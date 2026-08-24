@@ -1,0 +1,38 @@
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.angular/
+frontend/coverage/
+frontend/.cache/
+
+# Backend runtime
+backend/.env
+backend/storage/cache/*
+backend/storage/logs/*
+backend/storage/rate-limits/*
+backend/storage/uploads/*
+!backend/storage/cache/.gitkeep
+!backend/storage/logs/.gitkeep
+!backend/storage/rate-limits/.gitkeep
+!backend/storage/uploads/.gitkeep
+
+# Local environment
+.env
+.idea/
+.vscode/
+.tools/
+*.swp
+*.swo
+Thumbs.db
+.DS_Store
+
+# Test artifacts
+coverage/
+test-results/
+playwright-report/
+*.log
+
+# Database volumes and exports
+.data/
+*.sql.gz
+*.dump
