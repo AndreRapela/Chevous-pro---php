@@ -19,7 +19,6 @@ export function createBookingForm(formBuilder: FormBuilder) {
     date: ['', Validators.required],
     time: ['', Validators.required],
     providerId: ['', Validators.required],
-    coupon: [''],
     terms: [false, Validators.requiredTrue]
   });
 }

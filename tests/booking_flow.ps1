@@ -95,10 +95,14 @@ try {
     $scheduledStart = "$($slot.date)T$($slot.time):00"
     $quotePayload = @{
         serviceId = $service.id; professionalId = $professional.id; durationMinutes = $duration
-        quantity = 1; addonIds = @()
+        quantity = 1; addonIds = @(); currency = 'BRL'
     }
     $quote = (Invoke-Api Post '/bookings/quote' $customerHeaders $quotePayload).data
-    Assert-True ([int]$quote.totalCents -gt 0 -and @($quote.items).Count -gt 0) 'A cotação não retornou preço e itens válidos.'
+    Assert-True ([int]$quote.totalCents -gt 0 -and @($quote.items).Count -gt 0 -and $quote.currency -eq 'BRL') 'A cotação em BRL não retornou preço, moeda e itens válidos.'
+    $usdQuotePayload = $quotePayload.Clone()
+    $usdQuotePayload.currency = 'USD'
+    $usdQuote = (Invoke-Api Post '/bookings/quote' $customerHeaders $usdQuotePayload).data
+    Assert-True ($usdQuote.currency -eq 'USD' -and [int]$usdQuote.totalCents -gt [int]$quote.totalCents) 'A cotação em USD não aplicou a moeda e a taxa configuradas.'
 
     $bookingPayload = $quotePayload.Clone()
     $bookingPayload.addressId = $address.id
@@ -110,21 +114,23 @@ try {
     $bookingHeaders = $customerHeaders.Clone()
     $bookingHeaders['Idempotency-Key'] = $bookingKey
     $booking = (Invoke-Api Post '/bookings' $bookingHeaders $bookingPayload).data
-    Assert-True ($booking.status -eq 'awaiting_payment' -and $booking.allowedActions -contains 'pay') 'A reserva direta não entrou em pagamento.'
+    Assert-True ($booking.status -eq 'confirmed' -and $booking.allowedActions -contains 'cancel') 'A reserva direta não foi confirmada.'
     $repeatedBooking = (Invoke-Api Post '/bookings' $bookingHeaders $bookingPayload).data
     Assert-True ($repeatedBooking.id -eq $booking.id) 'A criação idempotente devolveu outra reserva.'
     $conflictingPayload = $bookingPayload.Clone()
     $conflictingPayload.notes = 'Mesmo identificador, outros dados'
     Expect-Status 409 { Invoke-Api Post '/bookings' $bookingHeaders $conflictingPayload } 'O conflito de idempotência não foi rejeitado.'
 
-    $paymentHeaders = $customerHeaders.Clone()
-    $paymentHeaders['Idempotency-Key'] = "payment-e2e-$([guid]::NewGuid())"
-    $payment = (Invoke-Api Post "/bookings/$($booking.id)/payment-intents" $paymentHeaders @{}).data
-    $repeatedPayment = (Invoke-Api Post "/bookings/$($booking.id)/payment-intents" $paymentHeaders @{}).data
-    Assert-True ($payment.id -eq $repeatedPayment.id) 'A criação idempotente de pagamento devolveu outro intent.'
-    $paid = (Invoke-Api Post "/payments/$($payment.id)/simulate" $customerHeaders @{ scenario = 'success' }).data
-    Assert-True ($paid.status -eq 'paid' -and $paid.bookingStatus -eq 'confirmed') 'O pagamento simulado não confirmou a reserva.'
+    $rescheduleSlot = Find-Slot $professional.id $duration 2
+    $rescheduled = (Invoke-Api Post "/bookings/$($booking.id)/reschedule" $customerHeaders @{
+        scheduledStart = "$($rescheduleSlot.date)T$($rescheduleSlot.time):00"; timezone = 'America/Sao_Paulo'
+    }).data
+    Assert-True ($rescheduled.status -eq 'confirmed' -and $rescheduled.allowedActions -contains 'reschedule') 'O cliente não conseguiu reagendar a reserva confirmada.'
 
+    $onTheWay = (Invoke-Api Post "/bookings/$($booking.id)/on-the-way" $providerHeaders @{}).data
+    Assert-True ($onTheWay.status -eq 'provider_on_the_way' -and $onTheWay.allowedActions -contains 'start') 'O profissional não conseguiu avisar que está a caminho.'
+    $arrivalMessage = (Invoke-Api Post "/conversations/$($booking.conversationId)/messages" $providerHeaders @{ body = 'Estou a caminho do atendimento.' }).data
+    Assert-True ($arrivalMessage.body -eq 'Estou a caminho do atendimento.') 'O chat ficou indisponível enquanto o profissional estava a caminho.'
     $started = (Invoke-Api Post "/bookings/$($booking.id)/start" $providerHeaders @{}).data
     $completed = (Invoke-Api Post "/bookings/$($booking.id)/complete" $providerHeaders @{}).data
     Assert-True ($started.status -eq 'in_progress' -and $completed.status -eq 'completed') 'O profissional não conseguiu iniciar e concluir o serviço.'
@@ -138,7 +144,7 @@ try {
     $marketPayload = @{
         serviceId = $service.id; addressId = $address.id; mode = 'marketplace'
         scheduledStart = "$($marketSlot.date)T$($marketSlot.time):00"; timezone = 'America/Sao_Paulo'
-        durationMinutes = $duration; quantity = 1; addonIds = @(); notes = 'Fluxo E2E marketplace'
+        durationMinutes = $duration; quantity = 1; addonIds = @(); notes = 'Fluxo E2E marketplace'; currency = 'BRL'
     }
     $marketHeaders = $customerHeaders.Clone()
     $marketHeaders['Idempotency-Key'] = "market-e2e-$([guid]::NewGuid())"
@@ -150,7 +156,7 @@ try {
     $offers = @((Invoke-Api Get "/bookings/$($marketBooking.id)/offers" $customerHeaders).data)
     Assert-True ($offers.id -contains $offer.id) 'A proposta enviada não apareceu para o cliente.'
     $accepted = (Invoke-Api Post "/bookings/$($marketBooking.id)/offers/$($offer.id)/accept" $customerHeaders @{}).data
-    Assert-True ($accepted.status -eq 'awaiting_payment' -and $accepted.professionalId -eq $professional.id) 'A proposta não foi aceita corretamente.'
+    Assert-True ($accepted.status -eq 'confirmed' -and $accepted.professionalId -eq $professional.id) 'A proposta não foi aceita corretamente.'
     $cancelled = (Invoke-Api Post "/bookings/$($marketBooking.id)/cancel" $customerHeaders @{ reason = 'Encerramento controlado do teste E2E' }).data
     Assert-True ($cancelled.status -eq 'cancelled') 'A solicitação de teste não foi cancelada.'
 
@@ -169,7 +175,7 @@ try {
     $adminUsers = Invoke-Api Get '/admin/users?page=1&perPage=5' $adminHeaders
     Assert-True ($null -ne $adminDashboard.metrics -and $null -ne $adminUsers.meta.total) 'Os contratos administrativos estão incompletos.'
 
-    Write-Output "PASS fluxo completo: endereços, favoritos, disponibilidade, cotação, idempotência, reserva, pagamento, execução, avaliação, mensagens, propostas, agenda, notificações e administração."
+    Write-Output "PASS fluxo completo: endereços, favoritos, disponibilidade, cotação, idempotência, reserva, reagendamento, chegada, execução, avaliação, mensagens, propostas, agenda, notificações e administração."
 } finally {
     Pop-Location
 }

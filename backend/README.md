@@ -4,7 +4,7 @@ API REST autocontida para o marketplace de serviços domésticos ChezVoust Pro.
 
 ## Requisitos
 
-- PHP 8.2 ou superior com `pdo_mysql`, `mbstring`, `json`, `openssl` e `fileinfo`.
+- PHP 8.4 ou superior com `pdo_mysql`, `mbstring`, `json`, `openssl` e `fileinfo`.
 - MySQL 8.
 - Apache com `mod_rewrite`, PHP-FPM/Nginx ou servidor embutido do PHP para desenvolvimento.
 
@@ -46,33 +46,21 @@ As senhas são transformadas por `password_hash` durante a execução do seed; n
 - Resposta: `{ "data": ... }`; listas incluem `meta`.
 - Erro: `{ "error": { "code", "message", "fields?", "requestId" } }`.
 - Autenticação: `Authorization: Bearer <accessToken>`.
-- Renovação: refresh JWT rotativo no corpo ou cookie `cv_refresh` `HttpOnly`.
+- Renovação: refresh JWT rotativo somente no cookie `cv_refresh` `HttpOnly`, `Secure` fora do local e `SameSite=Strict`.
 - Datas persistidas em UTC e exibidas conforme o timezone da reserva.
-- Dinheiro em centavos inteiros e moeda `BRL`.
-- Criação de reserva e intenção de pagamento aceitam `Idempotency-Key`.
+- Valores de referência em centavos inteiros, com base em `BRL` e opções de exibição em `EUR` e `USD`; a plataforma não processa pagamentos.
+- Criação de reserva aceita `Idempotency-Key`.
 
 Grupos principais:
 
 - `/auth`, `/me`, `/me/addresses` — conta, sessão e endereços.
 - `/home`, `/categories`, `/services`, `/professionals` — catálogo e descoberta.
 - `/bookings`, `/offers`, `/quotes` — reserva direta e solicitações ao marketplace.
-- `/payments` — intenção e cobrança simulada, sem dados de cartão.
 - `/conversations`, `/notifications`, `/me/favorites` — relacionamento.
 - `/provider` — perfil, serviços, agenda, oportunidades e jobs.
-- `/admin` — dashboard, usuários, aprovação, catálogo, cupons, promoções e auditoria.
+- `/admin` — dashboard, usuários, aprovação, catálogo, promoções e auditoria.
 
 `routes/api.php` é a fonte definitiva da lista de rotas.
-
-## Pagamento simulado
-
-Crie uma intenção em `POST /bookings/{id}/payment-intents` e use
-`POST /payments/{id}/simulate` com um dos cenários:
-
-```json
-{ "scenario": "success" }
-```
-
-Os valores possíveis são `success`, `declined` e `timeout`. A API nunca recebe número de cartão, CVV ou outro dado financeiro real.
 
 ## Worker local
 
@@ -82,7 +70,7 @@ Execute periodicamente:
 php backend/bin/worker.php
 ```
 
-Ele processa a outbox em modo de log e libera reservas de agenda cujo pagamento expirou.
+Ele processa a outbox em modo de log ou entrega transacional configurada.
 
 ## Segurança implementada
 

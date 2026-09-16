@@ -6,7 +6,7 @@ import { BrandComponent } from '../../../shared/components';
   standalone: true,
   imports: [BrandComponent],
   template: `
-    <main class="auth-page">
+    <main class="auth-page" [class.login-auth-page]="variant === 'login'">
       <section
         class="auth-brand-panel"
         [class.login-brand-panel]="variant !== 'register'"

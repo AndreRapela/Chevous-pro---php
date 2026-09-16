@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS content_reports (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    reporter_id BIGINT UNSIGNED NOT NULL,
+    content_type ENUM('professional_comment', 'review', 'message') NOT NULL,
+    content_public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    status ENUM('pending', 'resolved', 'dismissed') NOT NULL DEFAULT 'pending',
+    action ENUM('none', 'hidden', 'retained') NOT NULL DEFAULT 'none',
+    resolved_by BIGINT UNSIGNED NULL,
+    resolved_at DATETIME NULL,
+    resolution_note VARCHAR(1000) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_content_reports_reporter_content (reporter_id, content_type, content_public_id),
+    UNIQUE KEY uq_content_reports_public_id (public_id),
+    KEY idx_content_reports_queue (status, created_at),
+    CONSTRAINT fk_content_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_content_reports_resolver FOREIGN KEY (resolved_by) REFERENCES users (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

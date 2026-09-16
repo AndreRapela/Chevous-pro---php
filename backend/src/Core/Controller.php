@@ -47,4 +47,11 @@ abstract class Controller
             'data' => $data === [] ? null : json_encode($data, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
         ]);
     }
+
+    protected function requireVerifiedEmail(?array $auth): void
+    {
+        if (!$auth || empty($auth['emailVerified'])) {
+            throw new ApiException(403, 'EMAIL_VERIFICATION_REQUIRED', 'Confirme seu e-mail para realizar esta ação.');
+        }
+    }
 }

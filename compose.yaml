@@ -14,7 +14,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_local_only}
       TZ: America/Sao_Paulo
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "127.0.0.1:${MYSQL_PORT:-3306}:3306"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
@@ -33,10 +33,14 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_URL: ${APP_URL:-http://localhost:4200}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
       APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt-BR
+      APP_CURRENCY: BRL
+      USD_PER_BRL: ${USD_PER_BRL:-0.20}
+      EUR_PER_BRL: ${EUR_PER_BRL:-0.17}
       DB_HOST: database
       DB_PORT: 3306
       DB_DATABASE: ${MYSQL_DATABASE:-chezvoust}
@@ -44,17 +48,24 @@ services:
       DB_PASSWORD: ${MYSQL_PASSWORD:-chezvoust_local}
       JWT_SECRET: ${JWT_SECRET:-local_only_change_this_64_character_secret_before_any_public_use}
       AUTO_SEED: ${AUTO_SEED:-true}
+      MAIL_DRIVER: ${MAIL_DRIVER:-log}
       TZ: America/Sao_Paulo
     ports:
-      - "${API_PORT:-8080}:80"
+      - "127.0.0.1:${API_PORT:-8080}:80"
     volumes:
       - ./backend:/var/www/html
       - ./database:/var/www/database:ro
       - api_storage:/var/www/html/storage
-    command: ["sh", "-c", "if [ \"$${AUTO_SEED}\" = \"true\" ]; then php bin/seed.php || exit 1; fi; exec apache2-foreground"]
+    command: ["sh", "-c", "php bin/migrate.php || exit 1; if [ \"$${AUTO_SEED}\" = \"true\" ]; then php bin/seed.php || exit 1; fi; exec apache2-foreground"]
     depends_on:
       database:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@file_get_contents(\"http://127.0.0.1/api/v1/health\") === false ? 1 : 0);'"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
 
   web:
     build:
@@ -63,11 +74,33 @@ services:
     restart: unless-stopped
     environment:
       API_PROXY_TARGET: http://api
+      SSR_UPSTREAM: http://ssr:4000
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
     ports:
       - "${WEB_PORT:-4200}:80"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
+      ssr:
+        condition: service_started
+
+  ssr:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: ssr
+    restart: unless-stopped
+    environment:
+      SSR_API_URL: http://api/api/v1
+      SSR_PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
+      SITE_URL: ${APP_URL:-http://localhost:4200}
+      PORT: 4000
+      # O SSR só recebe tráfego do Nginx; aceite somente o host público definido.
+      NG_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:-localhost}
+      NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
+    depends_on:
+      api:
+        condition: service_healthy
 
   worker:
     build:
@@ -77,16 +110,21 @@ services:
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${APP_URL:-http://localhost:8080}
+      APP_URL: ${APP_URL:-http://localhost:4200}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
       APP_TIMEZONE: America/Sao_Paulo
+      APP_LOCALE: pt-BR
+      APP_CURRENCY: BRL
+      USD_PER_BRL: ${USD_PER_BRL:-0.20}
+      EUR_PER_BRL: ${EUR_PER_BRL:-0.17}
       DB_HOST: database
       DB_PORT: 3306
       DB_DATABASE: ${MYSQL_DATABASE:-chezvoust}
       DB_USERNAME: ${MYSQL_USER:-chezvoust}
       DB_PASSWORD: ${MYSQL_PASSWORD:-chezvoust_local}
       JWT_SECRET: ${JWT_SECRET:-local_only_change_this_64_character_secret_before_any_public_use}
+      MAIL_DRIVER: ${MAIL_DRIVER:-log}
       TZ: America/Sao_Paulo
     volumes:
       - ./backend:/var/www/html
@@ -95,6 +133,8 @@ services:
     command: ["sh", "-c", "while true; do php bin/worker.php; sleep 30; done"]
     depends_on:
       database:
+        condition: service_healthy
+      api:
         condition: service_healthy
 
 volumes:

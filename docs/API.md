@@ -1,7 +1,6 @@
 # ChezVoust Pro — contrato atual da API
 
-> Estado reconciliado em 19 de agosto de 2026 por inspeção estática. Este documento
-> descreve o código existente; não afirma que testes, build ou homologação foram executados.
+> Estado reconciliado em 26 de agosto de 2026 por inspeção e testes automatizados locais.
 
 ## Como ler o status
 
@@ -17,16 +16,16 @@ divergência, o código prevalece e este arquivo deve ser atualizado.
 
 - Base local: `/api/v1`; JSON UTF-8.
 - Autenticação: `Authorization: Bearer <accessToken>`.
-- Renovação: refresh token rotativo no corpo ou no cookie `cv_refresh` `HttpOnly`.
+- Renovação: refresh token rotativo somente no cookie `cv_refresh` `HttpOnly` e `SameSite=Strict`.
 - Sucesso com corpo: `{ "data": ... }`; algumas coleções paginadas também incluem
   `{ "meta": { "page", "perPage", "total", "lastPage" } }`.
 - Sucesso sem corpo: HTTP `204`.
 - Erro: `{ "error": { "code", "message", "fields?", "requestId" } }`.
 - A API devolve `X-Request-Id`; um identificador de entrada válido pode ser enviado em
   `X-Request-Id`.
-- Valores monetários são inteiros em centavos e usam `BRL` no domínio atual.
+- Valores monetários são inteiros em centavos e usam `EUR` ou `USD`; a moeda deve ser enviada na cotação e na reserva.
 - IDs públicos são UUIDs. O detalhe de serviço aceita UUID e também slug.
-- Reservas e intenções de pagamento aceitam `Idempotency-Key`.
+- Reservas aceitam `Idempotency-Key`.
 - Horários de reserva e agenda são serializados em RFC 3339 UTC nos endpoints que os
   expõem. Outros timestamps administrativos ainda podem aparecer no formato SQL UTC e
   devem ser tratados como uma limitação de compatibilidade até a normalização global.
@@ -73,9 +72,12 @@ Erro de validação:
 | GET | `/services?category=&q=&page=&perPage=` | Catálogo paginado; categoria aceita UUID ou slug. |
 | GET | `/services/{idOrSlug}` | Detalhe e adicionais ativos do serviço. |
 | GET | `/professionals?service=&city=&state=&ratingMin=&sort=` | Busca pública paginada. |
-| GET | `/professionals/{id}` | Perfil público e serviços ofertados. |
+| GET | `/professionals/{id}` | Perfil público, vitrine profissional, experiências, cursos e serviços ofertados. |
+| GET | `/avatars/{id}` | Foto pública do perfil, quando o usuário tiver enviado uma. |
 | GET | `/professionals/{id}/availability` | Regras e exceções; não é uma grade final já descontada por reservas. |
 | GET | `/professionals/{id}/reviews` | Avaliações publicadas. |
+| GET | `/professionals/{id}/comments` | Comentários públicos publicados; não influenciam a nota. |
+| POST | `/professionals/{id}/comments` | Autenticado; publica comentário de comunidade, com limite de uma publicação por minuto por perfil. |
 
 `/providers`, `/providers/{id}`, `/providers/{id}/availability` e
 `/providers/{id}/reviews` são aliases de compatibilidade para as rotas de profissionais.
@@ -87,8 +89,8 @@ Erro de validação:
 | POST | `/auth/register/customer` | Cadastro de cliente. |
 | POST | `/auth/register/provider` | Cadastro inicial de prestador. |
 | POST | `/auth/register` | Alias genérico com papel permitido pela validação. |
-| POST | `/auth/login` | Cria sessão e devolve access/refresh token. |
-| POST | `/auth/refresh` | Rotaciona o refresh token. |
+| POST | `/auth/login` | Cria sessão, devolve o access token e grava o refresh em cookie HttpOnly. |
+| POST | `/auth/refresh` | Rotaciona o refresh token; uma repetição concorrente do cookie anterior é aceita só por 10 segundos para não derrubar outra aba legítima. |
 | POST | `/auth/password/forgot` | Cria token e evento de recuperação sem enumerar conta. |
 | POST | `/auth/password/reset` | Redefine senha com token descartável. |
 | POST | `/auth/forgot-password` | Alias de `/auth/password/forgot`. |
@@ -96,7 +98,11 @@ Erro de validação:
 | POST | `/auth/email/verify` | Confirma e-mail com token descartável. |
 | POST | `/auth/logout` | Autenticado; revoga a sessão atual. |
 | POST | `/auth/logout-all` | Autenticado; revoga todas as sessões da conta. |
+| GET | `/auth/sessions` | Lista os dispositivos conectados e identifica a sessão atual. |
+| DELETE | `/auth/sessions/{id}` | Revoga outra sessão da própria conta. |
+| POST | `/auth/password/change` | Troca a senha e revoga os outros dispositivos. |
 | GET/PATCH | `/me` | Consulta e atualiza o perfil básico. |
+| POST | `/me/avatar` | Atualiza a foto do perfil por `multipart/form-data`, campo `avatar`; aceita JPG, PNG ou WebP de até 5 MiB, dimensões entre 96 e 2048 px por lado e no máximo 4 megapixels. A imagem é convertida para WebP no servidor. |
 | GET/POST | `/me/addresses` | Lista e cria endereços próprios. |
 | PUT/DELETE | `/me/addresses/{id}` | Atualiza ou remove logicamente endereço próprio. |
 
@@ -106,11 +112,15 @@ ser agendada manualmente. O driver `log` registra somente o tipo e o agregado do
 sem expor o token. Em `APP_ENV=local` com debug, a própria resposta da API pode fornecer
 o token de demonstração. Não existe entrega de e-mail transacional real.
 
+O access token permanece apenas em memória no navegador. O refresh token fica em cookie
+`HttpOnly`, `Secure` em produção e `SameSite=Strict`; não há refresh token em JSON nem
+em armazenamento do navegador.
+
 ## Cotação, reserva e propostas — implementadas na API
 
 ### Cotação
 
-`POST /quotes` é o endpoint canônico; `/bookings/quote` e `/coupons/validate` são aliases.
+`POST /quotes` é o endpoint canônico; `/bookings/quote` é um alias.
 Ele exige cliente autenticado e aceita:
 
 ```json
@@ -120,14 +130,14 @@ Ele exige cliente autenticado e aceita:
   "durationMinutes": 180,
   "quantity": 1,
   "areaSqm": 80,
-  "addonIds": [],
-  "couponCode": "BEMVINDO10"
+  "addonIds": []
 }
 ```
 
-O servidor resolve preço fixo, por hora ou por área, preço específico do profissional,
-adicionais, cupom, taxa e comissão. O resultado é uma estimativa; a criação da reserva
-recalcula o valor e persiste `pricing_snapshot` e `booking_items`.
+O servidor resolve preço fixo, por hora ou por área, preço específico do profissional e
+adicionais. O resultado é uma estimativa de referência; a criação da reserva recalcula
+o valor e persiste `pricing_snapshot` e `booking_items`, sem cobrança, taxa ou comissão
+da plataforma.
 
 ### Criação
 
@@ -143,7 +153,7 @@ recalcula o valor e persiste `pricing_snapshot` e `booking_items`.
 }
 ```
 
-- `direct` exige `professionalId` e cria a reserva em `awaiting_payment`.
+- `direct` exige `professionalId` e cria a reserva como `confirmed`.
 - `marketplace` não recebe profissional e publica a solicitação como `open`.
 - O alias de entrada `request` é normalizado internamente para `marketplace`.
 - `providerId`, `estimatedMinutes`, `extras` e `answers.areaM2` são aliases de entrada
@@ -162,29 +172,14 @@ recalcula o valor e persiste `pricing_snapshot` e `booking_items`.
 | POST | `/bookings/{id}/offers/{offerId}/accept` | Cliente aceita proposta. |
 | POST | `/provider/offers/{offerId}/withdraw` | Prestador retira proposta pendente. |
 | POST | `/bookings/{id}/cancel` | Participante autorizado cancela conforme estados aceitos. |
+| POST | `/bookings/{id}/reschedule` | Cliente/admin reagenda reserva confirmada sem conflito. |
+| POST | `/bookings/{id}/on-the-way` | Prestador/admin informa que está a caminho. |
 | POST | `/bookings/{id}/start` | Prestador/admin inicia serviço permitido. |
 | POST | `/bookings/{id}/complete` | Prestador/admin conclui serviço permitido. |
 | POST | `/bookings/{id}/reviews` | Cliente avalia reserva concluída. |
 
-Reagendamento, chegada, confirmação de conclusão pelo cliente, disputa, política
-versionada de cancelamento e recorrência são **roadmap**.
-
-## Pagamento — demonstração implementada
-
-O driver local é deliberadamente fictício. A aplicação não recebe número de cartão,
-CVV ou credencial bancária.
-
-| Método | Rota | Uso |
-| --- | --- | --- |
-| POST | `/bookings/{id}/payment-intents` | Cria intenção para reserva própria aguardando pagamento. |
-| POST | `/bookings/{id}/checkout-intents` | Alias da criação de intenção. |
-| GET | `/payments` | Cliente/admin lista pagamentos autorizados. |
-| GET | `/payments/{id}` | Estado sanitizado para participante/admin. |
-| POST | `/payments/{id}/simulate` | Simula `success`, `declined` ou `timeout`. |
-
-O simulador exercita estados e transações locais. Gateway real, checkout hospedado,
-webhook, estorno, crédito, chargeback, split, repasse e conciliação são **roadmap** e não
-devem ser anunciados como disponíveis.
+Confirmação de conclusão pelo cliente, disputa, política versionada de cancelamento e
+recorrência automática são **roadmap**.
 
 ## Relacionamento — implementado na API
 
@@ -194,16 +189,22 @@ devem ser anunciados como disponíveis.
 | POST/DELETE | `/me/favorites/{professionalId}` | Adiciona/remove favorito. |
 | GET | `/conversations` | Conversas das quais o usuário participa. |
 | GET/POST | `/conversations/{id}/messages` | Lista/envia mensagens de texto. |
+| GET | `/conversations/{id}/events?after={sequence}&limit=50` | Consulta incremental autenticada. Devolve imediatamente as mensagens posteriores ao cursor e informa em `meta.pollAfterSeconds` quando a próxima consulta deve ocorrer (atualmente, 5 s). |
 | POST | `/conversations/{id}/read` | Atualiza leitura do participante. |
 | GET | `/notifications` | Lista notificações; `/me/notifications` é alias. |
 | POST | `/notifications/{id}/read` | Marca uma notificação; há alias sob `/me`. |
 | POST | `/notifications/read-all` | Marca todas; há alias sob `/me`. |
 | GET | `/professionals/{id}/reviews` | Lista avaliações públicas. |
 | POST | `/bookings/{id}/reviews` | Cria avaliação elegível. |
+| GET/POST | `/professionals/{id}/comments` | Lista/publica comentários da comunidade, separados de avaliações de reserva. |
 
-Anexos, resposta/denúncia de avaliação, suporte, tickets e moderação são **roadmap**.
+Anexos de conversa, denúncia, suporte, tickets e moderação editorial são **roadmap**. Comentários públicos passam por sanitização, controle de frequência e podem ser ocultados pela operação no banco.
 O Angular integra favoritos, conversa de texto, cancelamento e avaliação; recursos sem
 endpoint permanecem rotulados como demonstração.
+
+O envio de `POST /conversations/{id}/messages` aceita `Idempotency-Key` (até 100
+caracteres). Repetir a mesma chave e conteúdo devolve a mesma mensagem; reutilizá-la
+com conteúdo ou conversa diferente responde `409 IDEMPOTENCY_CONFLICT`.
 
 ## Área do prestador — implementada na API
 
@@ -211,6 +212,10 @@ endpoint permanecem rotulados como demonstração.
 | --- | --- | --- |
 | GET | `/provider/dashboard` | Perfil e métricas agregadas. |
 | GET/PATCH | `/provider/profile` | Consulta/atualiza perfil profissional. |
+| GET/POST | `/provider/profile/experiences` | Lista ou adiciona experiências do próprio perfil. |
+| PUT/DELETE | `/provider/profile/experiences/{id}` | Atualiza ou remove experiência própria. |
+| GET/POST | `/provider/profile/courses` | Lista ou adiciona cursos do próprio perfil. |
+| PUT/DELETE | `/provider/profile/courses/{id}` | Atualiza ou remove curso próprio. |
 | GET | `/provider/services` | Lista ofertas do prestador. |
 | PUT/DELETE | `/provider/services/{serviceId}` | Ativa, precifica ou remove oferta. |
 | GET/PUT | `/provider/availability` | Consulta/substitui regras semanais. |
@@ -220,7 +225,7 @@ endpoint permanecem rotulados como demonstração.
 | POST | `/provider/bookings/{bookingId}/offers` | Envia proposta. |
 | POST | `/provider/offers/{offerId}/withdraw` | Retira proposta. |
 
-Documentos/KYC, áreas geográficas precisas, conta bancária, saldo, extrato e repasses são
+Documentos/KYC e áreas geográficas precisas são
 **roadmap**. `verificationStatus=approved` representa aprovação operacional do perfil;
 não comprova identidade documental.
 
@@ -237,15 +242,13 @@ Todas as rotas abaixo exigem papel `admin`:
 | POST | `/admin/professionals/{id}/review` | Aprova/rejeita/suspende perfil. |
 | POST/PATCH | `/admin/categories`, `/admin/categories/{id}` | Cria/atualiza categoria. |
 | POST/PATCH | `/admin/services`, `/admin/services/{id}` | Cria/atualiza serviço. |
-| GET/POST | `/admin/coupons` | Lista/cria cupom. |
 | GET/POST | `/admin/promotions` | Lista/cria promoção textual. |
 | GET | `/admin/bookings` | Alias administrativo da listagem de reservas. |
-| GET | `/admin/payments` | Alias administrativo da listagem de pagamentos. |
 | GET | `/admin/audit-logs` | Trilha administrativa paginada. |
 
 O painel Angular consome as operações administrativas que possuem endpoint; qualquer
 fallback sem contrato deve ser identificado como demonstração. Disputas, tickets,
-reembolsos, repasses, documentos, RBAC granular, impersonação e exportação são
+documentos, RBAC granular, impersonação e exportação são
 **roadmap**.
 
 ## Fora do contrato atual — roadmap
@@ -257,10 +260,9 @@ executável completo nesta versão:
 - preferência de notificação e encerramento automatizado de conta;
 - áreas de serviço georreferenciadas e disponibilidade final por slots;
 - recorrência e ocorrências de reserva;
-- reagendamento, disputa, ticket, anexos e uploads privados;
+- disputa, ticket, anexos e uploads privados;
 - KYC/documentos e selos baseados em evidência;
 - resposta ou denúncia de avaliações;
-- gateway real, webhook, estorno, crédito, razão e repasse;
 - relatórios/exportações e permissões administrativas granulares;
 - OpenAPI estabilizado e versionamento `/api/v2`.
 

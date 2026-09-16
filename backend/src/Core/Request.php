@@ -11,6 +11,7 @@ final class Request
         public readonly string $path,
         public readonly array $query,
         public readonly array $body,
+        public readonly array $files,
         public readonly array $headers,
         public readonly array $cookies,
         public readonly string $ip,
@@ -43,13 +44,20 @@ final class Request
         }
 
         $body = [];
-        $raw = file_get_contents('php://input') ?: '';
-        if ($raw !== '') {
-            $decoded = json_decode($raw, true);
-            if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
-                throw new ApiException(400, 'INVALID_JSON', 'O corpo da requisição deve conter JSON válido.');
+        $files = [];
+        $contentType = strtolower($normalizedHeaders['content-type'] ?? '');
+        if (str_starts_with($contentType, 'multipart/form-data')) {
+            $body = is_array($_POST) ? $_POST : [];
+            $files = is_array($_FILES) ? $_FILES : [];
+        } else {
+            $raw = file_get_contents('php://input') ?: '';
+            if ($raw !== '') {
+                $decoded = json_decode($raw, true);
+                if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
+                    throw new ApiException(400, 'INVALID_JSON', 'O corpo da requisição deve conter JSON válido.');
+                }
+                $body = $decoded;
             }
-            $body = $decoded;
         }
 
         // O IP encaminhado só é aceito quando o proxy prova conhecer o segredo interno.
@@ -68,7 +76,7 @@ final class Request
         $providedRequestId = $normalizedHeaders['x-request-id'] ?? '';
         $requestId = preg_match('/^[a-zA-Z0-9._-]{8,80}$/', $providedRequestId) ? $providedRequestId : Uuid::v4();
 
-        return new self($method, $path, $_GET, $body, $normalizedHeaders, $_COOKIE, $ip, $requestId);
+        return new self($method, $path, $_GET, $body, $files, $normalizedHeaders, $_COOKIE, $ip, $requestId);
     }
 
     public function bearerToken(): ?string

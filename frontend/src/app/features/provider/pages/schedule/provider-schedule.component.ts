@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -6,12 +5,13 @@ import { forkJoin } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { AvailabilityException, AvailabilityRule, ProviderJob } from '../../../../core/models';
 import { PageHeaderComponent, StatePanelComponent, StatusPillComponent } from '../../../../shared/components';
+import { LocalizedDatePipe } from '../../../../shared/localization/localized-format.pipe';
 import { hasOverlappingRules } from '../../../booking/utils/availability.util';
 
 @Component({
   selector: 'cvp-provider-schedule',
   standalone: true,
-  imports: [DatePipe, FormsModule, PageHeaderComponent, RouterLink, StatePanelComponent, StatusPillComponent],
+  imports: [LocalizedDatePipe, FormsModule, PageHeaderComponent, RouterLink, StatePanelComponent, StatusPillComponent],
   template: `
     <section class="portal-page provider-operations-page provider-schedule-page">
       <cvp-page-header eyebrow="Organize sua semana" title="Minha agenda" description="Defina sua disponibilidade e acompanhe atendimentos."><button class="btn btn-primary" type="button" [disabled]="acting()" (click)="saveAvailability()">Salvar disponibilidade</button></cvp-page-header>
@@ -21,8 +21,8 @@ import { hasOverlappingRules } from '../../../booking/utils/availability.util';
       @else if (loadError()) { <cvp-state-panel kind="error" title="Agenda indisponível" [message]="loadError()" (retry)="load()" /> }
       @else {
         <section class="portal-card"><div class="card-title-row"><h2>Horários disponíveis</h2><button class="btn btn-secondary btn-small" type="button" (click)="addRule()">+ Adicionar horário</button></div>@if (!rules().length) { <p class="muted">Adicione os dias e horários em que você atende.</p> } @else { <div class="table-wrap availability-table"><table><thead><tr><th>Dia</th><th>Início</th><th>Fim</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody>@for (rule of rules(); track $index) { <tr><td data-label="Dia"><select [(ngModel)]="rule.weekday" [name]="'weekday-' + $index" [attr.aria-label]="'Dia do horário ' + ($index + 1)"><option [ngValue]="0">Domingo</option><option [ngValue]="1">Segunda</option><option [ngValue]="2">Terça</option><option [ngValue]="3">Quarta</option><option [ngValue]="4">Quinta</option><option [ngValue]="5">Sexta</option><option [ngValue]="6">Sábado</option></select></td><td data-label="Início"><input type="time" [(ngModel)]="rule.startTime" [name]="'start-' + $index" [attr.aria-label]="'Início do horário ' + ($index + 1)"></td><td data-label="Fim"><input type="time" [(ngModel)]="rule.endTime" [name]="'end-' + $index" [attr.aria-label]="'Fim do horário ' + ($index + 1)"></td><td><button class="text-button" type="button" (click)="removeRule($index)">Remover horário</button></td></tr> }</tbody></table></div> }</section>
-        <section class="portal-card"><div class="card-title-row"><h2>Bloqueios e exceções</h2></div><form class="inline-action-form" (submit)="addException($event)"><div class="form-grid"><label>Data<input name="date" type="date" [min]="minDate" required></label><label>Início <span class="optional">Dia todo se vazio</span><input name="startTime" type="time"></label><label>Fim<input name="endTime" type="time"></label></div><label>Motivo <span class="optional">Opcional</span><input name="reason" maxlength="250" placeholder="Ex.: compromisso pessoal"></label><button class="btn btn-secondary btn-small" type="submit" [disabled]="acting()">Adicionar bloqueio</button></form>@if (exceptions().length) { <div class="timeline-list">@for (item of exceptions(); track item.id) { <article><time>{{ item.date | date:'dd/MM':'UTC':'pt-BR' }}</time><span class="timeline-dot"></span><div><strong>{{ item.startTime && item.endTime ? item.startTime + '–' + item.endTime : 'Dia inteiro' }}</strong><p>{{ item.reason || 'Indisponível' }}</p></div><button class="text-button" type="button" (click)="removeException(item)">Remover</button></article> }</div> } @else { <p class="muted">Nenhum bloqueio futuro.</p> }</section>
-        <section class="portal-card"><div class="card-title-row"><h2>Atendimentos</h2></div>@if (jobs().length) { <div class="timeline-list">@for (job of jobs(); track job.id) { <article><time>{{ job.scheduledStart | date:'dd/MM HH:mm':'':'pt-BR' }}</time><span class="timeline-dot"></span><div><cvp-status-pill [status]="job.status" /><h3>{{ job.serviceName }}</h3><p>{{ job.customerName }} · {{ job.city }}, {{ job.state }}</p></div><div class="card-actions">@if (job.conversationId) { <a class="btn btn-secondary btn-small" routerLink="/prestador/mensagens" [queryParams]="{ conversa: job.conversationId }">Mensagem</a> }@if (job.status === 'confirmed' || job.status === 'in_progress') { @if (confirmTarget() === job.id) { <button class="btn btn-secondary btn-small" type="button" (click)="confirmTarget.set('')">Voltar</button><button class="btn btn-primary btn-small" type="button" [disabled]="acting()" (click)="transition(job)">Confirmar {{ job.status === 'confirmed' ? 'início' : 'conclusão' }}</button> } @else { <button class="btn btn-primary btn-small" type="button" (click)="confirmTarget.set(job.id)">{{ job.status === 'confirmed' ? 'Iniciar serviço' : 'Concluir serviço' }}</button> } }</div></article> }</div> } @else { <p class="muted">Nenhum atendimento na agenda.</p> }</section>
+        <section class="portal-card"><div class="card-title-row"><h2>Bloqueios e exceções</h2></div><form class="inline-action-form" (submit)="addException($event)"><div class="form-grid"><label>Data<input name="date" type="date" [min]="minDate" required></label><label>Início <span class="optional">Dia todo se vazio</span><input name="startTime" type="time"></label><label>Fim<input name="endTime" type="time"></label></div><label>Motivo <span class="optional">Opcional</span><input name="reason" maxlength="250" placeholder="Ex.: compromisso pessoal"></label><button class="btn btn-secondary btn-small" type="submit" [disabled]="acting()">Adicionar bloqueio</button></form>@if (exceptions().length) { <div class="timeline-list">@for (item of exceptions(); track item.id) { <article><time>{{ item.date | appDate:'MMM d':'UTC' }}</time><span class="timeline-dot"></span><div><strong>{{ item.startTime && item.endTime ? item.startTime + '–' + item.endTime : 'Dia inteiro' }}</strong><p>{{ item.reason || 'Indisponível' }}</p></div><button class="text-button" type="button" (click)="removeException(item)">Remover</button></article> }</div> } @else { <p class="muted">Nenhum bloqueio futuro.</p> }</section>
+        <section class="portal-card"><div class="card-title-row"><h2>Atendimentos</h2></div>@if (jobs().length) { <div class="timeline-list">@for (job of jobs(); track job.id) { <article><time>{{ job.scheduledStart | appDate:'MMM d, HH:mm' }}</time><span class="timeline-dot"></span><div><cvp-status-pill [status]="job.status" /><h3>{{ job.serviceName }}</h3><p>{{ job.customerName }} · {{ job.city }}, {{ job.state }}</p></div><div class="card-actions">@if (job.conversationId) { <a class="btn btn-secondary btn-small" routerLink="/prestador/mensagens" [queryParams]="{ conversa: job.conversationId }">Mensagem</a> }@if (job.status === 'confirmed') { <button class="btn btn-secondary btn-small" type="button" [disabled]="acting()" (click)="onTheWay(job)">Estou a caminho</button> }@if (job.status === 'confirmed' || job.status === 'provider_on_the_way' || job.status === 'in_progress') { @if (confirmTarget() === job.id) { <button class="btn btn-secondary btn-small" type="button" (click)="confirmTarget.set('')">Voltar</button><button class="btn btn-primary btn-small" type="button" [disabled]="acting()" (click)="transition(job)">Confirmar {{ job.status === 'in_progress' ? 'conclusão' : 'início' }}</button> } @else { <button class="btn btn-primary btn-small" type="button" (click)="confirmTarget.set(job.id)">{{ job.status === 'in_progress' ? 'Concluir serviço' : 'Iniciar serviço' }}</button> } }</div></article> }</div> } @else { <p class="muted">Nenhum atendimento na agenda.</p> }</section>
       }
     </section>
   `,
@@ -89,10 +89,19 @@ export class ProviderScheduleComponent implements OnInit {
 
   transition(job: ProviderJob): void {
     if (this.acting()) return;
-    const request = job.status === 'confirmed' ? this.marketplace.startBooking(job.id) : this.marketplace.completeBooking(job.id);
+    const request = job.status === 'in_progress' ? this.marketplace.completeBooking(job.id) : this.marketplace.startBooking(job.id);
     this.acting.set(true); this.actionError.set('');
     request.subscribe({
       next: (booking) => { this.jobs.update((items) => items.map((item) => item.id === job.id ? { ...item, status: booking.status } : item)); this.success.set(booking.status === 'in_progress' ? 'Serviço iniciado.' : 'Serviço concluído.'); this.confirmTarget.set(''); this.acting.set(false); },
+      error: (failure: Error) => { this.actionError.set(failure.message); this.acting.set(false); }
+    });
+  }
+
+  onTheWay(job: ProviderJob): void {
+    if (this.acting() || job.status !== 'confirmed') return;
+    this.acting.set(true); this.actionError.set('');
+    this.marketplace.markBookingOnTheWay(job.id).subscribe({
+      next: (booking) => { this.jobs.update((items) => items.map((item) => item.id === job.id ? { ...item, status: booking.status } : item)); this.success.set('Cliente avisado: você está a caminho.'); this.acting.set(false); },
       error: (failure: Error) => { this.actionError.set(failure.message); this.acting.set(false); }
     });
   }

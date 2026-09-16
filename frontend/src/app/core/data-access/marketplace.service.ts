@@ -2,10 +2,11 @@ import { Injectable, inject } from '@angular/core';
 import { EMPTY, Observable, catchError, expand, map, of, reduce, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiQuery, ApiService } from '../http/api.service';
+import { AppCurrency, LocalizationService } from '../localization/localization.service';
 import {
   Address, AppNotification, AvailabilityException, AvailabilityRule, Booking, BookingDraft, BookingOffer, BookingQuote, BookingStatus, ChatMessage,
-  CheckoutResult, Conversation, DashboardMetric, PaymentIntent, ProviderDashboard, ProviderJob,
-  ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
+  BookingConfirmation, Conversation, DashboardMetric, ProviderDashboard, ProviderJob,
+  ProfessionalComment, ProfessionalCourse, ProfessionalExperience, ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
 } from '../models';
 
 type UnknownRecord = Record<string, unknown>;
@@ -13,9 +14,11 @@ type UnknownRecord = Record<string, unknown>;
 @Injectable({ providedIn: 'root' })
 export class MarketplaceService {
   private readonly api = inject(ApiService);
+  private readonly localization = inject(LocalizationService);
 
   categories() { return this.api.get<unknown[]>('categories').pipe(map((items) => items.map((item) => this.category(item)))); }
   services(query: ApiQuery = {}) { return this.allPages<unknown>('services', query).pipe(map((items) => items.map((item) => this.serviceModel(item)))); }
+  servicesPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('services', query).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.serviceModel(item)) }))); }
   service(idOrSlug: string): Observable<Service> {
     const direct = this.api.get<unknown>(`services/${encodeURIComponent(idOrSlug)}`).pipe(map((item) => this.serviceModel(item)));
     if (this.isUuid(idOrSlug) || environment.useMockApi) return direct;
@@ -30,8 +33,17 @@ export class MarketplaceService {
     const hintedService = String(apiQuery['service'] ?? '');
     return this.allPages<unknown>('professionals', apiQuery).pipe(map((items) => items.map((item) => this.providerModel(item, hintedService ? [hintedService] : []))));
   }
+  providersPage(query: ApiQuery = {}) {
+    const apiQuery: ApiQuery = { service: query['serviceId'] ?? query['service'], city: query['city'], state: query['state'], ratingMin: query['minRating'] ?? query['ratingMin'], sort: query['sort'], page: query['page'], perPage: query['perPage'] };
+    const hintedService = String(apiQuery['service'] ?? '');
+    return this.api.getEnvelope<unknown[]>('professionals', apiQuery).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.providerModel(item, hintedService ? [hintedService] : [])) })));
+  }
   provider(id: string) { return this.api.get<unknown>(`professionals/${encodeURIComponent(id)}`).pipe(map((item) => this.providerModel(item))); }
-  providerReviews(id: string) { return this.allPages<unknown>(`professionals/${encodeURIComponent(id)}/reviews`).pipe(map((items) => items.map((item) => this.reviewModel(item)))); }
+  providerReviewsPage(id: string, page = 1) { return this.api.getEnvelope<unknown[]>(`professionals/${encodeURIComponent(id)}/reviews`, { page, perPage: 20 }).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.reviewModel(item)) }))); }
+  providerReviews(id: string, page = 1) { return this.providerReviewsPage(id, page).pipe(map((response) => response.data)); }
+  providerCommentsPage(id: string, page = 1) { return this.api.getEnvelope<unknown[]>(`professionals/${encodeURIComponent(id)}/comments`, { page, perPage: 20 }).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.commentModel(item)) }))); }
+  providerComments(id: string, page = 1) { return this.providerCommentsPage(id, page).pipe(map((response) => response.data)); }
+  createProviderComment(id: string, comment: string) { return this.api.post<unknown>(`professionals/${encodeURIComponent(id)}/comments`, { comment }).pipe(map((item) => this.commentModel(item))); }
   publicProviderAvailability(id: string, query: ApiQuery = {}) { return this.api.get<PublicAvailability>(`professionals/${encodeURIComponent(id)}/availability`, query); }
   bookings(query: ApiQuery = {}) { return this.allPages<unknown>('bookings', query).pipe(map((items) => items.map((item) => this.bookingModel(item)))); }
   booking(id: string) { return this.api.get<unknown>(`bookings/${encodeURIComponent(id)}`).pipe(map((item) => this.bookingModel(item))); }
@@ -55,21 +67,10 @@ export class MarketplaceService {
     );
   }
 
-  checkoutBooking(draft: BookingDraft, bookingKey: string, paymentKey: string): Observable<CheckoutResult> {
+  confirmBooking(draft: BookingDraft, bookingKey: string): Observable<BookingConfirmation> {
     return this.quote(draft).pipe(
       switchMap((quote) => this.createBooking(draft, quote, bookingKey)),
-      switchMap((booking) => this.api.post<PaymentIntent>(`bookings/${booking.id}/payment-intents`, {}, { headers: { 'Idempotency-Key': paymentKey } }).pipe(
-        switchMap((payment) => {
-          const maySimulate = environment.allowPaymentSimulation && (environment.useMockApi || payment.driver === 'fake');
-          if (!maySimulate) return of({ booking, payment, confirmed: booking.status === 'confirmed' });
-          return this.api.post<PaymentIntent & { bookingStatus?: string }>(`payments/${payment.id}/simulate`, { scenario: 'success' }).pipe(
-            switchMap((paid) => this.booking(booking.id).pipe(
-              catchError(() => of({ ...booking, status: paid.bookingStatus === 'confirmed' ? 'confirmed' as const : booking.status })),
-              map((fresh) => ({ booking: fresh, payment: { ...payment, ...paid }, confirmed: paid.status === 'paid' }))
-            ))
-          );
-        })
-      ))
+      map((booking) => ({ booking, confirmed: booking.status === 'confirmed' }))
     );
   }
 
@@ -78,19 +79,14 @@ export class MarketplaceService {
   bookingOffers(id: string) { return this.api.get<unknown[]>(`bookings/${encodeURIComponent(id)}/offers`).pipe(map((items) => items.map((item) => this.offerModel(item)))); }
   acceptBookingOffer(bookingId: string, offerId: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(bookingId)}/offers/${encodeURIComponent(offerId)}/accept`, {}).pipe(map((item) => this.bookingModel(item))); }
   startBooking(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/start`, {}).pipe(map((item) => this.bookingModel(item))); }
+  markBookingOnTheWay(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/on-the-way`, {}).pipe(map((item) => this.bookingModel(item))); }
   completeBooking(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/complete`, {}).pipe(map((item) => this.bookingModel(item))); }
-  payBooking(id: string): Observable<Booking> {
-    return this.api.post<PaymentIntent>(`bookings/${encodeURIComponent(id)}/payment-intents`, {}, { headers: { 'Idempotency-Key': this.newIdempotencyKey('payment') } }).pipe(
-      switchMap((payment) => {
-        if (!environment.allowPaymentSimulation || payment.driver !== 'fake') return this.booking(id);
-        return this.api.post<PaymentIntent>(`payments/${encodeURIComponent(payment.id)}/simulate`, { scenario: 'success' }).pipe(switchMap(() => this.booking(id)));
-      })
-    );
-  }
-
-  conversations() { return this.api.get<unknown[]>('conversations').pipe(map((items) => items.map((item) => this.conversationModel(item)))); }
+  rescheduleBooking(id: string, date: string, time: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/reschedule`, { scheduledStart: `${date}T${time}:00`, timezone: 'America/Sao_Paulo' }).pipe(map((item) => this.bookingModel(item))); }
+  conversationsPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('conversations', { page: query['page'], perPage: query['perPage'] ?? 30 }).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.conversationModel(item)) }))); }
+  conversations() { return this.conversationsPage().pipe(map((response) => response.data)); }
   conversationMessages(id: string, query: ApiQuery = {}) { return this.api.get<unknown[]>(`conversations/${id}/messages`, query).pipe(map((items) => items.map((item) => this.chatMessageModel(item)))); }
-  sendMessage(id: string, body: string) { return this.api.post<unknown>(`conversations/${id}/messages`, { body }).pipe(map((item) => this.chatMessageModel(item))); }
+  conversationMessageUpdates(id: string, after: number) { return this.api.get<unknown[]>(`conversations/${encodeURIComponent(id)}/events`, { after, limit: 50 }).pipe(map((items) => items.map((item) => this.chatMessageModel(item)))); }
+  sendMessage(id: string, body: string, idempotencyKey: string) { return this.api.post<unknown>(`conversations/${encodeURIComponent(id)}/messages`, { body }, { headers: { 'Idempotency-Key': idempotencyKey } }).pipe(map((item) => this.chatMessageModel(item))); }
   markConversationRead(id: string, lastSequence: number) { return this.api.post<void>(`conversations/${id}/read`, { lastSequence }); }
 
   notifications(query: ApiQuery = {}) { return this.api.getEnvelope<AppNotification[]>('me/notifications', query).pipe(map((response) => ({ ...response, data: response.data.map((item) => ({ ...item, createdAt: this.normalizeDate(item.createdAt), readAt: item.readAt ? this.normalizeDate(item.readAt) : item.readAt })) }))); }
@@ -105,7 +101,7 @@ export class MarketplaceService {
   customerMetrics(bookings: Booking[]): DashboardMetric[] { return [
       { label: 'Agendados', value: String(bookings.filter((item) => !['completed', 'cancelled'].includes(item.status)).length), hint: 'Em acompanhamento', tone: 'brand' },
       { label: 'Concluídos', value: String(bookings.filter((item) => item.status === 'completed').length), hint: 'No seu histórico', tone: 'neutral' },
-      { label: 'Total gasto', value: this.money(bookings.filter((item) => ['confirmed', 'provider_on_the_way', 'in_progress', 'completed'].includes(item.status)).reduce((sum, item) => sum + item.price.totalCents, 0)), hint: 'Reservas pagas', tone: 'amber' }
+      { label: 'Valores de referência', value: this.money(bookings.filter((item) => ['confirmed', 'provider_on_the_way', 'in_progress', 'completed'].includes(item.status)).reduce((sum, item) => sum + this.localization.convertAmount(item.price.totalCents, item.price.currency, 'BRL'), 0)), hint: 'Reservas confirmadas', tone: 'amber' }
     ]; }
 
   dashboardMetricsFor(portal: 'provider' | 'admin', value: unknown): DashboardMetric[] {
@@ -122,6 +118,14 @@ export class MarketplaceService {
   providerDashboard() { return this.api.get<ProviderDashboard>('provider/dashboard'); }
   providerProfile() { return this.api.get<Record<string, unknown>>('provider/profile'); }
   updateProviderProfile(payload: Record<string, unknown>) { return this.api.patch<Record<string, unknown>>('provider/profile', payload); }
+  providerExperiences() { return this.api.get<unknown[]>('provider/profile/experiences').pipe(map((items) => items.map((item) => this.experienceModel(item)))); }
+  createProviderExperience(payload: Omit<ProfessionalExperience, 'id'>) { return this.api.post<unknown>('provider/profile/experiences', payload).pipe(map((item) => this.experienceModel(item))); }
+  updateProviderExperience(id: string, payload: Omit<ProfessionalExperience, 'id'>) { return this.api.put<unknown>(`provider/profile/experiences/${encodeURIComponent(id)}`, payload).pipe(map((item) => this.experienceModel(item))); }
+  removeProviderExperience(id: string) { return this.api.delete<void>(`provider/profile/experiences/${encodeURIComponent(id)}`); }
+  providerCourses() { return this.api.get<unknown[]>('provider/profile/courses').pipe(map((items) => items.map((item) => this.courseModel(item)))); }
+  createProviderCourse(payload: Omit<ProfessionalCourse, 'id'>) { return this.api.post<unknown>('provider/profile/courses', payload).pipe(map((item) => this.courseModel(item))); }
+  updateProviderCourse(id: string, payload: Omit<ProfessionalCourse, 'id'>) { return this.api.put<unknown>(`provider/profile/courses/${encodeURIComponent(id)}`, payload).pipe(map((item) => this.courseModel(item))); }
+  removeProviderCourse(id: string) { return this.api.delete<void>(`provider/profile/courses/${encodeURIComponent(id)}`); }
   providerServices() { return this.api.get<ProviderService[]>('provider/services').pipe(map((items) => items.map((item) => ({ ...item, catalogPriceCents: this.number(item.catalogPriceCents), customPriceCents: this.number(item.customPriceCents, this.number(item.catalogPriceCents)) })))); }
   updateProviderService(id: string, payload: { priceCents: number; active: boolean }) { return this.api.put<ProviderService>(`provider/services/${id}`, payload); }
   removeProviderService(id: string) { return this.api.delete<void>(`provider/services/${id}`); }
@@ -138,10 +142,10 @@ export class MarketplaceService {
   adminUsers(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/users', query); }
   adminPendingProviders(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/professionals/pending', query); }
   adminBookings(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/bookings', query); }
-  adminPayments(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/payments', query); }
-  adminCoupons(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/coupons', query); }
+  adminContentReports(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/content-reports', query); }
+  adminResolveContentReport(id: string, action: 'hide' | 'retain', note: string) { return this.api.post<unknown>(`admin/content-reports/${encodeURIComponent(id)}/resolve`, { action, note }); }
+  reportContent(contentType: 'professional_comment' | 'review' | 'message', contentId: string, reason: string) { return this.api.post<unknown>('content-reports', { contentType, contentId, reason }); }
   adminCreateService(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/services', payload); }
-  adminCreateCoupon(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/coupons', payload); }
   adminReviewProvider(id: string, status: 'approved' | 'rejected' | 'suspended', notes = '') { return this.api.post<unknown>(`admin/professionals/${id}/review`, { status, notes }); }
   adminUserStatus(id: string, status: 'active' | 'suspended', reason = '') { return this.api.patch<unknown>(`admin/users/${id}/status`, { status, reason }); }
 
@@ -177,35 +181,54 @@ export class MarketplaceService {
       reviewCount: this.number(item['reviewCount'] ?? item['reviewsCount']), completedJobs: this.number(item['completedJobs']), responseTime: this.string(item['responseTime'], 'Responde pela plataforma'),
       priceFromCents: this.number(item['priceFromCents'], servicePrices.length ? Math.min(...servicePrices) : 0), serviceIds: [...new Set([...serviceIds, ...hintedServices])],
       qualities: Array.isArray(item['qualities']) ? item['qualities'].map(String) : ['Perfil aprovado', 'Atendimento pela plataforma'], nextAvailability: this.string(item['nextAvailability'], 'Consulte a agenda'),
-      reviews: rawReviews.map((review) => this.reviewModel(review))
+      reviews: rawReviews.map((review) => this.reviewModel(review)), avatarUrl: this.string(item['avatarUrl']) || null,
+      state: this.string(item['state'] ?? item['baseState']) || undefined, yearsExperience: this.number(item['yearsExperience']), memberSince: this.string(item['memberSince']) || undefined,
+      experiences: Array.isArray(item['experiences']) ? item['experiences'].map((experience) => this.experienceModel(experience)) : [],
+      courses: Array.isArray(item['courses']) ? item['courses'].map((course) => this.courseModel(course)) : []
     };
   }
 
   private reviewModel(value: unknown): Review {
     const item = this.record(value); const author = this.string(item['author'] ?? item['customerName'], 'Cliente');
-    return { id: this.string(item['id']), author, initials: this.string(item['initials'], this.initials(author)), rating: this.number(item['rating'], 5), comment: this.string(item['comment']), createdAt: this.string(item['createdAt'], new Date().toISOString()) };
+    return { id: this.string(item['id']), author, initials: this.string(item['initials'], this.initials(author)), rating: this.number(item['rating'], 5), comment: this.string(item['comment']), createdAt: this.string(item['createdAt'], new Date().toISOString()), serviceName: this.string(item['serviceName']) || undefined, providerReply: this.string(item['providerReply']) || undefined, verifiedTransaction: true };
+  }
+
+  private commentModel(value: unknown): ProfessionalComment {
+    const item = this.record(value); const author = this.string(item['author'], 'Membro da comunidade');
+    return { id: this.string(item['id']), author, initials: this.string(item['initials'], this.initials(author)), comment: this.string(item['comment']), createdAt: this.normalizeDate(this.string(item['createdAt'])) };
+  }
+
+  private experienceModel(value: unknown): ProfessionalExperience {
+    const item = this.record(value);
+    return { id: this.string(item['id']), role: this.string(item['role']), company: this.string(item['company']), description: this.string(item['description']) || null, startedAt: this.string(item['startedAt']), endedAt: this.string(item['endedAt']) || null, current: this.number(item['current']) === 1 };
+  }
+
+  private courseModel(value: unknown): ProfessionalCourse {
+    const item = this.record(value);
+    return { id: this.string(item['id']), title: this.string(item['title']), institution: this.string(item['institution']), completedAt: this.string(item['completedAt']) || null, certificateUrl: this.string(item['certificateUrl']) || null };
   }
 
   private bookingModel(value: unknown): Booking {
-    const item = this.record(value); if (item['service'] && item['provider'] && item['price']) { const booking = value as Booking; return { ...booking, canMessage: Boolean(booking.canMessage ?? booking.conversationId), allowedActions: booking.allowedActions ?? [booking.canCancel ? 'cancel' : '', booking.canReview ? 'review' : '', booking.canMessage ? 'message' : ''].filter(Boolean) }; }
+    const item = this.record(value); if (item['service'] && item['provider'] && item['price']) { const booking = value as Booking; return { ...booking, price: { ...booking.price, currency: this.currency(booking.price.currency) }, history: booking.history ?? [], canMessage: Boolean(booking.canMessage ?? booking.conversationId), allowedActions: booking.allowedActions ?? [booking.canCancel ? 'cancel' : '', booking.canReview ? 'review' : '', booking.canMessage ? 'message' : ''].filter(Boolean) }; }
     const status = this.bookingStatus(this.string(item['status'])); const serviceName = this.string(item['serviceName'], 'Serviço doméstico');
     const professionalName = this.string(item['professionalName'], 'Profissional a definir'); const pricing = this.record(item['pricingSnapshot']);
     const totalCents = this.number(item['totalCents'] ?? pricing['totalCents']); const address = this.record(item['addressSnapshot']);
     const actions = Array.isArray(item['allowedActions']) ? item['allowedActions'].map(String) : [];
+    const history = Array.isArray(item['history']) ? item['history'].map((entry) => { const row = this.record(entry); return { fromStatus: this.string(row['fromStatus']) || null, toStatus: this.bookingStatus(this.string(row['toStatus'])), reason: this.string(row['reason']), createdAt: this.normalizeDate(this.string(row['createdAt'])) }; }) : [];
     return {
       id: this.string(item['id']), code: this.string(item['code'], `CVP-${this.string(item['id']).slice(0, 8).toUpperCase()}`),
       service: { id: this.string(item['serviceId']), categoryId: '', slug: '', name: serviceName, description: '', symbol: this.initials(serviceName), priceFromCents: totalCents, unit: 'serviço', durationMinutes: this.number(item['durationMinutes'], 120) },
       provider: { id: this.string(item['professionalId']), name: professionalName, initials: this.initials(professionalName), headline: '', bio: '', city: '', neighborhood: '', verified: true, rating: 5, reviewCount: 0, completedJobs: 0, responseTime: '', priceFromCents: 0, serviceIds: [], qualities: [], nextAvailability: '', reviews: [] },
       customerName: this.string(item['customerName'], 'Cliente'), status, scheduledAt: this.normalizeDate(this.string(item['scheduledAt'] ?? item['scheduledStart'])),
       addressLabel: [this.string(address['neighborhood']), this.string(address['city'])].filter(Boolean).join(', ') || 'Endereço da reserva', notes: this.string(item['notes']),
-      price: { subtotalCents: this.number(item['subtotalCents'] ?? pricing['subtotalCents'], totalCents), serviceFeeCents: this.number(item['serviceFeeCents'] ?? pricing['serviceFeeCents']), discountCents: this.number(item['discountCents'] ?? pricing['discountCents']), totalCents, currency: 'BRL' },
-      canCancel: actions.length ? actions.includes('cancel') : ['open', 'awaiting_payment', 'confirmed'].includes(status),
-      canReview: actions.length ? actions.includes('review') : Boolean(item['canReview']), canMessage: actions.length ? actions.includes('message') : Boolean(item['conversationId']), conversationId: this.string(item['conversationId']) || undefined, allowedActions: actions
+      price: { subtotalCents: this.number(item['subtotalCents'] ?? pricing['subtotalCents'], totalCents), serviceFeeCents: this.number(item['serviceFeeCents'] ?? pricing['serviceFeeCents']), discountCents: this.number(item['discountCents'] ?? pricing['discountCents']), totalCents, currency: this.currency(item['currency'] ?? pricing['currency']) },
+      canCancel: actions.length ? actions.includes('cancel') : ['open', 'confirmed'].includes(status),
+      canReview: actions.length ? actions.includes('review') : Boolean(item['canReview']), canMessage: actions.length ? actions.includes('message') : Boolean(item['conversationId']), conversationId: this.string(item['conversationId']) || undefined, allowedActions: actions, history
     };
   }
 
   private bookingStatus(value: string): BookingStatus {
-    const statuses: Record<string, BookingStatus> = { open: 'open', awaiting_payment: 'awaiting_payment', awaiting_confirmation: 'awaiting_confirmation', paid: 'confirmed', confirmed: 'confirmed', provider_on_the_way: 'provider_on_the_way', in_progress: 'in_progress', completed: 'completed', cancelled: 'cancelled', disputed: 'disputed', refunded: 'refunded' };
+    const statuses: Record<string, BookingStatus> = { open: 'open', awaiting_confirmation: 'awaiting_confirmation', confirmed: 'confirmed', provider_on_the_way: 'provider_on_the_way', in_progress: 'in_progress', completed: 'completed', cancelled: 'cancelled', disputed: 'disputed' };
     return statuses[value] ?? 'awaiting_confirmation';
   }
 
@@ -213,14 +236,14 @@ export class MarketplaceService {
     if (Array.isArray(value)) return value as DashboardMetric[];
     const data = this.record(value); const metrics = this.record(data['metrics']);
     if (portal === 'provider') { const profile = this.record(data['profile']); return [
-      { label: 'Ganhos acumulados', value: this.money(this.number(metrics['earningsCents'])), hint: 'Serviços concluídos', tone: 'brand' },
+      { label: 'Serviços concluídos', value: String(this.number(metrics['completedJobs'])), hint: 'Atendimentos finalizados', tone: 'brand' },
       { label: 'Novas solicitações', value: String(this.number(metrics['openRequests'])), hint: 'Oportunidades disponíveis', tone: 'coral' },
       { label: 'Próximos serviços', value: String(this.number(metrics['upcomingJobs'])), hint: 'Confirmados na agenda', tone: 'neutral' },
       { label: 'Sua avaliação', value: this.number(profile['rating'], 5).toFixed(2).replace('.', ','), hint: `${this.number(profile['reviewsCount'])} avaliações`, tone: 'amber' }
     ]; }
     return [
       { label: 'Reservas', value: String(this.number(metrics['bookings'])), hint: `${this.number(metrics['confirmedBookings'])} confirmadas`, tone: 'brand' },
-      { label: 'Volume bruto', value: this.money(this.number(metrics['grossVolumeCents'])), hint: `${this.number(metrics['paidPayments'])} pagamentos`, tone: 'amber' },
+      { label: 'Concluídas', value: String(this.number(metrics['completedBookings'])), hint: 'Atendimentos finalizados', tone: 'amber' },
       { label: 'Prestadores em análise', value: String(this.number(metrics['professionalsPending'])), hint: `${this.number(metrics['professionals'])} cadastrados`, tone: 'coral' },
       { label: 'Clientes', value: String(this.number(metrics['customers'])), hint: 'Contas na plataforma', tone: 'neutral' }
     ];
@@ -234,7 +257,7 @@ export class MarketplaceService {
       durationMinutes: Math.max(30, Number(draft.durationMinutes) || 120),
       areaSqm: Math.max(1, Number(draft.homeSize) || 1),
       addonIds: draft.addonIds,
-      couponCode: draft.coupon?.trim() || null
+      currency: draft.currency
     };
   }
 
@@ -248,7 +271,7 @@ export class MarketplaceService {
       areaSqm: item['areaSqm'] == null ? undefined : this.number(item['areaSqm']),
       items: rawItems.map((raw) => { const row = this.record(raw); return { type: this.string(row['type']), name: this.string(row['name']), quantity: this.number(row['quantity'], 1), unitPriceCents: this.number(row['unitPriceCents']), totalCents: this.number(row['totalCents']) }; }),
       subtotalCents: this.number(item['subtotalCents']), serviceFeeCents: this.number(item['serviceFeeCents']), discountCents: this.number(item['discountCents']), totalCents: this.number(item['totalCents']),
-      professionalAmountCents: this.number(item['professionalAmountCents']), currency: 'BRL', couponCode: this.string(item['couponCode']) || null
+      currency: this.currency(item['currency'])
     };
   }
 
@@ -262,7 +285,7 @@ export class MarketplaceService {
 
   private conversationModel(value: unknown): Conversation {
     const item = this.record(value);
-    return { id: this.string(item['id']), bookingId: this.string(item['bookingId']), bookingStatus: this.string(item['bookingStatus']), serviceName: this.string(item['serviceName'], 'Serviço'), updatedAt: this.normalizeDate(this.string(item['updatedAt'])), lastMessage: this.string(item['lastMessage'], 'Conversa iniciada.'), unreadCount: this.number(item['unreadCount']) };
+    return { id: this.string(item['id']), bookingId: this.string(item['bookingId']), bookingStatus: this.string(item['bookingStatus']), serviceName: this.string(item['serviceName'], 'Serviço'), contactName: this.string(item['contactName']) || undefined, contactId: this.string(item['contactId']) || undefined, contactAvatarUrl: this.string(item['contactAvatarUrl']) || null, updatedAt: this.normalizeDate(this.string(item['updatedAt'])), lastMessage: this.string(item['lastMessage'], 'Conversa iniciada.'), unreadCount: this.number(item['unreadCount']) };
   }
 
   private chatMessageModel(value: unknown): ChatMessage {
@@ -288,7 +311,10 @@ export class MarketplaceService {
         const lastPage = Math.max(page, Number(response.meta?.['lastPage']) || page);
         return page < lastPage ? this.api.getEnvelope<T[]>(path, { ...query, page: page + 1, perPage }) : EMPTY;
       }),
-      reduce((items, response) => [...items, ...(Array.isArray(response.data) ? response.data : [])], [] as T[])
+      reduce((items, response) => {
+        items.push(...(Array.isArray(response.data) ? response.data : []));
+        return items;
+      }, [] as T[])
     );
   }
 
@@ -298,5 +324,9 @@ export class MarketplaceService {
   private string(value: unknown, fallback = ''): string { return typeof value === 'string' && value.trim() ? value : fallback; }
   private number(value: unknown, fallback = 0): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
   private initials(name: string): string { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join(''); }
-  private money(cents: number): string { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(cents / 100); }
+  private money(cents: number): string { return this.localization.formatMoney(cents / 100, 'BRL', 0); }
+  private currency(value: unknown): AppCurrency {
+    const currency = String(value).toUpperCase();
+    return currency === 'USD' || currency === 'EUR' || currency === 'BRL' ? currency : 'BRL';
+  }
 }

@@ -139,21 +139,10 @@ ON DUPLICATE KEY UPDATE
     professional_id = VALUES(professional_id), weekday = VALUES(weekday), start_time = VALUES(start_time),
     end_time = VALUES(end_time), active = 1, updated_at = UTC_TIMESTAMP();
 
-INSERT INTO coupons
-    (public_id, code, name, discount_type, discount_value, max_discount_cents, minimum_order_cents,
-     usage_limit, used_count, starts_at, ends_at, active, created_at, updated_at)
-VALUES
-    ('60000000-0000-4000-8000-000000000001', 'BEMVINDO10', 'Boas-vindas ChezVoust Pro', 'percent', 10, 5000, 8000, 10000, 0, NULL, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
-    ('60000000-0000-4000-8000-000000000002', 'CASA20', 'Campanha Casa em Dia', 'percent', 20, 6000, 18000, 5000, 0, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-ON DUPLICATE KEY UPDATE
-    name = VALUES(name), discount_type = VALUES(discount_type), discount_value = VALUES(discount_value),
-    max_discount_cents = VALUES(max_discount_cents), minimum_order_cents = VALUES(minimum_order_cents),
-    usage_limit = VALUES(usage_limit), active = 1, updated_at = UTC_TIMESTAMP();
-
 INSERT INTO promotions
     (public_id, title, subtitle, cta_label, cta_url, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
 VALUES
-    ('70000000-0000-4000-8000-000000000001', 'Até 20% de desconto', 'Use CASA20 em serviços selecionados e cuide da sua casa.', 'Ver serviços', '/servicos', '#08B86F', '#FFFFFF', 1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('70000000-0000-4000-8000-000000000001', 'Atendimento organizado', 'Encontre profissionais avaliados para cada necessidade da sua casa.', 'Ver serviços', '/servicos', '#08B86F', '#FFFFFF', 1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('70000000-0000-4000-8000-000000000002', 'Profissionais verificados', 'Agende com praticidade, acompanhe tudo pelo aplicativo.', 'Encontrar profissional', '/profissionais', '#F7D44A', '#241A1C', 1, NULL, NULL, 20, UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
     title = VALUES(title), subtitle = VALUES(subtitle), cta_label = VALUES(cta_label), cta_url = VALUES(cta_url),
@@ -162,8 +151,6 @@ ON DUPLICATE KEY UPDATE
 
 INSERT INTO app_settings (setting_key, setting_value, is_public, updated_at)
 VALUES
-    ('service_fee_percent', '12', 1, UTC_TIMESTAMP()),
-    ('professional_commission_percent', '15', 0, UTC_TIMESTAMP()),
     ('minimum_booking_notice_minutes', '30', 1, UTC_TIMESTAMP()),
     ('booking_horizon_days', '180', 1, UTC_TIMESTAMP()),
     ('support_email', '"suporte@chezvoust.test"', 1, UTC_TIMESTAMP()),
@@ -173,17 +160,17 @@ VALUES
 ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), is_public = VALUES(is_public), updated_at = UTC_TIMESTAMP();
 
 INSERT INTO bookings
-    (public_id, customer_id, professional_id, service_id, address_id, coupon_id, mode, status,
+    (public_id, customer_id, professional_id, service_id, address_id, mode, status,
      scheduled_start, scheduled_end, timezone, duration_minutes, quantity, area_sqm, notes,
      address_snapshot, pricing_snapshot, subtotal_cents, discount_cents, service_fee_cents,
-     total_cents, professional_amount_cents, currency, paid_at, completed_at, created_at, updated_at)
+     total_cents, professional_amount_cents, currency, completed_at, created_at, updated_at)
 VALUES
-    ('80000000-0000-4000-8000-000000000001', @customer_id, @provider_id, @service_cleaning, @address_id, NULL,
+    ('80000000-0000-4000-8000-000000000001', @customer_id, @provider_id, @service_cleaning, @address_id,
      'direct', 'completed', DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY), DATE_ADD(DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY), INTERVAL 3 HOUR),
      'America/Sao_Paulo', 180, 1, NULL, 'Interfone 42. Dar atenção especial à cozinha.',
      JSON_OBJECT('label', 'Casa', 'street', 'Rua das Acácias', 'number', '125', 'complement', 'Apto 42', 'neighborhood', 'Vila Mariana', 'city', 'São Paulo', 'state', 'SP', 'postal_code', '04110000'),
-     JSON_OBJECT('serviceId', '40000000-0000-4000-8000-000000000001', 'serviceName', 'Limpeza residencial', 'subtotalCents', 14500, 'discountCents', 0, 'serviceFeeCents', 1740, 'totalCents', 16240, 'currency', 'BRL'),
-     14500, 0, 1740, 16240, 12325, 'BRL', DATE_SUB(UTC_TIMESTAMP(), INTERVAL 15 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 16 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY))
+     JSON_OBJECT('serviceId', '40000000-0000-4000-8000-000000000001', 'serviceName', 'Limpeza residencial', 'subtotalCents', 14500, 'discountCents', 0, 'serviceFeeCents', 0, 'totalCents', 14500, 'currency', 'BRL'),
+     14500, 0, 0, 14500, 14500, 'BRL', DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 16 DAY), DATE_SUB(UTC_TIMESTAMP(), INTERVAL 14 DAY))
 ON DUPLICATE KEY UPDATE
     customer_id = VALUES(customer_id), professional_id = VALUES(professional_id), service_id = VALUES(service_id),
     address_id = VALUES(address_id), status = 'completed', updated_at = VALUES(updated_at);

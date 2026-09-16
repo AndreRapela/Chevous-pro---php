@@ -34,10 +34,13 @@ for (const path of required) {
 
 const packageJson = JSON.parse(await text('frontend/package.json'));
 assert.ok(packageJson.dependencies['@angular/core'], 'Angular deve estar declarado.');
+assert.ok(packageJson.dependencies['@angular/ssr'], 'SSR deve estar declarado para tornar as páginas públicas rastreáveis.');
 assert.ok(packageJson.scripts.build, 'Script de build deve existir.');
 assert.ok(packageJson.scripts.lint, 'Script de lint deve existir.');
 assert.ok(packageJson.scripts['test:unit'], 'Suíte unitária deve existir.');
 assert.ok(packageJson.scripts['test:coverage'], 'Relatório de cobertura deve existir.');
+assert.ok(packageJson.scripts['test:bundle'], 'Auditoria do bundle de produção deve existir.');
+assert.ok(packageJson.scripts['test:ssr'], 'Verificação de renderização SSR deve existir.');
 assert.match(packageJson.scripts['test:unit'], /node .*--test/, 'A suíte unitária deve usar o executor nativo do Node.');
 assert.ok(!packageJson.devDependencies.vitest, 'Vitest não deve voltar como dependência redundante.');
 assert.ok(packageJson.devDependencies['@angular/build'], 'O construtor moderno do Angular deve estar declarado.');
@@ -45,6 +48,8 @@ assert.ok(!packageJson.devDependencies['@angular-devkit/build-angular'], 'O cons
 const angularConfig = JSON.parse(await text('frontend/angular.json'));
 const angularArchitect = angularConfig.projects['chezvoust-pro'].architect;
 assert.equal(angularArchitect.build.builder, '@angular/build:application', 'A produção deve usar o construtor moderno do Angular.');
+assert.equal(angularArchitect.build.options.outputMode, 'server', 'Páginas públicas devem ser renderizadas pelo servidor.');
+assert.equal(angularArchitect.build.options.ssr.entry, 'src/server.ts', 'O processo SSR deve ter uma entrada explícita.');
 assert.equal(angularArchitect.serve.builder, '@angular/build:dev-server', 'O servidor local deve usar o construtor moderno do Angular.');
 const productionOptimization = angularArchitect.build.configurations.production.optimization;
 assert.equal(productionOptimization.styles.inlineCritical, false, 'CSS crítico inline conflita com a CSP e não deve ser ativado.');
@@ -54,6 +59,29 @@ assert.match(globalStyles, /\.desktop-hero-lower\s*\{[^}]*min-height:\s*8\.5rem/
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
 assert.match(globalStyles, /\.portal-header \.icon-button\s*\{[^}]*min-width:\s*2\.75rem/s, 'Ações do cabeçalho devem manter alvo de toque de 44px.');
+assert.match(globalStyles, /--public-bottom-nav-height:\s*calc\(4\.4rem \+ env\(safe-area-inset-bottom\)\)/, 'A navegação pública deve declarar uma altura compartilhada com a safe area.');
+assert.match(globalStyles, /\.mobile-sticky-action\s*\{[^}]*var\(--public-bottom-nav-height\)/s, 'O CTA fixo do perfil deve ficar acima da navegação inferior.');
+assert.match(globalStyles, /body:has\(cvp-provider-detail\) \.site-footer\s*\{[^}]*--mobile-sticky-action-height/s, 'O rodapé do perfil deve reservar espaço para CTA e navegação fixos.');
+assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat móvel deve respeitar o viewport dinâmico quando o teclado aparece.');
+assert.match(globalStyles, /\.catalog-results \.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/s, 'O catálogo deve manter informação de decisão em uma coluna no celular.');
+assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');
+
+const bookingWizard = await text('frontend/src/app/features/booking/pages/booking-wizard/booking-wizard.component.ts');
+assert.ok(
+  bookingWizard.indexOf('<cvp-booking-price-summary') < bookingWizard.indexOf('<div class="booking-main">'),
+  'No celular, o resumo de referência deve aparecer antes do formulário e da ação de continuar.'
+);
+const homeSource = await text('frontend/src/app/features/public/pages/home/home.component.ts');
+assert.match(homeSource, /mobile-scroll-hint/, 'Carrosséis móveis devem indicar visualmente que existe mais conteúdo.');
+const documentSource = await text('frontend/src/index.html');
+assert.match(documentSource, /<html lang="pt-BR">/, 'O idioma inicial do documento deve acompanhar a interface padrão em português.');
+const seoService = await text('frontend/src/app/core/seo/seo.service.ts');
+for (const tag of ['canonical', 'og:title', 'twitter:card', 'application/ld+json', 'noindex, nofollow']) {
+  assert.ok(seoService.includes(tag), `Metadado SEO ${tag} ausente.`);
+}
+const serverRoutes = await text('frontend/src/app/app.routes.server.ts');
+assert.match(serverRoutes, /path: 'conta\/\*\*'[\s\S]*RenderMode\.Client/, 'Área autenticada deve permanecer fora do SSR público.');
+assert.match(serverRoutes, /path: '\*\*'[\s\S]*status: 404/, 'Rotas inexistentes precisam responder 404 no SSR.');
 
 const routeSource = (await Promise.all([
   'frontend/src/app/app.routes.ts',
@@ -66,6 +94,8 @@ const routeSource = (await Promise.all([
 for (const route of ['servicos', 'profissionais', 'agendar/:serviceId', 'redefinir-senha', 'verificar-email', 'conta', 'agendamentos/:id', 'prestador', 'admin']) {
   assert.match(routeSource, new RegExp(`path:\\s*['\"]${route.replace('/', '\\/')}['\"]`), `Rota ${route} ausente.`);
 }
+assert.match(routeSource, /profissionais\/:id\/:slug/, 'Perfil público precisa de URL semântica além do ID técnico.');
+assert.match(routeSource, /servicos\/categoria\/:category/, 'Categoria pública precisa de URL indexável.');
 
 const angularFiles = (await files('frontend/src/app')).filter((path) => path.endsWith('.ts'));
 for (const path of angularFiles) {
@@ -85,49 +115,126 @@ for (const legacy of ['auth-pages.component.ts', 'customer-pages.component.ts', 
 const apiRoutes = await text('backend/routes/api.php');
 const routeCount = (apiRoutes.match(/\$router->add\(/g) ?? []).length;
 assert.ok(routeCount >= 80, `Contrato REST incompleto: ${routeCount} rotas.`);
-for (const endpoint of ['/api/v1/auth/login', '/api/v1/auth/password/reset', '/api/v1/auth/email/verify', '/api/v1/bookings/quote', '/api/v1/provider/dashboard', '/api/v1/provider/availability-exceptions', '/api/v1/admin/dashboard']) {
+for (const endpoint of ['/api/v1/auth/login', '/api/v1/auth/password/reset', '/api/v1/auth/email/verify', '/api/v1/bookings/quote', '/api/v1/provider/dashboard', '/api/v1/provider/availability-exceptions', '/api/v1/admin/dashboard', '/api/v1/seo/robots.txt', '/api/v1/seo/sitemap.xml', '/api/v1/conversations/{id}/events']) {
   assert.ok(apiRoutes.includes(endpoint), `Endpoint ${endpoint} ausente.`);
 }
 
 const schema = await text('database/schema.sql');
 const tableCount = (schema.match(/CREATE TABLE IF NOT EXISTS/gi) ?? []).length;
-assert.ok(tableCount >= 35, `Schema incompleto: ${tableCount} tabelas.`);
+assert.ok(tableCount >= 32, `Schema incompleto: ${tableCount} tabelas.`);
 assert.match(schema, /KEY idx_messages_conversation \(conversation_id, id\)/, 'Mensagens devem ter índice para leitura incremental por conversa.');
+assert.match(schema, /previous_refresh_token_hash/, 'A rotação concorrente de refresh precisa manter o hash anterior por uma janela curta.');
+assert.doesNotMatch(schema, /CREATE TABLE IF NOT EXISTS coupons/i, 'Cupons não pertencem a uma plataforma sem pagamentos.');
+assert.doesNotMatch(apiRoutes, /coupons/i, 'A API não deve expor recursos de cupom.');
 
 const engagement = await text('backend/src/Modules/Engagement/EngagementController.php');
 assert.match(engagement, /m\.id > :after/, 'Leitura de mensagens deve aceitar cursor incremental.');
+assert.match(engagement, /function messageUpdates\(/, 'Chat deve expor atualização autenticada de baixa latência.');
+const apiIndex = await text('backend/public/index.php');
+assert.match(apiIndex, /\['rateLimiter'\]->check\([\s\S]*global:/, 'Atualizações do chat devem atravessar o limite global antes do roteamento.');
+assert.doesNotMatch(engagement, /chat-events:user:|chat-events:ip:/, 'Polling do chat não deve duplicar buckets persistentes além do limite global.');
+assert.match(engagement, /pollAfterSeconds.*10/, 'A API deve orientar a cadência de sincronização incremental sustentável.');
+assert.doesNotMatch(engagement, /connection_aborted\(\)|usleep\(1_000_000\)/, 'A atualização do chat não deve reter workers PHP em espera longa.');
 assert.match(engagement, /INNER JOIN conversation_participants cp/, 'Mensagens devem ser restritas aos participantes da conversa.');
 assert.match(engagement, /senderName[\s\S]*messageType[\s\S]*createdAt/, 'Envio deve devolver um ChatMessage completo.');
+assert.match(engagement, /operation = \\'chat\.message\\'/, 'Envio de mensagem deve suportar idempotência.');
+assert.match(engagement, /beginTransaction\(\)/, 'Mensagem, atualização e notificação devem ser gravadas atomicamente.');
 assert.match(engagement, /MAX\(id\)/, 'Confirmação de leitura deve limitar o cursor ao conteúdo existente.');
+assert.match(engagement, /provider_on_the_way/, 'Chat deve permanecer disponível enquanto o profissional está a caminho.');
 
 const bookings = await text('backend/src/Modules/Bookings/BookingController.php');
 assert.match(bookings, /IDEMPOTENCY_CONFLICT/, 'Reuso conflitante da chave idempotente deve ser rejeitado.');
 assert.match(bookings, /hash_equals\(\(string\) \$existingRequest\['request_hash'\], \$requestHash\)/, 'A chave idempotente deve comparar o conteúdo da requisição.');
 
+const bookingModels = await text('frontend/src/app/core/models/index.ts');
+assert.doesNotMatch(bookingModels, /frequency:\s*'once'/, 'Recorrência não implementada não deve permanecer no contrato do frontend.');
+assert.doesNotMatch(bookingModels, /PaymentIntent|paymentMethod/, 'Nenhum contrato de pagamento deve permanecer no frontend.');
+const providerStep = await text('frontend/src/app/features/booking/components/booking-provider-step/booking-provider-step.component.ts');
+assert.match(providerStep, /Receber propostas/, 'Cliente deve conseguir publicar uma solicitação aberta pela interface.');
+const marketplaceService = await text('frontend/src/app/core/data-access/marketplace.service.ts');
+assert.doesNotMatch(marketplaceService, /payment-intents|payments\//, 'O cliente não deve iniciar cobrança pela plataforma.');
+assert.doesNotMatch(marketplaceService, /couponCode/, 'O cliente não deve enviar ou interpretar cupons.');
+const bookingWizardSource = await text('frontend/src/app/features/booking/pages/booking-wizard/booking-wizard.component.ts');
+assert.doesNotMatch(bookingWizardSource, /coupon/i, 'A reserva não deve expor fluxo de cupom ou desconto.');
+const pricing = await text('backend/src/Modules/Bookings/PricingService.php');
+assert.doesNotMatch(pricing, /coupon|resolveCoupon/i, 'A precificação não deve consultar cupons.');
+
 const catalog = await text('backend/src/Modules/Catalog/CatalogController.php');
 assert.match(catalog, /slot_reservations/, 'Disponibilidade pública deve considerar horários temporariamente reservados.');
 assert.match(catalog, /'slots' => \$slots/, 'Disponibilidade pública deve devolver horários calculados.');
+assert.match(catalog, /function robots\(/, 'Backend deve gerar robots.txt a partir da URL pública configurada.');
+assert.match(catalog, /function sitemap\(/, 'Backend deve gerar sitemap.xml com catálogo e profissionais ativos.');
 
 const authController = await text('backend/src/Modules/Auth/AuthController.php');
 assert.match(authController, /'httponly' => true/, 'Token de renovação deve usar cookie HttpOnly.');
 assert.doesNotMatch(authController, /'refreshToken' => \$tokens\['refreshToken'\]/, 'Login não deve expor o token de renovação ao JavaScript.');
+assert.match(authController, /previous_refresh_expires_at/, 'Refresh concorrente em abas não deve revogar uma sessão válida por corrida.');
+assert.match(authController, /DUMMY_PASSWORD_HASH/, 'Falhas de login devem executar uma verificação de senha mesmo para e-mail inexistente.');
+const response = await text('backend/src/Core/Response.php');
+assert.match(response, /Cache-Control: no-store, private/, 'Respostas JSON da API não devem permanecer em cache.');
+const account = await text('backend/src/Modules/Users/AccountController.php');
+assert.match(account, /avatar:user:/, 'Envio de avatar deve ter limite de frequência por usuário.');
+assert.match(account, /4_000_000/, 'Avatar deve limitar a quantidade de pixels decodificados.');
+const phpUploads = await text('backend/docker/php/uploads.ini');
+assert.match(phpUploads, /upload_max_filesize = 6M/, 'O PHP deve aceitar o corpo multipart do avatar de 5 MiB.');
+const nginxTemplate = await text('frontend/nginx.conf.template');
+assert.match(nginxTemplate, /client_max_body_size 6m/, 'A borda Nginx deve aceitar o corpo multipart do avatar de 5 MiB.');
 
 const messageSync = await text('frontend/src/app/features/messaging/data-access/conversation-sync.service.ts');
 assert.match(messageSync, /exhaustMap/, 'Sincronização de mensagens não deve sobrepor requisições.');
 assert.match(messageSync, /visibilityState/, 'Sincronização deve pausar quando a página não estiver visível.');
-assert.match(messageSync, /after: messages\.at\(-1\)\?\.sequence/, 'Sincronização deve drenar lotes usando o último cursor.');
+assert.match(messageSync, /conversationMessageUpdates/, 'Mensagens novas devem usar atualização autenticada de baixa latência.');
+assert.match(messageSync, /repeat\(/, 'O cliente deve abrir a próxima espera apenas após a anterior terminar.');
+assert.match(messageSync, /messagesLatest/, 'A conversa deve iniciar pela janela recente, sem baixar todo o histórico.');
+assert.match(messageSync, /before: Number\.MAX_SAFE_INTEGER/, 'A janela recente deve ser solicitada pelo cursor anterior.');
+assert.doesNotMatch(messageSync, /expand\(/, 'A sincronização não deve drenar páginas ilimitadas no primeiro acesso.');
+const messagesPage = await text('frontend/src/app/features/messaging/pages/messages/messages.component.ts');
+assert.match(messagesPage, /data-cvp-no-localize/, 'Mensagens e nomes enviados por usuários não podem ser alterados pela tradução automática.');
+assert.match(messagesPage, /loadOlderMessages/, 'O histórico do chat deve ser carregado sob demanda.');
+assert.match(messagesPage, /chat-has-selection/, 'No celular, a conversa selecionada deve ocupar a tela de leitura.');
+assert.match(messagesPage, /connectionStatusLabel/, 'O chat deve informar quando está conectando ou reconectando.');
+assert.match(messagesPage, /shouldSendComposerMessage/, 'O compositor deve preservar Enter para quebra de linha em mobile.');
+assert.match(messagesPage, /pendingMessageKey/, 'Reenvio depois de falha precisa manter a mesma chave de idempotência.');
+assert.match(marketplaceService, /Idempotency-Key/, 'O cliente deve enviar chave idempotente ao publicar mensagem.');
+const productionEnvironment = await text('frontend/src/environments/environment.prod.ts');
+const loginPage = await text('frontend/src/app/features/auth/pages/login/login.component.ts');
+assert.match(productionEnvironment, /demoAccounts: null/, 'Credenciais de demonstração não podem ser incluídas na configuração de produção.');
+assert.doesNotMatch(loginPage, /Cliente@123|Profissional@123|Admin@123/, 'A tela de login não deve embutir senhas de demonstração.');
+
+const providerDetail = await text('frontend/src/app/features/public/pages/provider-detail/provider-detail.component.ts');
+assert.match(providerDetail, /Avaliações verificadas/, 'Perfil público deve separar avaliações de reservas concluídas.');
+assert.match(providerDetail, /Comentários públicos/, 'Perfil público deve exibir comentários da comunidade em uma área distinta.');
+assert.match(providerDetail, /data-cvp-no-localize/, 'Conteúdo escrito pelo profissional ou clientes não pode ser alterado pela camada de tradução.');
+const localizedContent = await text('frontend/src/app/shared/localization/localized-content.directive.ts');
+assert.match(localizedContent, /closest\('\[data-cvp-no-localize\]'\)/, 'A diretiva de tradução deve respeitar o conteúdo criado por usuários.');
+
+for (const endpoint of ['/api/v1/me/avatar', '/api/v1/professionals/{id}/comments', '/api/v1/provider/profile/experiences', '/api/v1/provider/profile/courses']) {
+  assert.ok(apiRoutes.includes(endpoint), `Endpoint de perfil profissional ausente: ${endpoint}`);
+}
+for (const table of ['professional_experiences', 'professional_courses', 'professional_comments']) {
+  assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`), `Tabela de perfil profissional ausente: ${table}.`);
+}
 
 const compose = await text('compose.yaml');
-for (const service of ['database', 'api', 'web', 'worker']) {
+for (const service of ['database', 'api', 'web', 'ssr', 'worker']) {
   assert.match(compose, new RegExp(`^  ${service}:`, 'm'), `Serviço Compose ${service} ausente.`);
 }
 assert.ok((compose.match(/PROXY_SHARED_SECRET:/g) ?? []).length >= 3, 'Segredo interno deve chegar à API, web e worker.');
+assert.match(compose, /api:[\s\S]*healthcheck:[\s\S]*api\/v1\/health/, 'A API deve publicar um health check após aplicar as migrações.');
+assert.match(compose, /worker:[\s\S]*depends_on:[\s\S]*api:[\s\S]*condition: service_healthy/, 'O worker deve aguardar a API migrada e saudável.');
+assert.match(compose, /ssr:[\s\S]*SSR_API_URL: http:\/\/api\/api\/v1/, 'SSR deve usar a API interna, sem depender do navegador.');
+assert.match(compose, /ssr:[\s\S]*SSR_PROXY_SHARED_SECRET/, 'SSR deve autenticar a propagação interna do IP até a API.');
 
 const nginx = await text('frontend/nginx.conf.template');
 assert.match(nginx, /proxy_set_header X-Forwarded-For \$remote_addr;/, 'Nginx deve substituir o IP encaminhado.');
 assert.match(nginx, /proxy_set_header X-Proxy-Secret \$\{PROXY_SHARED_SECRET\};/, 'Nginx deve autenticar o proxy interno.');
 assert.match(nginx, /resolver 127\.0\.0\.11/, 'Nginx deve usar o DNS interno dinâmico do Docker.');
 assert.match(nginx, /proxy_pass \$api_upstream;/, 'Nginx deve resolver novamente a API após recriações.');
+assert.match(nginx, /location = \/robots\.txt/, 'robots.txt deve estar disponível na raiz do domínio.');
+assert.match(nginx, /location = \/sitemap\.xml/, 'sitemap.xml deve estar disponível na raiz do domínio.');
+assert.match(nginx, /location @ssr/, 'Rotas públicas devem alcançar o processo SSR.');
+assert.match(nginx, /try_files \$uri @ssr;/, 'Nginx não deve mascarar URLs desconhecidas com index.html e status 200.');
+assert.match(nginx, /proxy_set_header X-Client-IP \$remote_addr;/, 'O SSR deve receber apenas o IP observado pelo Nginx.');
 assert.match(nginx, /Content-Security-Policy/, 'Nginx deve publicar uma política de segurança de conteúdo.');
 assert.match(nginx, /Permissions-Policy/, 'Nginx deve restringir recursos sensíveis do navegador.');
 assert.match(nginx, /Strict-Transport-Security/, 'Nginx deve instruir navegadores HTTPS a manter transporte seguro.');

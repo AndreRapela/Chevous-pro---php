@@ -40,6 +40,9 @@ export const MOCK_PROVIDERS: ProviderProfile[] = [
     city: 'São Paulo', neighborhood: 'Vila Mariana', verified: true, topProvider: true, rating: 4.96, reviewCount: 128, completedJobs: 214,
     responseTime: 'Responde em até 10 min', priceFromCents: 12000, serviceIds: ['clean-home', 'clean-heavy', 'laundry-wash'],
     qualities: ['Pontual', 'Cuidadosa', 'Muito elogiada'], nextAvailability: 'Hoje, 14:00',
+    avatarUrl: '/images/garconete-cadastro-v1-640.webp', state: 'SP', yearsExperience: 6,
+    experiences: [{ id: 'experience-1', role: 'Especialista em limpeza residencial', company: 'Atuação autônoma', description: 'Atendimento residencial com organização e cuidado nos detalhes.', startedAt: '2019-01-01', endedAt: null, current: true }],
+    courses: [{ id: 'course-1', title: 'Higienização e limpeza profissional', institution: 'Instituto Casa', completedAt: '2022-10-01', certificateUrl: null }],
     reviews: [
       { id: 'r1', author: 'Marina', initials: 'MC', rating: 5, comment: 'Serviço impecável e comunicação excelente do início ao fim.', createdAt: '2026-08-12' },
       { id: 'r2', author: 'Rafael', initials: 'RM', rating: 5, comment: 'Muito pontual, organizada e cuidadosa com o apartamento.', createdAt: '2026-08-03' }
@@ -90,12 +93,12 @@ export const MOCK_BOOKINGS: Booking[] = [
   {
     id: 'bk-1001', code: 'CVP-1001', service: cleaningService, provider: ana, customerName: 'Marina Costa', status: 'confirmed',
     scheduledAt: '2026-08-20T14:00:00-03:00', addressLabel: 'Vila Mariana, São Paulo', notes: 'Priorizar cozinha e banheiros.',
-    price: { subtotalCents: 14400, serviceFeeCents: 1440, discountCents: 0, totalCents: 15840, currency: 'BRL' }, canCancel: true, canReview: false, canMessage: true, conversationId: 'conversation-1', allowedActions: ['cancel', 'message']
+    price: { subtotalCents: 14400, serviceFeeCents: 0, discountCents: 0, totalCents: 14400, currency: 'BRL' }, canCancel: true, canReview: false, canMessage: true, conversationId: 'conversation-1', allowedActions: ['cancel', 'message']
   },
   {
     id: 'bk-0988', code: 'CVP-0988', service: repairService, provider: lucas, customerName: 'Marina Costa', status: 'completed',
     scheduledAt: '2026-08-08T09:00:00-03:00', addressLabel: 'Vila Mariana, São Paulo',
-    price: { subtotalCents: 11000, serviceFeeCents: 1100, discountCents: 1500, totalCents: 10600, currency: 'BRL' }, canCancel: false, canReview: true, canMessage: false, allowedActions: ['review']
+    price: { subtotalCents: 11000, serviceFeeCents: 0, discountCents: 0, totalCents: 11000, currency: 'BRL' }, canCancel: false, canReview: true, canMessage: false, allowedActions: ['review']
   }
 ];
 
@@ -106,19 +109,19 @@ export const MOCK_MESSAGES: MessagePreview[] = [
 
 export const CUSTOMER_METRICS: DashboardMetric[] = [
   { label: 'Próximo serviço', value: 'Qui, 14h', hint: 'Limpeza residencial', tone: 'brand' },
-  { label: 'Economia no mês', value: 'R$ 42', hint: 'Cupons e benefícios', tone: 'amber' },
+  { label: 'Economia no mês', value: '€42', hint: 'Cupons e benefícios', tone: 'amber' },
   { label: 'Serviços concluídos', value: '8', hint: 'Nos últimos 12 meses', tone: 'neutral' }
 ];
 
 export const PROVIDER_METRICS: DashboardMetric[] = [
-  { label: 'Ganhos em agosto', value: 'R$ 3.480', hint: '+18% em relação a julho', tone: 'brand' },
+  { label: 'Serviços em agosto', value: '€3,480', hint: '+18% em relação a julho', tone: 'brand' },
   { label: 'Novas solicitações', value: '6', hint: '3 precisam de resposta', tone: 'coral' },
   { label: 'Sua avaliação', value: '4,96', hint: '128 avaliações', tone: 'amber' }
 ];
 
 export const ADMIN_METRICS: DashboardMetric[] = [
   { label: 'Reservas hoje', value: '184', hint: '+12% contra terça passada', tone: 'brand' },
-  { label: 'GMV no mês', value: 'R$ 428 mil', hint: '87% da meta mensal', tone: 'amber' },
+  { label: 'GMV no mês', value: '€428k', hint: '87% da meta mensal', tone: 'amber' },
   { label: 'Prestadores em análise', value: '27', hint: 'Dados demonstrativos', tone: 'coral' },
   { label: 'Chamados abertos', value: '14', hint: '2 com prioridade alta', tone: 'neutral' }
 ];

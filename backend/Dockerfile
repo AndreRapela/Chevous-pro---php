@@ -1,12 +1,17 @@
-FROM php:8.2-apache
+FROM php:8.4-apache
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libonig-dev \
-    && docker-php-ext-install -j"$(nproc)" mbstring pdo_mysql \
+    && apt-get install -y --no-install-recommends libcurl4-openssl-dev libjpeg62-turbo-dev libonig-dev libpng-dev libwebp-dev \
+    && docker-php-ext-configure gd --with-jpeg --with-webp \
+    && docker-php-ext-install -j"$(nproc)" curl gd mbstring pdo_mysql \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
+# O limite da borda (Nginx) e do PHP precisa comportar o contrato público de
+# avatar de 5 MiB mais o overhead do multipart.
+COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
 
 RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
     /etc/apache2/sites-available/*.conf \

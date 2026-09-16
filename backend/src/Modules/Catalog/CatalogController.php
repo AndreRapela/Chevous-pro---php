@@ -13,6 +13,77 @@ use DateTimeZone;
 
 final class CatalogController extends Controller
 {
+    public function robots(Request $request, array $params, ?array $auth): Response
+    {
+        $siteUrl = rtrim((string) $this->config['url'], '/');
+        $body = "User-agent: *\n"
+            . "Allow: /\n"
+            . "Disallow: /api/\n"
+            . "Disallow: /entrar\n"
+            . "Disallow: /cadastro\n"
+            . "Disallow: /recuperar-senha\n"
+            . "Disallow: /redefinir-senha\n"
+            . "Disallow: /verificar-email\n"
+            . "Disallow: /agendar/\n"
+            . "Disallow: /conta/\n"
+            . "Disallow: /prestador/\n"
+            . "Disallow: /admin/\n"
+            . "\nSitemap: {$siteUrl}/sitemap.xml\n";
+        return Response::text($body, 'text/plain; charset=utf-8', 3600);
+    }
+
+    public function sitemap(Request $request, array $params, ?array $auth): Response
+    {
+        $baseUrl = rtrim((string) $this->config['url'], '/');
+        $entries = [
+            ['/', 'weekly', '1.0', null],
+            ['/servicos', 'daily', '0.9', null],
+            ['/profissionais', 'daily', '0.9', null],
+            ['/como-funciona', 'monthly', '0.6', null],
+            ['/seguranca', 'monthly', '0.6', null],
+            ['/ajuda', 'monthly', '0.5', null],
+            ['/termos', 'yearly', '0.3', null],
+            ['/privacidade', 'yearly', '0.3', null],
+        ];
+        $categories = $this->db->query(
+            'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
+             FROM service_categories WHERE active = 1 ORDER BY sort_order, name'
+        )->fetchAll();
+        foreach ($categories as $category) {
+            $entries[] = ['/servicos/categoria/' . rawurlencode((string) $category['slug']), 'weekly', '0.7', $category['lastmod']];
+        }
+        $services = $this->db->query(
+            'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
+             FROM services WHERE active = 1 ORDER BY updated_at DESC'
+        )->fetchAll();
+        foreach ($services as $service) {
+            $entries[] = ['/servicos/' . rawurlencode((string) $service['slug']), 'weekly', '0.8', $service['lastmod']];
+        }
+        $professionals = $this->db->query(
+            'SELECT u.public_id AS id, u.name, p.base_city AS city,
+                    DATE_FORMAT(GREATEST(u.updated_at, p.updated_at), \'%Y-%m-%d\') AS lastmod
+             FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
+             WHERE u.status = \'active\' AND p.verification_status = \'approved\'
+             ORDER BY p.updated_at DESC'
+        )->fetchAll();
+        foreach ($professionals as $professional) {
+            $slug = $this->publicSlug((string) $professional['name'] . ' ' . (string) $professional['city']);
+            $entries[] = ['/profissionais/' . rawurlencode((string) $professional['id']) . '/' . rawurlencode($slug), 'weekly', '0.8', $professional['lastmod']];
+        }
+
+        $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+        $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+        foreach ($entries as [$path, $changeFrequency, $priority, $lastModified]) {
+            $xml .= "  <url><loc>" . $this->xml($baseUrl . $path) . "</loc>";
+            if (is_string($lastModified) && $lastModified !== '') {
+                $xml .= '<lastmod>' . $this->xml($lastModified) . '</lastmod>';
+            }
+            $xml .= '<changefreq>' . $changeFrequency . '</changefreq><priority>' . $priority . "</priority></url>\n";
+        }
+        $xml .= '</urlset>\n';
+        return Response::text($xml, 'application/xml; charset=utf-8', 3600);
+    }
+
     public function appConfig(Request $request, array $params, ?array $auth): Response
     {
         $settings = $this->db->query('SELECT setting_key, setting_value FROM app_settings WHERE is_public = 1')->fetchAll();
@@ -80,6 +151,10 @@ final class CatalogController extends Controller
             $search = '%' . mb_substr((string) $request->query['q'], 0, 80) . '%';
             $values['search_name'] = $search;
             $values['search_description'] = $search;
+        }
+        if (!empty($request->query['professional'])) {
+            $where[] = 'EXISTS (SELECT 1 FROM professional_services ps INNER JOIN users pu ON pu.id = ps.professional_id WHERE ps.service_id = s.id AND ps.active = 1 AND pu.public_id = :professional_id AND pu.status = \'active\')';
+            $values['professional_id'] = (string) $request->query['professional'];
         }
 
         $whereSql = implode(' AND ', $where);
@@ -157,6 +232,7 @@ final class CatalogController extends Controller
         $sort = match ($request->query['sort'] ?? '') {
             'rating' => 'p.rating_avg DESC, p.reviews_count DESC',
             'experience' => 'p.years_experience DESC, p.completed_jobs DESC',
+            'price' => 'COALESCE((SELECT MIN(COALESCE(ps4.price_cents, s4.price_cents)) FROM professional_services ps4 INNER JOIN services s4 ON s4.id = ps4.service_id WHERE ps4.professional_id = u.id AND ps4.active = 1 AND s4.active = 1), 2147483647) ASC, p.rating_avg DESC',
             default => 'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC',
         };
 
@@ -164,7 +240,7 @@ final class CatalogController extends Controller
         $count->execute($values);
         $total = (int) $count->fetchColumn();
         $statement = $this->db->prepare(
-            "SELECT u.public_id AS id, u.name, p.headline, p.bio, p.base_city AS city,
+            "SELECT u.public_id AS id, u.name, u.avatar_path AS avatarPath, u.avatar_updated_at AS avatarUpdatedAt, p.headline, p.bio, p.base_city AS city,
                     p.base_state AS state, p.years_experience AS yearsExperience, p.rating_avg AS rating,
                     p.reviews_count AS reviewsCount, p.completed_jobs AS completedJobs,
                     p.verification_status AS verificationStatus,
@@ -181,6 +257,8 @@ final class CatalogController extends Controller
         $rows = $statement->fetchAll();
         foreach ($rows as &$row) {
             $row['serviceIds'] = $row['serviceIds'] ? explode(',', (string) $row['serviceIds']) : [];
+            $row['avatarUrl'] = $this->avatarUrl((string) $row['id'], $row['avatarPath'] ?? null, $row['avatarUpdatedAt'] ?? null);
+            unset($row['avatarPath'], $row['avatarUpdatedAt']);
         }
         unset($row);
         return Response::data($rows, 200, [
@@ -191,7 +269,7 @@ final class CatalogController extends Controller
     public function professional(Request $request, array $params, ?array $auth): Response
     {
         $professional = $this->requireRow(
-            'SELECT u.id AS internalId, u.public_id AS id, u.name, p.headline, p.bio,
+            'SELECT u.id AS internalId, u.public_id AS id, u.name, u.avatar_path AS avatarPath, u.avatar_updated_at AS avatarUpdatedAt, p.headline, p.bio,
                     p.base_city AS city, p.base_state AS state, p.years_experience AS yearsExperience,
                     p.service_radius_km AS serviceRadiusKm, p.rating_avg AS rating,
                     p.reviews_count AS reviewsCount, p.completed_jobs AS completedJobs,
@@ -209,6 +287,23 @@ final class CatalogController extends Controller
         );
         $services->execute(['professional_id' => $professional['internalId']]);
         $professional['services'] = $services->fetchAll();
+        $experiences = $this->db->prepare(
+            'SELECT public_id AS id, role_title AS role, company_name AS company, description,
+                    DATE_FORMAT(started_at, \'%Y-%m-%d\') AS startedAt, DATE_FORMAT(ended_at, \'%Y-%m-%d\') AS endedAt,
+                    is_current AS current
+             FROM professional_experiences WHERE professional_id = :professional_id ORDER BY is_current DESC, started_at DESC'
+        );
+        $experiences->execute(['professional_id' => $professional['internalId']]);
+        $professional['experiences'] = $experiences->fetchAll();
+        $courses = $this->db->prepare(
+            'SELECT public_id AS id, title, institution, DATE_FORMAT(completed_at, \'%Y-%m-%d\') AS completedAt,
+                    certificate_url AS certificateUrl
+             FROM professional_courses WHERE professional_id = :professional_id ORDER BY completed_at DESC, created_at DESC'
+        );
+        $courses->execute(['professional_id' => $professional['internalId']]);
+        $professional['courses'] = $courses->fetchAll();
+        $professional['avatarUrl'] = $this->avatarUrl((string) $professional['id'], $professional['avatarPath'] ?? null, $professional['avatarUpdatedAt'] ?? null);
+        unset($professional['avatarPath'], $professional['avatarUpdatedAt']);
         unset($professional['internalId']);
         return Response::data($professional);
     }
@@ -261,7 +356,7 @@ final class CatalogController extends Controller
             $busyStatement = $this->db->prepare(
                 "SELECT scheduled_start, scheduled_end FROM bookings
                  WHERE professional_id = :booking_professional_id
-                   AND status IN ('awaiting_payment', 'confirmed', 'provider_on_the_way', 'in_progress')
+                   AND status IN ('confirmed', 'provider_on_the_way', 'in_progress')
                    AND scheduled_start < :booking_day_end AND scheduled_end > :booking_day_start
                  UNION ALL
                  SELECT starts_at AS scheduled_start, ends_at AS scheduled_end FROM slot_reservations
@@ -331,5 +426,26 @@ final class CatalogController extends Controller
             sort($slots);
         }
         return Response::data(['rules' => $ruleRows, 'exceptions' => $exceptionRows, 'slots' => $slots]);
+    }
+
+    private function avatarUrl(string $publicId, mixed $path, mixed $updatedAt): ?string
+    {
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+        return '/api/v1/avatars/' . rawurlencode($publicId) . '?v=' . urlencode((string) ($updatedAt ?? '0'));
+    }
+
+    private function publicSlug(string $value): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        $normalized = strtolower($ascii === false ? $value : $ascii);
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+        return trim($slug, '-') ?: 'profissional';
+    }
+
+    private function xml(string $value): string
+    {
+        return htmlspecialchars($value, ENT_XML1 | ENT_QUOTES, 'UTF-8');
     }
 }

@@ -5,6 +5,7 @@ import { FormBuilder, Validators } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subject, catchError, combineLatest, distinctUntilChanged, forkJoin, map, of, switchMap } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
+import { LocalizationService } from '../../../../core/localization/localization.service';
 import { Address, Booking, BookingDraft, BookingQuote, ProviderProfile, Service } from '../../../../core/models';
 import { StatePanelComponent } from '../../../../shared/components';
 import { BookingAddressStepComponent } from '../../components/booking-address-step/booking-address-step.component';
@@ -21,7 +22,6 @@ import { mergeAvailableSlots, providerIdsForSlot } from '../../utils/availabilit
 
 interface QuoteRequest {
   draft: BookingDraft;
-  couponMode: boolean;
 }
 
 @Component({
@@ -49,8 +49,9 @@ interface QuoteRequest {
       } @else if (service(); as selectedService) {
         @if (step() < 5) {
           <div class="container booking-layout">
+            <cvp-booking-price-summary [service]="selectedService" [homeSize]="form.controls.homeSize.value" [quote]="quote()" [loading]="quoteLoading()" [marketplace]="isMarketplace()" />
             <div class="booking-main">
-              <cvp-booking-progress [step]="step()" [progress]="progress()" [label]="stepLabels[step()]" />
+              <cvp-booking-progress [step]="step()" [progress]="progress()" [label]="step() === 4 && isMarketplace() ? 'Revisão' : stepLabels[step()]" />
               <form (submit)="next(); $event.preventDefault()" novalidate>
                 @if (submitError()) { <div class="alert alert-error" role="alert"><strong>Não foi possível continuar.</strong><span>{{ submitError() }}</span></div> }
                 @switch (step()) {
@@ -58,15 +59,14 @@ interface QuoteRequest {
                   @case (1) { <cvp-booking-address-step [form]="form" [addresses]="addresses()" /> }
                   @case (2) { <cvp-booking-schedule-step [form]="form" [minDate]="minDate" [times]="times()" [loading]="availabilityLoading()" [availabilityError]="availabilityError()" (dateChanged)="dateChanged()" /> }
                   @case (3) { <cvp-booking-provider-step [form]="form" [providers]="providers()" (quoteRequested)="refreshQuote()" /> }
-                  @case (4) { <cvp-booking-review-step [form]="form" [service]="selectedService" [provider]="selectedProvider()" [couponMessage]="couponMessage()" [couponValid]="couponValid()" (couponApplied)="applyCoupon()" /> }
+                  @case (4) { <cvp-booking-review-step [form]="form" [service]="selectedService" [provider]="selectedProvider()" /> }
                 }
-                <div class="wizard-actions"><button class="btn btn-secondary" type="button" (click)="previous()" [disabled]="step() === 0">Voltar</button><button class="btn btn-primary" type="submit" [disabled]="submitting() || quoteLoading() || availabilityLoading() || (step() === 3 && !providers().length)">{{ availabilityLoading() ? 'Consultando agendas…' : submitting() ? 'Confirmando...' : step() === 4 ? 'Confirmar reserva' : 'Continuar' }} <span aria-hidden="true">→</span></button></div>
+                <div class="wizard-actions"><button class="btn btn-secondary" type="button" (click)="previous()" [disabled]="step() === 0">Voltar</button><button class="btn btn-primary" type="submit" [disabled]="submitting() || quoteLoading() || availabilityLoading()">{{ availabilityLoading() ? 'Consultando agendas…' : submitting() ? 'Confirmando...' : step() === 4 ? (isMarketplace() ? 'Publicar solicitação' : 'Confirmar reserva') : 'Continuar' }} <span aria-hidden="true">→</span></button></div>
               </form>
             </div>
-            <cvp-booking-price-summary [service]="selectedService" [homeSize]="form.controls.homeSize.value" [quote]="quote()" [loading]="quoteLoading()" />
           </div>
         } @else if (confirmedBooking(); as booking) {
-          <cvp-booking-confirmation [booking]="booking" [paymentConfirmed]="paymentConfirmed()" />
+          <cvp-booking-confirmation [booking]="booking" />
         }
       }
     </section>
@@ -74,6 +74,7 @@ interface QuoteRequest {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BookingWizardComponent implements OnInit {
+  private readonly localization = inject(LocalizationService);
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly marketplace = inject(MarketplaceService);
@@ -83,12 +84,11 @@ export class BookingWizardComponent implements OnInit {
   private readonly reload = new BehaviorSubject(0);
   private readonly quoteRequests = new Subject<QuoteRequest>();
   private bookingKey = '';
-  private paymentKey = '';
   private availabilityKey = '';
   private availabilityRevision = 0;
   private readonly availabilityByProvider = new Map<string, string[]>();
 
-  readonly stepLabels = ['Detalhes', 'Endereço', 'Agenda', 'Profissional', 'Pagamento'];
+  readonly stepLabels = ['Detalhes', 'Endereço', 'Agenda', 'Profissional', 'Revisão'];
   readonly times = signal<string[]>([]);
   readonly minDate = this.localDateToday();
   readonly form = createBookingForm(this.fb);
@@ -103,12 +103,9 @@ export class BookingWizardComponent implements OnInit {
   readonly loadError = signal('');
   readonly submitError = signal('');
   readonly submitting = signal(false);
-  readonly couponMessage = signal('');
-  readonly couponValid = signal(false);
   readonly quote = signal<BookingQuote | null>(null);
   readonly quoteLoading = signal(false);
   readonly confirmedBooking = signal<Booking | null>(null);
-  readonly paymentConfirmed = signal(false);
   readonly progress = computed(() => ((this.step() + 1) / 5) * 100);
 
   ngOnInit(): void {
@@ -148,19 +145,10 @@ export class BookingWizardComponent implements OnInit {
     return this.providers().find((person) => person.id === this.form.controls.providerId.value);
   }
 
-  applyCoupon(): void {
-    const code = this.form.controls.coupon.value.trim();
-    if (!code) {
-      this.couponValid.set(false);
-      this.couponMessage.set('Digite um cupom.');
-      this.refreshQuote();
-      return;
-    }
-    this.requestQuote(true, code);
-  }
+  isMarketplace(): boolean { return this.form.controls.providerId.value === '__marketplace__'; }
 
   refreshQuote(): void {
-    this.requestQuote(false);
+    this.requestQuote();
   }
 
   dateChanged(): void {
@@ -224,32 +212,18 @@ export class BookingWizardComponent implements OnInit {
         catchError((failure: Error) => of({ request, quote: null, error: failure.message || 'Não foi possível calcular o valor.' }))
       )),
       takeUntilDestroyed(this.destroyRef)
-    ).subscribe(({ request, quote, error }) => {
+    ).subscribe(({ quote, error }) => {
       this.quoteLoading.set(false);
-      if (quote) {
-        this.quote.set(quote);
-        if (request.couponMode) {
-          const valid = !!quote.couponCode && quote.discountCents > 0;
-          this.couponValid.set(valid);
-          this.couponMessage.set(valid ? `Cupom aplicado: desconto de ${this.money(quote.discountCents)}.` : 'Este cupom não gerou desconto.');
-        }
-        return;
-      }
-      if (request.couponMode) {
-        this.couponValid.set(false);
-        this.couponMessage.set(error || 'Cupom inválido ou expirado.');
-        this.refreshQuote();
-      } else {
-        this.quote.set(null);
-        this.submitError.set(error);
-      }
+      if (quote) { this.quote.set(quote); return; }
+      this.quote.set(null);
+      this.submitError.set(error);
     });
   }
 
-  private requestQuote(couponMode: boolean, couponOverride?: string): void {
+  private requestQuote(): void {
     if (!this.service()) return;
     this.quoteLoading.set(true);
-    this.quoteRequests.next({ draft: this.buildDraft(couponOverride), couponMode });
+    this.quoteRequests.next({ draft: this.buildDraft() });
   }
 
   private validateStep(): boolean {
@@ -269,10 +243,9 @@ export class BookingWizardComponent implements OnInit {
     if (!this.service()) return;
     this.persist();
     this.submitting.set(true);
-    this.marketplace.checkoutBooking(this.buildDraft(), this.bookingKey, this.paymentKey).subscribe({
+    this.marketplace.confirmBooking(this.buildDraft(), this.bookingKey).subscribe({
       next: (result) => {
         this.confirmedBooking.set(result.booking);
-        this.paymentConfirmed.set(result.confirmed);
         this.step.set(5);
         this.submitting.set(false);
         this.draftStorage.clear();
@@ -295,10 +268,16 @@ export class BookingWizardComponent implements OnInit {
     const revision = ++this.availabilityRevision;
     const service = this.service();
     const date = this.form.controls.date.value;
-    if (!service || !date || !this.allProviders().length) {
+    if (!service || !date) {
       this.times.set([]);
       this.availabilityLoading.set(false);
-      if (advance) this.submitError.set('Nenhum profissional oferece este serviço no momento.');
+      return;
+    }
+    if (!this.allProviders().length) {
+      this.times.set([]);
+      this.providers.set([]);
+      this.availabilityLoading.set(false);
+      if (advance) this.openProviderStep();
       return;
     }
     this.availabilityLoading.set(true);
@@ -341,12 +320,12 @@ export class BookingWizardComponent implements OnInit {
     const availableIds = providerIdsForSlot(results, time);
     const available = this.allProviders().filter((provider) => availableIds.has(provider.id));
     this.providers.set(available);
-    if (!available.some((provider) => provider.id === this.form.controls.providerId.value)) this.form.controls.providerId.setValue('');
+    if (this.form.controls.providerId.value !== '__marketplace__' && !available.some((provider) => provider.id === this.form.controls.providerId.value)) this.form.controls.providerId.setValue('');
     if (!advance) return;
-    if (!available.length) {
-      this.submitError.set('Nenhum profissional está disponível nesse horário. Escolha outro horário.');
-      return;
-    }
+    this.openProviderStep();
+  }
+
+  private openProviderStep(): void {
     this.step.set(3);
     this.persist();
     this.focusHeading();
@@ -379,21 +358,16 @@ export class BookingWizardComponent implements OnInit {
       date: '',
       time: '',
       providerId: '',
-      coupon: '',
       terms: false
     });
     this.step.set(0);
-    this.couponMessage.set('');
-    this.couponValid.set(false);
     this.quote.set(null);
     this.confirmedBooking.set(null);
-    this.paymentConfirmed.set(false);
     this.times.set([]);
     this.availabilityByProvider.clear();
     this.availabilityRevision++;
     this.availabilityKey = '';
     this.bookingKey = this.marketplace.newIdempotencyKey('booking');
-    this.paymentKey = this.marketplace.newIdempotencyKey('payment');
   }
 
   private configureServiceControls(service: Service): void {
@@ -431,7 +405,7 @@ export class BookingWizardComponent implements OnInit {
     setTimeout(() => this.document.querySelector<HTMLElement>('.wizard-step h1, .confirmation-page h1')?.focus(), 0);
   }
 
-  private buildDraft(couponOverride?: string): BookingDraft {
+  private buildDraft(): BookingDraft {
     const service = this.service();
     const value = this.form.getRawValue();
     return {
@@ -440,14 +414,12 @@ export class BookingWizardComponent implements OnInit {
       quantity: value.quantity,
       durationMinutes: value.durationMinutes,
       addonIds: value.addonIds,
-      frequency: 'once',
       notes: value.notes,
       address: value.address,
       date: value.date,
       time: value.time,
-      providerId: value.providerId,
-      paymentMethod: 'pix',
-      coupon: couponOverride ?? (this.couponValid() ? value.coupon.trim() : undefined)
+      providerId: value.providerId === '__marketplace__' ? '' : value.providerId,
+      currency: this.localization.currency()
     };
   }
 
@@ -457,7 +429,4 @@ export class BookingWizardComponent implements OnInit {
     return local.toISOString().slice(0, 10);
   }
 
-  private money(cents: number): string {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(cents / 100);
-  }
 }

@@ -1,14 +1,14 @@
-import { CurrencyPipe, DatePipe } from '@angular/common';
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Booking } from '../../../../core/models';
 import { PageHeaderComponent, StatePanelComponent, StatusPillComponent } from '../../../../shared/components';
+import { LocalizedDatePipe, LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 
 @Component({
   selector: 'cvp-customer-bookings',
   standalone: true,
-  imports: [CurrencyPipe, DatePipe, PageHeaderComponent, RouterLink, StatePanelComponent, StatusPillComponent],
+  imports: [LocalizedDatePipe, LocalizedMoneyPipe, PageHeaderComponent, RouterLink, StatePanelComponent, StatusPillComponent],
   template: `
     <section class="portal-page customer-bookings-page">
       <cvp-page-header eyebrow="Sua agenda" title="Agendamentos" description="Acompanhe serviços futuros e seu histórico."><a class="btn btn-primary" routerLink="/servicos">+ Agendar serviço</a></cvp-page-header>
@@ -25,7 +25,7 @@ import { PageHeaderComponent, StatePanelComponent, StatusPillComponent } from '.
         <div class="booking-list" role="tabpanel" [id]="'booking-panel-' + filter()" [attr.aria-labelledby]="'booking-tab-' + filter()">@for (booking of filtered(); track booking.id) {
           <article class="booking-list-card">
             <div class="booking-card-top"><div><span class="eyebrow">{{ booking.code }}</span><h2>{{ booking.service.name }}</h2></div><cvp-status-pill [status]="booking.status" /></div>
-            <div class="booking-info-grid"><div><span>Data e horário</span><strong>{{ booking.scheduledAt | date:'EEE, dd MMM · HH:mm':'':'pt-BR' }}</strong></div><div><span>Profissional</span><strong>{{ booking.provider.name }}</strong></div><div><span>Região</span><strong>{{ booking.addressLabel }}</strong></div><div><span>Total</span><strong>{{ booking.price.totalCents / 100 | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div></div>
+            <div class="booking-info-grid"><div><span>Data e horário</span><strong>{{ booking.scheduledAt | appDate:'EEE, dd MMM · HH:mm' }}</strong></div><div><span>Profissional</span><strong>{{ booking.provider.name }}</strong></div><div><span>Região</span><strong>{{ booking.addressLabel }}</strong></div><div><span>Total</span><strong>{{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}</strong></div></div>
             <div class="card-actions"><a class="btn btn-secondary btn-small" [routerLink]="['/conta/agendamentos', booking.id]">Detalhes</a>@if (booking.canMessage && booking.conversationId) { <a class="btn btn-secondary btn-small" routerLink="/conta/mensagens" [queryParams]="{ conversa: booking.conversationId }">Enviar mensagem</a> }@if (booking.canCancel) { <button class="btn btn-danger btn-small" type="button" (click)="cancelTarget.set(cancelTarget() === booking.id ? '' : booking.id)">Cancelar</button> }@if (booking.canReview) { <button class="btn btn-primary btn-small" type="button" (click)="reviewTarget.set(reviewTarget() === booking.id ? '' : booking.id)">Avaliar serviço</button> }</div>
             @if (cancelTarget() === booking.id) { <form class="inline-action-form" (submit)="cancel($event, booking)"><label>Motivo do cancelamento<textarea required maxlength="500" placeholder="Conte brevemente o motivo"></textarea></label><button class="btn btn-danger btn-small" type="submit" [disabled]="acting()">Confirmar cancelamento</button></form> }
             @if (reviewTarget() === booking.id) { <form class="inline-action-form" (submit)="review($event, booking)"><label>Nota<select required><option value="5">5 — Excelente</option><option value="4">4 — Muito bom</option><option value="3">3 — Bom</option><option value="2">2 — Regular</option><option value="1">1 — Ruim</option></select></label><label>Comentário<textarea required maxlength="1000" placeholder="Como foi o serviço?"></textarea></label><button class="btn btn-primary btn-small" type="submit" [disabled]="acting()">Enviar avaliação</button></form> }

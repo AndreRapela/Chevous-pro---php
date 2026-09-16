@@ -1,10 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { Subject, combineLatest, debounceTime, distinctUntilChanged, forkJoin } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Service, ServiceCategory } from '../../../../core/models';
 import { ServiceCardComponent, StatePanelComponent } from '../../../../shared/components';
+import { SeoService } from '../../../../core/seo/seo.service';
+import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
 
 @Component({
   selector: 'cvp-catalog',
@@ -33,10 +35,13 @@ export class CatalogComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
+  private readonly seo = inject(SeoService);
+  private readonly searchChanges = new Subject<string>();
   readonly services = signal<Service[]>([]);
   readonly categories = signal<ServiceCategory[]>([]);
   readonly query = signal('');
   readonly category = signal('');
+  private readonly categorySlug = signal('');
   readonly loading = signal(true);
   readonly error = signal('');
   readonly filtered = computed(() => {
@@ -48,22 +53,56 @@ export class CatalogComponent implements OnInit {
   });
 
   ngOnInit(): void {
-    this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      this.query.set(params.get('q') ?? '');
-      this.category.set(params.get('categoria') ?? '');
+    this.searchChanges.pipe(debounceTime(250), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.syncUrl(value));
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(takeUntilDestroyed(this.destroyRef)).subscribe(([path, query]) => {
+      this.categorySlug.set(path.get('category') ?? '');
+      this.query.set(query.get('q') ?? '');
+      this.resolveCategoryFromUrl();
+      this.updateSeo();
     });
     this.load();
   }
   load(): void {
     this.loading.set(true); this.error.set('');
     forkJoin({ services: this.marketplace.services(), categories: this.marketplace.categories() }).subscribe({
-      next: ({ services, categories }) => { this.services.set(services); this.categories.set(categories); this.loading.set(false); },
+      next: ({ services, categories }) => { this.services.set(services); this.categories.set(categories); this.resolveCategoryFromUrl(); this.updateSeo(); this.loading.set(false); },
       error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
     });
   }
-  setQuery(value: string): void { this.query.set(value); this.syncUrl(); }
+  setQuery(value: string): void { this.query.set(value); this.searchChanges.next(value.trim()); }
   selectCategory(id: string): void { this.category.set(id); this.syncUrl(); }
-  private syncUrl(): void {
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { q: this.query() || null, categoria: this.category() || null }, queryParamsHandling: 'merge', replaceUrl: true });
+  private resolveCategoryFromUrl(): void {
+    const selected = this.categories().find((item) => item.slug === this.categorySlug());
+    this.category.set(selected?.id ?? '');
+  }
+
+  private syncUrl(query = this.query()): void {
+    const selected = this.categories().find((item) => item.id === this.category());
+    void this.router.navigate(selected ? categoryPublicPath(selected) : ['/servicos'], {
+      queryParams: { q: query || null },
+      replaceUrl: true
+    });
+  }
+
+  private updateSeo(): void {
+    const selected = this.categories().find((item) => item.slug === this.categorySlug());
+    const canonicalPath = selected ? `/servicos/categoria/${selected.slug}` : '/servicos';
+    const title = selected ? `${selected.name} para casa | ChezVoust Pro` : 'Serviços para casa | ChezVoust Pro';
+    const description = selected
+      ? `${selected.description} Compare opções e solicite um horário com profissionais aprovados.`
+      : 'Encontre serviços para casa, compare opções e solicite um horário com profissionais aprovados.';
+    this.seo.update({
+      title,
+      description,
+      canonicalPath,
+      noindex: Boolean(this.query().trim()),
+      structuredData: {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: title.replace(' | ChezVoust Pro', ''),
+        description,
+        url: canonicalPath
+      }
+    });
   }
 }

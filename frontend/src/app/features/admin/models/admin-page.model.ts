@@ -1,6 +1,6 @@
 export type AdminTone = 'success' | 'warning' | 'danger' | 'neutral';
 
-export type AdminPageKey = 'bookings' | 'customers' | 'providers' | 'catalog' | 'finance' | 'coupons' | 'support' | 'settings';
+export type AdminPageKey = 'bookings' | 'customers' | 'providers' | 'catalog' | 'support' | 'settings';
 
 export interface AdminRow {
   id: string;

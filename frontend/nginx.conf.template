@@ -3,15 +3,42 @@ server {
     server_name _;
     root /usr/share/nginx/html;
     index index.html;
+    # Permite o avatar de 5 MiB declarado pela API, com folga para multipart.
+    client_max_body_size 6m;
+    client_body_timeout 60s;
 
     # O DNS interno do Docker pode mudar o IP da API após uma recriação.
     resolver 127.0.0.11 valid=10s ipv6=off;
     set $api_upstream ${API_PROXY_TARGET};
+    set $ssr_upstream ${SSR_UPSTREAM};
 
     location = /health {
         access_log off;
         add_header Content-Type text/plain;
         return 200 'ok';
+    }
+
+    # Arquivos de descoberta ficam na raiz do domínio, como os rastreadores esperam.
+    location = /robots.txt {
+        proxy_pass $api_upstream/api/v1/seo/robots.txt;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Proxy-Secret ${PROXY_SHARED_SECRET};
+    }
+
+    location = /sitemap.xml {
+        proxy_pass $api_upstream/api/v1/seo/sitemap.xml;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Proxy-Secret ${PROXY_SHARED_SECRET};
     }
 
     location /api/ {
@@ -20,6 +47,7 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Proxy-Secret ${PROXY_SHARED_SECRET};
         proxy_set_header Authorization $http_authorization;
@@ -27,8 +55,21 @@ server {
         proxy_read_timeout 60s;
     }
 
+    # A página inicial precisa atravessar o SSR; arquivos estáticos continuam
+    # sendo atendidos diretamente pelo Nginx.
+    location = / {
+        try_files /__never_exists__ @ssr;
+    }
+
+    # Áreas pessoais e formulários não podem entrar no índice, mesmo se uma
+    # ferramenta ignorar a tag HTML renderizada pelo cliente.
+    location ~ ^/(?:entrar|cadastro|recuperar-senha|redefinir-senha|verificar-email|agendar|conta|prestador|admin)(?:/|$) {
+        add_header X-Robots-Tag "noindex, nofollow" always;
+        try_files $uri @ssr;
+    }
+
     location / {
-        try_files $uri $uri/ /index.html;
+        try_files $uri @ssr;
     }
 
     location ~* \.(?:js|css|woff2?)$ {
@@ -37,8 +78,8 @@ server {
         add_header Cache-Control "public, immutable";
         add_header X-Content-Type-Options nosniff always;
         add_header Referrer-Policy strict-origin-when-cross-origin always;
-        add_header X-Frame-Options SAMEORIGIN always;
-        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'" always;
+        add_header X-Frame-Options DENY always;
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'none'; script-src 'self'; connect-src 'self'" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
@@ -49,8 +90,8 @@ server {
         add_header Cache-Control "public, max-age=2592000";
         add_header X-Content-Type-Options nosniff always;
         add_header Referrer-Policy strict-origin-when-cross-origin always;
-        add_header X-Frame-Options SAMEORIGIN always;
-        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'" always;
+        add_header X-Frame-Options DENY always;
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'none'; script-src 'self'; connect-src 'self'" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
@@ -59,16 +100,32 @@ server {
         add_header Cache-Control "no-store";
         add_header X-Content-Type-Options nosniff always;
         add_header Referrer-Policy strict-origin-when-cross-origin always;
-        add_header X-Frame-Options SAMEORIGIN always;
-        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'" always;
+        add_header X-Frame-Options DENY always;
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'none'; script-src 'self'; connect-src 'self'" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     }
 
+    location @ssr {
+        proxy_pass $ssr_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Uri $request_uri;
+        # Não encaminhe a cadeia enviada pelo cliente: o SSR só recebe o IP
+        # observado por este proxy e o autentica de volta na API.
+        proxy_set_header X-Client-IP $remote_addr;
+        proxy_connect_timeout 10s;
+        proxy_read_timeout 60s;
+    }
+
     add_header X-Content-Type-Options nosniff always;
     add_header Referrer-Policy strict-origin-when-cross-origin always;
-    add_header X-Frame-Options SAMEORIGIN always;
-    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'" always;
+    add_header X-Frame-Options DENY always;
+    add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data:; font-src 'self'; style-src 'self' 'unsafe-inline'; style-src-attr 'none'; script-src 'self'; connect-src 'self'" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()" always;
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 }

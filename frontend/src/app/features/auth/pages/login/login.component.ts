@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ApiClientError } from '../../../../core/models';
 import { AuthShellComponent } from '../../layout/auth-shell.component';
+import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'cvp-login',
@@ -14,7 +15,7 @@ import { AuthShellComponent } from '../../layout/auth-shell.component';
       variant="login"
       eyebrow="Bem-vindo de volta"
       heroTitle="Sua casa e seus serviços em um só lugar."
-      heroDescription="Acompanhe reservas, converse com profissionais e cuide dos pagamentos com tranquilidade."
+      heroDescription="Acompanhe reservas, converse com profissionais e organize seus serviços com tranquilidade."
       imageSrc="/images/eletricista-login-v1-640.webp"
       imageSrcset="/images/eletricista-login-v1-640.webp 640w, /images/eletricista-login-v1-1280.webp 1280w"
       imageAlt="Eletricista residencial sorrindo com alicate e multímetro"
@@ -31,24 +32,25 @@ import { AuthShellComponent } from '../../layout/auth-shell.component';
       <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
         <label>
           E-mail
-          <input type="email" formControlName="email" autocomplete="email" inputmode="email" [attr.aria-invalid]="invalid('email')">
+          <input type="email" formControlName="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" [attr.aria-invalid]="invalid('email')">
           @if (invalid('email')) { <small class="field-error">Informe um e-mail válido.</small> }
         </label>
         <label>
-          Senha
-          <span class="label-row"><span></span><a routerLink="/recuperar-senha">Esqueci minha senha</a></span>
-          <input type="password" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="invalid('password')">
+          <span class="label-row"><span>Senha</span><a routerLink="/recuperar-senha">Esqueci minha senha</a></span>
+          <span class="password-input"><input [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="invalid('password')"><button type="button" (click)="togglePasswordVisibility()" [attr.aria-label]="passwordVisible() ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-pressed]="passwordVisible()">{{ passwordVisible() ? 'Ocultar' : 'Mostrar' }}</button></span>
           @if (invalid('password')) { <small class="field-error">A senha é obrigatória.</small> }
         </label>
         <label class="check-row"><input type="checkbox" formControlName="remember"> <span>Manter acesso neste dispositivo</span></label>
         <button class="btn btn-primary btn-block" type="submit" [disabled]="auth.busy()">{{ auth.busy() ? 'Entrando...' : 'Entrar' }}</button>
       </form>
-      <div class="auth-divider"><span>ou acesse a demonstração</span></div>
-      <div class="demo-accounts" aria-label="Contas de demonstração">
-        <button type="button" (click)="useDemo('customer')"><strong>Cliente</strong><span>cliente&#64;chezvoust.test</span></button>
-        <button type="button" (click)="useDemo('provider')"><strong>Profissional</strong><span>profissional&#64;chezvoust.test</span></button>
-        <button type="button" (click)="useDemo('admin')"><strong>Admin</strong><span>admin&#64;chezvoust.test</span></button>
-      </div>
+      @if (demoAccounts) {
+        <div class="auth-divider"><span>ou acesse a demonstração</span></div>
+        <div class="demo-accounts" aria-label="Contas de demonstração">
+          <button type="button" [disabled]="auth.busy()" (click)="useDemo('customer')"><strong>Cliente</strong><span>{{ demoAccounts.customer[0] }}</span></button>
+          <button type="button" [disabled]="auth.busy()" (click)="useDemo('provider')"><strong>Profissional</strong><span>{{ demoAccounts.provider[0] }}</span></button>
+          <button type="button" [disabled]="auth.busy()" (click)="useDemo('admin')"><strong>Admin</strong><span>{{ demoAccounts.admin[0] }}</span></button>
+        </div>
+      }
       <p class="auth-switch">Ainda não tem conta? <a routerLink="/cadastro">Crie sua conta</a></p>
     </cvp-auth-shell>
   `,
@@ -60,6 +62,8 @@ export class LoginComponent {
   private readonly route = inject(ActivatedRoute);
   readonly auth = inject(AuthService);
   readonly error = signal('');
+  readonly passwordVisible = signal(false);
+  readonly demoAccounts = environment.demoAccounts;
   readonly registrationSuccess = this.route.snapshot.queryParamMap.get('cadastro') === 'sucesso';
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
@@ -72,12 +76,15 @@ export class LoginComponent {
     return control.invalid && (control.touched || this.form.touched);
   }
 
+  togglePasswordVisibility(): void { this.passwordVisible.update((visible) => !visible); }
+
   submit(): void {
+    if (this.auth.busy()) return;
     this.form.markAllAsTouched();
     if (this.form.invalid) return;
     this.error.set('');
     const { email, password, remember } = this.form.getRawValue();
-    this.auth.login({ email, password, remember }).subscribe({
+    this.auth.login({ email: email.trim().toLocaleLowerCase('pt-BR'), password, remember }).subscribe({
       next: (user) => {
         const requested = this.route.snapshot.queryParamMap.get('returnUrl');
         const target = requested?.startsWith('/') && !requested.startsWith('//') ? requested : this.auth.homeFor(user);
@@ -88,12 +95,9 @@ export class LoginComponent {
   }
 
   useDemo(role: 'customer' | 'provider' | 'admin'): void {
-    const credentials = {
-      customer: ['cliente@chezvoust.test', 'Cliente@123'],
-      provider: ['profissional@chezvoust.test', 'Profissional@123'],
-      admin: ['admin@chezvoust.test', 'Admin@123']
-    } as const;
-    const [email, password] = credentials[role];
+    const credentials = this.demoAccounts?.[role];
+    if (!credentials) return;
+    const [email, password] = credentials;
     this.form.patchValue({ email, password });
     this.submit();
   }
