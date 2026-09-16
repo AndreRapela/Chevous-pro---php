@@ -47,7 +47,7 @@ try {
     $customerConversations = @((Invoke-RestMethod -Uri "$baseUrl/conversations" -Headers $customerHeaders).data)
     $providerConversations = @((Invoke-RestMethod -Uri "$baseUrl/conversations" -Headers $providerHeaders).data)
     Assert-True ($customerConversations.Count -gt 0) 'A conta cliente não possui conversa para o teste.'
-    $chatStatuses = @('awaiting_payment', 'confirmed', 'in_progress', 'completed', 'disputed')
+    $chatStatuses = @('confirmed', 'provider_on_the_way', 'in_progress', 'completed', 'disputed')
     $conversation = $customerConversations |
         Where-Object { $chatStatuses -contains $_.bookingStatus -and $providerConversations.id -contains $_.id } |
         Select-Object -First 1
@@ -60,17 +60,42 @@ try {
     $customerMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ body = $customerBody } | ConvertTo-Json)).data
     $providerDelta = @((Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=$providerCursor&limit=100" -Headers $providerHeaders).data)
     Assert-True ($providerDelta.Count -eq 1) "O profissional deveria receber uma mensagem incremental; recebeu $($providerDelta.Count)."
-    Assert-True ($providerDelta[0].body -eq $customerBody -and $providerDelta[0].senderId -eq $customer.user.id) 'Conteúdo ou autoria cliente → profissional incorretos.'
+    Assert-True ($providerDelta[0].body -eq $customerBody -and $providerDelta[0].senderId -eq $customer.user.id) 'Conteúdo ou autoria cliente para profissional incorretos.'
 
     $providerBody = "e2e-profissional-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
     $providerMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $providerHeaders -ContentType 'application/json' -Body (@{ body = $providerBody } | ConvertTo-Json)).data
     $customerDelta = @((Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=$($customerMessage.sequence)&limit=100" -Headers $customerHeaders).data)
     Assert-True ($customerDelta.Count -eq 1) "O cliente deveria receber uma mensagem incremental; recebeu $($customerDelta.Count)."
-    Assert-True ($customerDelta[0].body -eq $providerBody -and $customerDelta[0].senderId -eq $provider.user.id) 'Conteúdo ou autoria profissional → cliente incorretos.'
+    Assert-True ($customerDelta[0].body -eq $providerBody -and $customerDelta[0].senderId -eq $provider.user.id) 'Conteúdo ou autoria profissional para cliente incorretos.'
     Assert-True ($customerDelta[0].senderName -eq $provider.user.name -and $customerDelta[0].messageType -eq 'text' -and $null -ne $customerDelta[0].createdAt) 'O contrato ChatMessage está incompleto.'
 
     $emptyDelta = @((Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=$($providerMessage.sequence)&limit=100" -Headers $customerHeaders).data)
     Assert-True ($emptyDelta.Count -eq 0) 'O cursor incremental devolveu mensagens já processadas.'
+
+    $liveCursor = Latest-Sequence $conversationId $providerHeaders
+    $emptySync = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
+    Assert-True (@($emptySync.data).Count -eq 0) 'A sincronização incremental devolveu mensagens já processadas.'
+    Assert-True ([int]$emptySync.meta.pollAfterSeconds -eq 5) 'A API não informou a cadência esperada para a próxima sincronização.'
+    $liveBody = "e2e-live-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $liveMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ body = $liveBody } | ConvertTo-Json)).data
+    $liveResponse = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
+    $liveDelta = @($liveResponse.data)
+    Assert-True ($liveDelta.Count -eq 1 -and $liveDelta[0].id -eq $liveMessage.id -and $liveDelta[0].body -eq $liveBody) 'A sincronização incremental não entregou a mensagem nova.'
+
+    $idempotencyKey = [guid]::NewGuid().ToString()
+    $idempotencyHeaders = @{ Authorization = "Bearer $($customer.accessToken)"; 'Idempotency-Key' = $idempotencyKey }
+    $idempotentBody = "e2e-idempotente-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $firstIdempotent = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $idempotencyHeaders -ContentType 'application/json' -Body (@{ body = $idempotentBody } | ConvertTo-Json)).data
+    $secondIdempotent = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $idempotencyHeaders -ContentType 'application/json' -Body (@{ body = $idempotentBody } | ConvertTo-Json)).data
+    Assert-True ($firstIdempotent.id -eq $secondIdempotent.id -and $firstIdempotent.sequence -eq $secondIdempotent.sequence) 'Repetir o envio com a mesma chave criou uma mensagem duplicada.'
+    $idempotencyConflict = 0
+    try {
+        Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $idempotencyHeaders -ContentType 'application/json' -Body (@{ body = "$idempotentBody-conteudo-alterado" } | ConvertTo-Json) | Out-Null
+        $idempotencyConflict = 200
+    } catch {
+        $idempotencyConflict = [int]$_.Exception.Response.StatusCode
+    }
+    Assert-True ($idempotencyConflict -eq 409) "Uma chave de mensagem reutilizada com outro conteúdo respondeu HTTP $idempotencyConflict em vez de 409."
 
     Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/read" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ lastSequence = $providerMessage.sequence } | ConvertTo-Json) | Out-Null
     $readConversation = @((Invoke-RestMethod -Uri "$baseUrl/conversations" -Headers $customerHeaders).data) | Where-Object id -eq $conversationId
@@ -85,7 +110,7 @@ try {
     }
     Assert-True ($foreignStatus -eq 404) "Uma conta alheia à conversa recebeu HTTP $foreignStatus em vez de 404."
 
-    Write-Output "PASS mensagens: cliente ↔ profissional, cursor incremental, leitura e isolamento por participante (conversa $conversationId)."
+    Write-Output "PASS mensagens: entrega incremental, idempotência, leitura e isolamento por participante (conversa $conversationId)."
 } finally {
     Pop-Location
 }

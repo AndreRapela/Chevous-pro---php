@@ -3,21 +3,22 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Address } from '../../../../core/models';
-import { PageHeaderComponent } from '../../../../shared/components';
+import { AccountIdentityComponent, AccountSecurityComponent, PageHeaderComponent } from '../../../../shared/components';
 
 @Component({
   selector: 'cvp-customer-profile',
   standalone: true,
-  imports: [PageHeaderComponent, ReactiveFormsModule],
+  imports: [AccountIdentityComponent, AccountSecurityComponent, PageHeaderComponent, ReactiveFormsModule],
   template: `
     <section class="portal-page customer-profile-page">
       <cvp-page-header eyebrow="Sua conta" title="Perfil e preferências" description="Mantenha seus dados atualizados." />
       @if (saved()) { <div class="alert alert-success" role="status">Alterações salvas com sucesso.</div> }
       @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
       <div class="settings-layout">
-        <form class="portal-card settings-form" [formGroup]="form" (ngSubmit)="save()"><h2>Dados pessoais</h2><div class="form-grid"><label class="span-two">Nome completo<input formControlName="name" autocomplete="name"></label><label>E-mail<input type="email" formControlName="email" autocomplete="email" readonly></label><label>Celular<input type="tel" formControlName="phone" autocomplete="tel"></label></div><div class="form-actions"><button class="btn btn-primary" type="submit" [disabled]="saving()">{{ saving() ? 'Salvando…' : 'Salvar alterações' }}</button></div></form>
-        <aside class="portal-card settings-nav"><span class="chip chip-soft">Demonstração</span><h2>Preferências futuras</h2><p>Notificações, autenticação em duas etapas e exclusão de conta serão habilitadas quando houver endpoints próprios.</p></aside>
+        <cvp-account-identity />
+        <aside class="portal-card settings-nav"><span class="success-mark small">✓</span><h2>Conta protegida</h2><p>O acesso usa sessão renovável em cookie protegido. Revise abaixo os dispositivos conectados e mantenha sua senha atualizada.</p></aside>
       </div>
+      <cvp-account-security />
       <section class="portal-card address-settings"><div class="card-title-row"><div><span class="eyebrow">Locais de atendimento</span><h2>Endereços salvos</h2></div><button class="btn btn-secondary btn-small" type="button" (click)="resetAddressForm()">Novo endereço</button></div>
         @if (addressesLoading()) { <p class="muted" role="status">Carregando endereços…</p> }
         @else { @if (addresses().length) { <div class="address-list">@for (address of addresses(); track address.id) { <article><div><strong>{{ address.label || 'Endereço' }} @if (address.isDefault) { <span class="chip chip-soft">Principal</span> }</strong><p>{{ address.street }}, {{ address.number }} · {{ address.neighborhood }}, {{ address.city }}/{{ address.state }}</p></div><div class="card-actions"><button class="text-button" type="button" (click)="editAddress(address)">Editar</button>@if (removeTarget() === address.id) { <button class="btn btn-secondary btn-small" type="button" (click)="removeTarget.set('')">Voltar</button><button class="btn btn-danger btn-small" type="button" [disabled]="addressSaving()" (click)="removeAddress(address)">Confirmar remoção</button> } @else { <button class="text-button" type="button" (click)="removeTarget.set(address.id || '')">Remover</button> }</div></article> }</div> } @else { <p class="muted">Nenhum endereço salvo.</p> } }
@@ -32,18 +33,12 @@ export class CustomerProfileComponent implements OnInit {
   private readonly auth = inject(AuthService);
   private readonly marketplace = inject(MarketplaceService);
   readonly saved = signal(false);
-  readonly saving = signal(false);
   readonly error = signal('');
   readonly addresses = signal<Address[]>([]);
   readonly addressesLoading = signal(true);
   readonly addressSaving = signal(false);
   readonly editingAddressId = signal('');
   readonly removeTarget = signal('');
-  readonly form = this.fb.nonNullable.group({
-    name: [this.auth.user()?.name ?? ''],
-    email: [this.auth.user()?.email ?? ''],
-    phone: [this.auth.user()?.phone ?? '']
-  });
   readonly addressForm = this.fb.nonNullable.group({
     label: ['Casa', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
     postalCode: ['', [Validators.required, Validators.minLength(8), Validators.maxLength(9)]],
@@ -57,21 +52,6 @@ export class CustomerProfileComponent implements OnInit {
   });
 
   ngOnInit(): void { this.loadAddresses(); }
-
-  save(): void {
-    if (this.saving()) return;
-    this.saving.set(true);
-    this.error.set('');
-    const { name, phone } = this.form.getRawValue();
-    this.auth.updateProfile({ name, phone }).subscribe({
-      next: () => {
-        this.saved.set(true);
-        this.saving.set(false);
-        setTimeout(() => this.saved.set(false), 3000);
-      },
-      error: (failure: Error) => { this.error.set(failure.message); this.saving.set(false); }
-    });
-  }
 
   loadAddresses(): void {
     this.addressesLoading.set(true);

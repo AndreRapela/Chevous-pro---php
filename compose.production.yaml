@@ -1,0 +1,62 @@
+# Produção: use somente junto de um arquivo de ambiente secreto, fora do repositório.
+# Nenhuma credencial, modo demonstrativo ou seed recebe valor padrão neste arquivo.
+services:
+  database:
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:?DB_DATABASE é obrigatório}
+      MYSQL_USER: ${DB_USERNAME:?DB_USERNAME é obrigatório}
+      MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD é obrigatório}
+    ports: []
+  api:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      AUTO_SEED: "false"
+      APP_URL: ${APP_URL:?APP_URL é obrigatório}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:?FRONTEND_ORIGINS é obrigatório}
+      DB_HOST: ${DB_HOST:?DB_HOST é obrigatório}
+      DB_PORT: ${DB_PORT:?DB_PORT é obrigatório}
+      DB_DATABASE: ${DB_DATABASE:?DB_DATABASE é obrigatório}
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME é obrigatório}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET é obrigatório}
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?PROXY_SHARED_SECRET é obrigatório}
+      REFRESH_COOKIE_SECURE: "true"
+      MAIL_DRIVER: resend
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM é obrigatório}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY é obrigatório}
+    ports: []
+  web:
+    environment:
+      API_PROXY_TARGET: http://api
+      SSR_UPSTREAM: http://ssr:4000
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?PROXY_SHARED_SECRET é obrigatório}
+    ports: []
+  ssr:
+    environment:
+      NODE_ENV: production
+      SSR_API_URL: http://api/api/v1
+      SSR_PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?PROXY_SHARED_SECRET é obrigatório}
+      SITE_URL: ${APP_URL:?APP_URL é obrigatório}
+      PORT: 4000
+      NG_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:?SSR_ALLOWED_HOSTS é obrigatório}
+      NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
+  worker:
+    environment:
+      APP_ENV: production
+      APP_DEBUG: "false"
+      AUTO_SEED: "false"
+      APP_URL: ${APP_URL:?APP_URL é obrigatório}
+      FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:?FRONTEND_ORIGINS é obrigatório}
+      DB_HOST: ${DB_HOST:?DB_HOST é obrigatório}
+      DB_PORT: ${DB_PORT:?DB_PORT é obrigatório}
+      DB_DATABASE: ${DB_DATABASE:?DB_DATABASE é obrigatório}
+      DB_USERNAME: ${DB_USERNAME:?DB_USERNAME é obrigatório}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET é obrigatório}
+      PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?PROXY_SHARED_SECRET é obrigatório}
+      REFRESH_COOKIE_SECURE: "true"
+      MAIL_DRIVER: resend
+      MAIL_FROM: ${MAIL_FROM:?MAIL_FROM é obrigatório}
+      RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY é obrigatório}

@@ -9,26 +9,25 @@ desnecessários em celulares.
 ## O que está incluído
 
 - catálogo, busca, perfis, favoritos e navegação pública responsiva;
-- cotação autoritativa e reserva em cinco etapas, com endereço, agenda, profissional,
-  cupom, intenção de pagamento e resumo;
+- estimativa autoritativa e reserva em cinco etapas, com endereço, agenda, profissional
+  e resumo;
 - agenda, cancelamento básico, conversa vinculada à reserva e avaliação pós-serviço;
 - painéis separados de cliente, profissional e administrador, protegidos por papel;
 - perfil, serviços, disponibilidade, oportunidades, propostas e jobs do profissional;
-- administração básica de usuários, prestadores, reservas, catálogo, cupons, promoções e auditoria;
+- administração básica de usuários, prestadores, reservas, catálogo, promoções e auditoria;
 - API REST com autenticação JWT/refresh, RBAC, validação, idempotência, rate limit,
   proxy autenticado, locks de agenda, outbox e persistência MySQL;
-- pagamento inteiramente simulado para desenvolvimento, sem coleta de cartão;
 - modo demonstrativo do Angular para navegar sem uma API ativa.
 
-Recorrência, reagendamento completo, KYC/documentos, gateway real, estorno, repasse,
-disputas, suporte operacional e automações de privacidade estão identificados nos
+Recorrência automática, KYC/documentos, disputas, suporte operacional e automações de
+privacidade estão identificados nos
 documentos como escopo parcial ou roadmap; não são apresentados como prontos.
 
 ## Arquitetura
 
 ```text
 frontend/   Angular standalone e responsivo para celular, tablet e desktop
-backend/    API REST PHP 8.2+ sem dependências obrigatórias de framework
+backend/    API REST PHP 8.4 sem dependências obrigatórias de framework
 database/   schema e dados demonstrativos para MySQL 8
 docs/       produto, arquitetura, contrato da API, LGPD e aceite
 compose.yaml ambiente local completo
@@ -36,7 +35,7 @@ compose.yaml ambiente local completo
 
 O backend segue um monólito modular: um único processo HTTP, módulos de domínio
 separados e persistência via PDO. Essa escolha deixa a instalação simples sem
-impedir a substituição futura de chat, notificações ou pagamentos por provedores
+impedir a evolução futura de chat e notificações por provedores
 externos.
 
 ## Início rápido da interface
@@ -74,12 +73,29 @@ real. O modo de interface com dados isolados está disponível apenas por
 Antes de qualquer uso fora da máquina local, substitua todos os segredos do arquivo
 `.env`, desative o modo de depuração e siga o checklist de [segurança](SECURITY.md).
 
+## Produção e segurança operacional
+
+Use `compose.production.yaml` somente com um arquivo de ambiente fora do repositório e
+um proxy externo que termine TLS em HTTPS na porta 443. O Nginx do projeto serve a
+aplicação na rede interna; ele não emite certificado nem deve ser exposto diretamente
+em HTTP na internet. Banco, API e processo de SSR ficam sem portas públicas no overlay
+de produção.
+
+Antes da primeira subida, faça backup restaurável do banco e valide a migração em um
+ambiente de homologação. A migração `202609120001_remove_coupon_feature.sql` elimina
+dados de cupons de versões antigas; ela é idempotente para bancos novos, mas a remoção
+dos registros é intencional. Configure `APP_URL`, `FRONTEND_ORIGINS` e
+`SSR_ALLOWED_HOSTS` com o domínio HTTPS público (inclua cada variação de domínio
+realmente usada), defina segredos aleatórios e mantenha `AUTO_SEED=false`. Após a
+publicação, envie `https://seu-dominio/sitemap.xml` ao Search Console; `robots.txt`,
+canonicals e metadados sociais são entregues automaticamente pela aplicação.
+
 ## Execução sem containers
 
 1. Crie um banco MySQL 8 e execute `database/schema.sql`.
 2. Copie `backend/.env.example` para `backend/.env` e configure a conexão.
 3. Execute `php backend/bin/seed.php` a partir da raiz para aplicar os dados demo com senhas protegidas.
-4. Sirva `backend/public` com PHP 8.2+.
+4. Sirva `backend/public` com PHP 8.4+.
 5. Configure a URL da API no ambiente Angular e inicie o frontend.
 
 Exemplo para a API:
@@ -102,26 +118,20 @@ ou substituídas em qualquer implantação real:
 
 ## Qualidade e testes
 
-Resultado da validação estática local em 24/08/2026:
+Resultado da validação local mais recente:
 
 - lint Angular/TypeScript/templates e build de produção aprovados;
-- testes unitários da agenda: 3/3, com 100% de linhas e funções no módulo coberto;
-- auditoria das dependências de produção: nenhuma vulnerabilidade encontrada;
-- inspeção estrutural: 95 registros de rota, 35 tabelas e seis variantes WebP autorizadas;
-- suíte do núcleo PHP: 8/8 testes aprovados e lint PHP integral;
-- Compose validado com MySQL, API, web e worker saudáveis, incluindo login dos três papéis;
-- fluxo HTTP completo aprovado para conta, agenda, reserva, proposta, pagamento simulado,
-  execução, avaliação, mensagens, notificações e administração;
-- inspeção visual e interativa aprovada em desktop e mobile. A última validação
-  com Docker/MySQL foi feita em 24/08/2026.
+- testes unitários do frontend: 12/12, cobrindo agenda, chat, perfil, registros profissionais e paginação;
+- inspeção estrutural: 107 rotas REST, 34 tabelas e seis variantes WebP autorizadas;
+- lint, build de produção e testes do Angular aprovados por `npm run check`.
 
-A matriz completa de concorrência transacional, desempenho, acessibilidade e
-segurança dinâmica permanece como gate antes de homologação. Comandos e escopo
-estão em `tests/README.md` e `docs/ACCEPTANCE.md`.
+Os fluxos PHP/MySQL, Compose, testes reais em dispositivos, matriz de concorrência,
+acessibilidade e segurança dinâmica permanecem gates obrigatórios antes da
+homologação. Comandos e escopo estão em `tests/README.md` e `docs/ACCEPTANCE.md`.
 
 ## Limites intencionais
 
-- pagamento, repasse, e-mail, SMS e verificação de identidade são adaptadores simulados;
+- e-mail, SMS e verificação de identidade exigem configuração operacional antes da produção;
 - uma foto de capa foi editada a partir da referência autorizada; as fotos de eletricista e garçonete foram geradas a pedido do usuário e todas são servidas em WebP responsivo;
 - nenhuma publicação, deploy, commit ou envio para repositório remoto é realizado automaticamente;
 - integrações de produção exigem credenciais e decisões comerciais do responsável pelo produto.

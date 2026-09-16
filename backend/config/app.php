@@ -16,6 +16,8 @@ $jwtSecret = Env::get('JWT_SECRET', $isLocalEnvironment ? $localJwtSecret : '');
 $localProxySecret = 'local-only-proxy-secret-change-before-public-use';
 $proxySharedSecret = Env::get('PROXY_SHARED_SECRET', $isLocalEnvironment ? $localProxySecret : '');
 $cookieSecure = Env::bool('REFRESH_COOKIE_SECURE', !$isLocalEnvironment);
+$autoSeed = Env::bool('AUTO_SEED', false);
+$mailDriver = Env::get('MAIL_DRIVER', 'disabled');
 
 if (!$isLocalEnvironment) {
     $unsafeSecrets = [
@@ -43,6 +45,15 @@ if (!$isLocalEnvironment) {
     if ($debug) {
         throw new RuntimeException('APP_DEBUG deve permanecer desabilitado fora do ambiente local.');
     }
+    if ($autoSeed) {
+        throw new RuntimeException('AUTO_SEED não pode ser habilitado fora do ambiente local.');
+    }
+    if ($mailDriver !== 'resend') {
+        throw new RuntimeException('MAIL_DRIVER=resend é obrigatório fora do ambiente local.');
+    }
+    if (Env::get('MAIL_FROM', '') === '' || Env::get('RESEND_API_KEY', '') === '') {
+        throw new RuntimeException('MAIL_FROM e RESEND_API_KEY são obrigatórios fora do ambiente local.');
+    }
 }
 
 return [
@@ -53,6 +64,11 @@ return [
     'timezone' => Env::get('APP_TIMEZONE', 'America/Sao_Paulo'),
     'locale' => Env::get('APP_LOCALE', 'pt-BR'),
     'currency' => Env::get('APP_CURRENCY', 'BRL'),
+    'currency_rates' => [
+        'BRL' => 1.0,
+        'USD' => (float) Env::get('USD_PER_BRL', '0.20'),
+        'EUR' => (float) Env::get('EUR_PER_BRL', '0.17'),
+    ],
     'cors_origins' => $origins,
     'proxy_shared_secret' => $proxySharedSecret,
     'database' => [
@@ -71,10 +87,20 @@ return [
         'cookie_secure' => $cookieSecure,
     ],
     'rate_limit' => [
-        'requests' => Env::int('RATE_LIMIT_REQUESTS', 120),
+        // O teto geral protege endpoints públicos sem bloquear uma rede móvel
+        // compartilhada que tenha vários chats abertos ao mesmo tempo.
+        'requests' => Env::int('RATE_LIMIT_REQUESTS', 600),
         'window' => Env::int('RATE_LIMIT_WINDOW', 60),
+        'chat_events_per_user' => Env::int('CHAT_EVENTS_PER_USER', 30),
+        'chat_events_per_ip' => Env::int('CHAT_EVENTS_PER_IP', 360),
+        'conversations_per_user' => Env::int('CONVERSATIONS_PER_USER', 24),
+        'conversations_per_ip' => Env::int('CONVERSATIONS_PER_IP', 240),
     ],
-    'payment_driver' => Env::get('PAYMENT_DRIVER', 'fake'),
-    'mail_driver' => Env::get('MAIL_DRIVER', 'log'),
+    'mail' => [
+        'driver' => $mailDriver,
+        'from' => Env::get('MAIL_FROM', ''),
+        'resend_api_key' => Env::get('RESEND_API_KEY', ''),
+    ],
+    'auto_seed' => $autoSeed,
     'upload_max_bytes' => Env::int('UPLOAD_MAX_BYTES', 5242880),
 ];

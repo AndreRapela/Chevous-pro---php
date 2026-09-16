@@ -1,4 +1,6 @@
 export { AvatarComponent } from './avatar/avatar.component';
+export { AccountSecurityComponent } from './account-security/account-security.component';
+export { AccountIdentityComponent } from './account-identity/account-identity.component';
 export { BrandComponent } from './brand/brand.component';
 export { DateLineComponent } from './date-line/date-line.component';
 export { MetricGridComponent } from './metric-grid/metric-grid.component';

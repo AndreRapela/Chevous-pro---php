@@ -1,4 +1,5 @@
 export type UserRole = 'customer' | 'provider' | 'admin';
+export type CurrencyCode = 'BRL' | 'EUR' | 'USD';
 
 export interface User {
   id: string;
@@ -8,6 +9,7 @@ export interface User {
   role: UserRole;
   initials: string;
   city: string;
+  avatarUrl?: string | null;
 }
 
 export interface AuthSession {
@@ -16,6 +18,17 @@ export interface AuthSession {
   refreshToken?: string;
   tokenType?: 'Bearer';
   expiresIn?: number;
+}
+
+export interface AuthSessionInfo {
+  id: string;
+  ipAddress?: string;
+  userAgent?: string;
+  device: string;
+  current: boolean;
+  createdAt: string;
+  lastUsedAt?: string;
+  expiresAt: string;
 }
 
 export interface ServiceCategory {
@@ -60,6 +73,35 @@ export interface Review {
   rating: number;
   comment: string;
   createdAt: string;
+  serviceName?: string;
+  providerReply?: string;
+  verifiedTransaction?: boolean;
+}
+
+export interface ProfessionalExperience {
+  id: string;
+  role: string;
+  company: string;
+  description?: string | null;
+  startedAt: string;
+  endedAt?: string | null;
+  current: boolean;
+}
+
+export interface ProfessionalCourse {
+  id: string;
+  title: string;
+  institution: string;
+  completedAt?: string | null;
+  certificateUrl?: string | null;
+}
+
+export interface ProfessionalComment {
+  id: string;
+  author: string;
+  initials: string;
+  comment: string;
+  createdAt: string;
 }
 
 export interface ProviderProfile {
@@ -82,26 +124,30 @@ export interface ProviderProfile {
   qualities: string[];
   nextAvailability: string;
   reviews: Review[];
+  avatarUrl?: string | null;
+  state?: string;
+  yearsExperience?: number;
+  memberSince?: string;
+  experiences?: ProfessionalExperience[];
+  courses?: ProfessionalCourse[];
 }
 
 export type BookingStatus =
   | 'open'
-  | 'awaiting_payment'
   | 'awaiting_confirmation'
   | 'confirmed'
   | 'provider_on_the_way'
   | 'in_progress'
   | 'completed'
   | 'cancelled'
-  | 'disputed'
-  | 'refunded';
+  | 'disputed';
 
 export interface PriceBreakdown {
   subtotalCents: number;
   serviceFeeCents: number;
   discountCents: number;
   totalCents: number;
-  currency: 'BRL';
+  currency: CurrencyCode;
 }
 
 export interface Address {
@@ -123,14 +169,12 @@ export interface BookingDraft {
   quantity: number;
   durationMinutes: number;
   addonIds: string[];
-  frequency: 'once' | 'weekly' | 'biweekly' | 'monthly';
   notes: string;
   address: Address;
   date: string;
   time: string;
   providerId: string;
-  paymentMethod: 'card' | 'pix';
-  coupon?: string;
+  currency: CurrencyCode;
 }
 
 export interface Booking {
@@ -149,6 +193,14 @@ export interface Booking {
   canMessage: boolean;
   conversationId?: string;
   allowedActions: string[];
+  history?: BookingHistoryItem[];
+}
+
+export interface BookingHistoryItem {
+  fromStatus?: string | null;
+  toStatus: BookingStatus;
+  reason?: string;
+  createdAt: string;
 }
 
 export interface BookingOffer {
@@ -180,22 +232,10 @@ export interface BookingQuote extends PriceBreakdown {
   quantity: number;
   areaSqm?: number;
   items: QuoteItem[];
-  professionalAmountCents: number;
-  couponCode?: string | null;
 }
 
-export interface PaymentIntent {
-  id: string;
-  status: 'pending' | 'paid' | 'failed' | 'expired' | string;
-  amountCents: number;
-  currency: string;
-  driver?: string;
-  allowedScenarios?: string[];
-}
-
-export interface CheckoutResult {
+export interface BookingConfirmation {
   booking: Booking;
-  payment: PaymentIntent;
   confirmed: boolean;
 }
 
@@ -204,6 +244,9 @@ export interface Conversation {
   bookingId: string;
   bookingStatus: string;
   serviceName: string;
+  contactName?: string;
+  contactId?: string;
+  contactAvatarUrl?: string | null;
   updatedAt: string;
   lastMessage: string;
   unreadCount: number;
@@ -220,7 +263,7 @@ export interface ChatMessage {
 }
 
 export interface ProviderDashboard {
-  metrics: { upcomingJobs: number; completedJobs: number; openRequests: number; earningsCents: number; };
+  metrics: { upcomingJobs: number; completedJobs: number; openRequests: number; };
   profile: Record<string, unknown>;
 }
 
@@ -230,12 +273,12 @@ export interface ProviderJob {
   scheduledStart: string;
   scheduledEnd?: string;
   totalCents: number;
-  professionalAmountCents: number;
   serviceName: string;
   customerName: string;
   city: string;
   state: string;
   conversationId?: string;
+  currency: CurrencyCode;
 }
 
 export interface ProviderRequest {
@@ -249,6 +292,7 @@ export interface ProviderRequest {
   city: string;
   state: string;
   createdAt: string;
+  currency: CurrencyCode;
 }
 
 export interface ProviderService {

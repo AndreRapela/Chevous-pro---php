@@ -7,26 +7,77 @@ namespace ChezVoust\Modules\Engagement;
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\Controller;
 use ChezVoust\Core\Request;
+use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Response;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
 
 final class EngagementController extends Controller
 {
+    private const CHAT_BOOKING_STATUSES = [
+        'confirmed',
+        'provider_on_the_way',
+        'in_progress',
+        'completed',
+        'disputed',
+    ];
+
+    public function __construct(\PDO $db, array $config, private readonly RateLimiter $rateLimiter)
+    {
+        parent::__construct($db, $config);
+    }
+
     public function conversations(Request $request, array $params, ?array $auth): Response
     {
+        $this->rateLimiter->check(
+            'conversations:user:' . $auth['id'],
+            $this->config['rate_limit']['conversations_per_user'],
+            $this->config['rate_limit']['window']
+        );
+        $this->rateLimiter->check(
+            'conversations:ip:' . $request->ip,
+            $this->config['rate_limit']['conversations_per_ip'],
+            $this->config['rate_limit']['window']
+        );
+        [$page, $perPage, $offset] = $this->pagination($request, 30, 100);
+        $count = $this->db->prepare('SELECT COUNT(*) FROM conversation_participants WHERE user_id = :user_id');
+        $count->execute(['user_id' => $auth['id']]);
+        $total = (int) $count->fetchColumn();
         $statement = $this->db->prepare(
             'SELECT c.public_id AS id, b.public_id AS bookingId, b.status AS bookingStatus,
                     s.name AS serviceName, c.updated_at AS updatedAt,
+                    (SELECT u2.name FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
+                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_user_id LIMIT 1) AS contactName,
+                    (SELECT u2.public_id FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
+                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_public_user_id LIMIT 1) AS contactId,
+                    (SELECT u2.avatar_path FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
+                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_avatar_user_id LIMIT 1) AS contactAvatarPath,
+                    (SELECT u2.avatar_updated_at FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
+                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_updated_user_id LIMIT 1) AS contactAvatarUpdatedAt,
                     (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS lastMessage,
                     (SELECT COUNT(*) FROM messages m
                      WHERE m.conversation_id = c.id AND m.id > COALESCE(cp.last_read_message_id, 0) AND m.sender_id <> :sender_id) AS unreadCount
              FROM conversation_participants cp INNER JOIN conversations c ON c.id = cp.conversation_id
              INNER JOIN bookings b ON b.id = c.booking_id INNER JOIN services s ON s.id = b.service_id
-             WHERE cp.user_id = :user_id ORDER BY c.updated_at DESC'
+             WHERE cp.user_id = :user_id ORDER BY c.updated_at DESC LIMIT ' . $perPage . ' OFFSET ' . $offset
         );
-        $statement->execute(['sender_id' => $auth['id'], 'user_id' => $auth['id']]);
-        return Response::data($statement->fetchAll());
+        $statement->execute([
+            'sender_id' => $auth['id'], 'user_id' => $auth['id'], 'contact_user_id' => $auth['id'],
+            'contact_public_user_id' => $auth['id'], 'contact_avatar_user_id' => $auth['id'], 'contact_updated_user_id' => $auth['id'],
+        ]);
+        $conversations = $statement->fetchAll();
+        foreach ($conversations as &$conversation) {
+            $conversation['contactAvatarUrl'] = $this->avatarUrl(
+                (string) ($conversation['contactId'] ?? ''),
+                $conversation['contactAvatarPath'] ?? null,
+                $conversation['contactAvatarUpdatedAt'] ?? null
+            );
+            unset($conversation['contactAvatarPath'], $conversation['contactAvatarUpdatedAt']);
+        }
+        unset($conversation);
+        return Response::data($conversations, 200, [
+            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+        ]);
     }
 
     public function favorites(Request $request, array $params, ?array $auth): Response
@@ -70,50 +121,116 @@ final class EngagementController extends Controller
     {
         $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
         $after = max(0, (int) ($request->query['after'] ?? 0));
+        $before = max(0, (int) ($request->query['before'] ?? 0));
         $limit = max(1, min(100, (int) ($request->query['limit'] ?? 50)));
-        $statement = $this->db->prepare(
-            "SELECT m.id AS sequence, m.public_id AS id, u.public_id AS senderId, u.name AS senderName,
-                    m.body, m.message_type AS messageType, m.created_at AS createdAt
-             FROM messages m INNER JOIN users u ON u.id = m.sender_id
-             WHERE m.conversation_id = :conversation_id AND m.id > :after
-             ORDER BY m.id ASC LIMIT {$limit}"
-        );
-        $statement->execute(['conversation_id' => $conversation['id'], 'after' => $after]);
-        return Response::data($statement->fetchAll(), 200, ['after' => $after, 'limit' => $limit]);
+        if ($before > 0) {
+            return Response::data($this->messageRowsBefore((int) $conversation['id'], $before, $limit), 200, ['before' => $before, 'limit' => $limit]);
+        }
+        return Response::data($this->messageRowsAfter((int) $conversation['id'], $after, $limit), 200, ['after' => $after, 'limit' => $limit]);
+    }
+
+    /**
+     * Consulta incremental curta para a conversa ativa. O limite global do
+     * bootstrap já protege o IP antes do roteamento; não repetir dois buckets
+     * persistentes neste endpoint evita seis operações de banco por polling.
+     */
+    public function messageUpdates(Request $request, array $params, ?array $auth): Response
+    {
+        $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
+        $after = max(0, (int) ($request->query['after'] ?? 0));
+        $limit = max(1, min(50, (int) ($request->query['limit'] ?? 50)));
+        $messages = $this->messageRowsAfter((int) $conversation['id'], $after, $limit);
+
+        return Response::data($messages, 200, [
+            'after' => $after,
+            'limit' => $limit,
+            'pollAfterSeconds' => 10,
+        ]);
     }
 
     public function sendMessage(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
+        $this->rateLimiter->check('chat:user:' . $auth['id'], 30, 60);
+        $this->rateLimiter->check('chat:ip:' . $request->ip, 90, 60);
         $data = Validator::validate($request->body, ['body' => ['required', 'string', 'min:1', 'max:4000']]);
         $body = trim(strip_tags((string) $data['body']));
         if ($body === '') {
             throw new ApiException(422, 'EMPTY_MESSAGE', 'A mensagem não pode ficar vazia.');
         }
+        if (preg_match('/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}|(?:\+?\d[\s().-]?){8,}\d/iu', $body) === 1) {
+            throw new ApiException(422, 'CONTACT_DETAILS_NOT_ALLOWED', 'Não envie telefone ou e-mail pelo chat. Use os dados protegidos da reserva.');
+        }
         $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
-        if (!in_array($conversation['booking_status'], ['awaiting_payment', 'confirmed', 'in_progress', 'completed', 'disputed'], true)) {
+        if (!in_array($conversation['booking_status'], self::CHAT_BOOKING_STATUSES, true)) {
             throw new ApiException(409, 'CHAT_UNAVAILABLE', 'O chat não está disponível para esta reserva.');
         }
-        $publicId = Uuid::v4();
-        $this->db->prepare(
-            'INSERT INTO messages (public_id, conversation_id, sender_id, message_type, body, created_at)
-             VALUES (:public_id, :conversation_id, :sender_id, \'text\', :body, UTC_TIMESTAMP())'
-        )->execute(['public_id' => $publicId, 'conversation_id' => $conversation['id'], 'sender_id' => $auth['id'], 'body' => $body]);
-        $sequence = (int) $this->db->lastInsertId();
-        $this->db->prepare('UPDATE conversations SET updated_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $conversation['id']]);
-        $recipients = $this->db->prepare('SELECT user_id FROM conversation_participants WHERE conversation_id = :id AND user_id <> :sender');
-        $recipients->execute(['id' => $conversation['id'], 'sender' => $auth['id']]);
-        foreach ($recipients->fetchAll() as $recipient) {
-            $this->notify((int) $recipient['user_id'], 'chat.message', 'Nova mensagem', $auth['name'] . ' enviou uma mensagem.', ['conversationId' => $params['id']]);
+        $requestHash = hash('sha256', $params['id'] . "\n" . $body);
+        $idempotencyKey = trim((string) ($request->headers['idempotency-key'] ?? ''));
+        if (strlen($idempotencyKey) > 100) {
+            throw new ApiException(422, 'INVALID_IDEMPOTENCY_KEY', 'Chave de idempotência inválida.');
         }
-        return Response::data([
-            'sequence' => $sequence,
-            'id' => $publicId,
-            'senderId' => $auth['publicId'],
-            'senderName' => $auth['name'],
-            'body' => $body,
-            'messageType' => 'text',
-            'createdAt' => gmdate('Y-m-d H:i:s'),
-        ], 201);
+        if ($idempotencyKey !== '') {
+            $this->db->prepare(
+                'DELETE FROM idempotency_keys WHERE user_id = :user_id AND operation = \'chat.message\'
+                 AND idempotency_key = :key AND expires_at <= UTC_TIMESTAMP()'
+            )->execute(['user_id' => $auth['id'], 'key' => $idempotencyKey]);
+            $existing = $this->db->prepare(
+                'SELECT request_hash, response_public_id FROM idempotency_keys
+                 WHERE user_id = :user_id AND operation = \'chat.message\' AND idempotency_key = :key LIMIT 1'
+            );
+            $existing->execute(['user_id' => $auth['id'], 'key' => $idempotencyKey]);
+            if ($stored = $existing->fetch()) {
+                if (!hash_equals((string) $stored['request_hash'], $requestHash)) {
+                    throw new ApiException(409, 'IDEMPOTENCY_CONFLICT', 'Esta chave de idempotência já foi usada com outro conteúdo.');
+                }
+                return Response::data($this->messageByPublicId((string) $stored['response_public_id'], (int) $auth['id']));
+            }
+        }
+
+        $publicId = Uuid::v4();
+        try {
+            $this->db->beginTransaction();
+            $this->db->prepare(
+                'INSERT INTO messages (public_id, conversation_id, sender_id, message_type, body, created_at)
+                 VALUES (:public_id, :conversation_id, :sender_id, \'text\', :body, UTC_TIMESTAMP())'
+            )->execute(['public_id' => $publicId, 'conversation_id' => $conversation['id'], 'sender_id' => $auth['id'], 'body' => $body]);
+            $this->db->prepare('UPDATE conversations SET updated_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $conversation['id']]);
+            $recipients = $this->db->prepare('SELECT user_id FROM conversation_participants WHERE conversation_id = :id AND user_id <> :sender');
+            $recipients->execute(['id' => $conversation['id'], 'sender' => $auth['id']]);
+            foreach ($recipients->fetchAll() as $recipient) {
+                $this->notify((int) $recipient['user_id'], 'chat.message', 'Nova mensagem', $auth['name'] . ' enviou uma mensagem.', ['conversationId' => $params['id']]);
+            }
+            if ($idempotencyKey !== '') {
+                $this->db->prepare(
+                    'INSERT INTO idempotency_keys (user_id, operation, idempotency_key, request_hash, response_public_id, created_at, expires_at)
+                     VALUES (:user_id, \'chat.message\', :key, :request_hash, :response_id, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR))'
+                )->execute([
+                    'user_id' => $auth['id'], 'key' => $idempotencyKey,
+                    'request_hash' => $requestHash, 'response_id' => $publicId,
+                ]);
+            }
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            if ($idempotencyKey !== '' && $exception instanceof \PDOException && $exception->getCode() === '23000') {
+                $existing = $this->db->prepare(
+                    'SELECT request_hash, response_public_id FROM idempotency_keys
+                     WHERE user_id = :user_id AND operation = \'chat.message\' AND idempotency_key = :key LIMIT 1'
+                );
+                $existing->execute(['user_id' => $auth['id'], 'key' => $idempotencyKey]);
+                if ($stored = $existing->fetch()) {
+                    if (!hash_equals((string) $stored['request_hash'], $requestHash)) {
+                        throw new ApiException(409, 'IDEMPOTENCY_CONFLICT', 'Esta chave de idempotência já foi usada com outro conteúdo.');
+                    }
+                    return Response::data($this->messageByPublicId((string) $stored['response_public_id'], (int) $auth['id']));
+                }
+            }
+            throw $exception;
+        }
+        return Response::data($this->messageByPublicId($publicId, (int) $auth['id']), 201);
     }
 
     public function markRead(Request $request, array $params, ?array $auth): Response
@@ -193,8 +310,59 @@ final class EngagementController extends Controller
         return Response::data($statement->fetchAll(), 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
     }
 
+    public function professionalComments(Request $request, array $params, ?array $auth): Response
+    {
+        [$page, $perPage, $offset] = $this->pagination($request, 20, 50);
+        $professional = $this->publicProfessional($params['id']);
+        $count = $this->db->prepare('SELECT COUNT(*) FROM professional_comments WHERE professional_id = :id AND status = \'published\'');
+        $count->execute(['id' => $professional['id']]);
+        $total = (int) $count->fetchColumn();
+        $statement = $this->db->prepare(
+            "SELECT c.public_id AS id, c.body AS comment, c.created_at AS createdAt, u.name AS author
+             FROM professional_comments c INNER JOIN users u ON u.id = c.author_id
+             WHERE c.professional_id = :id AND c.status = 'published'
+             ORDER BY c.created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+        );
+        $statement->execute(['id' => $professional['id']]);
+        return Response::data($statement->fetchAll(), 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
+    }
+
+    public function createProfessionalComment(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $this->rateLimiter->check('comment:user:' . $auth['id'], 5, 3600);
+        $this->rateLimiter->check('comment:ip:' . $request->ip, 15, 3600);
+        $data = Validator::validate($request->body, ['comment' => ['required', 'string', 'max:1200']]);
+        $comment = trim(strip_tags((string) $data['comment']));
+        if (mb_strlen($comment) < 3) {
+            throw new ApiException(422, 'INVALID_COMMENT', 'Escreva um comentário com pelo menos 3 caracteres.');
+        }
+        $professional = $this->publicProfessional($params['id']);
+        if ((int) $professional['id'] === (int) $auth['id']) {
+            throw new ApiException(422, 'OWN_COMMENT', 'Você não pode comentar no próprio perfil.');
+        }
+        $recent = $this->db->prepare(
+            'SELECT 1 FROM professional_comments WHERE professional_id = :professional_id AND author_id = :author_id
+             AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 60 SECOND) LIMIT 1'
+        );
+        $recent->execute(['professional_id' => $professional['id'], 'author_id' => $auth['id']]);
+        if ($recent->fetchColumn()) {
+            throw new ApiException(429, 'COMMENT_RATE_LIMIT', 'Aguarde um minuto antes de publicar outro comentário.');
+        }
+        $publicId = Uuid::v4();
+        $this->db->prepare(
+            'INSERT INTO professional_comments (public_id, professional_id, author_id, body, status, created_at, updated_at)
+             VALUES (:public_id, :professional_id, :author_id, :body, \'published\', UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+        )->execute(['public_id' => $publicId, 'professional_id' => $professional['id'], 'author_id' => $auth['id'], 'body' => $comment]);
+        return Response::data([
+            'id' => $publicId, 'author' => $auth['name'], 'comment' => $comment, 'createdAt' => gmdate('Y-m-d H:i:s'),
+        ], 201);
+    }
+
     public function createReview(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
+        $this->rateLimiter->check('review:user:' . $auth['id'], 12, 86400);
         $data = Validator::validate($request->body, [
             'rating' => ['required', 'integer', 'min:1', 'max:5'], 'comment' => ['nullable', 'string', 'max:2000'],
         ]);
@@ -233,6 +401,54 @@ final class EngagementController extends Controller
         return Response::data(['id' => $publicId, 'rating' => (int) $data['rating'], 'comment' => $data['comment'] ?? null], 201);
     }
 
+    public function reportContent(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $this->rateLimiter->check('report:user:' . $auth['id'], 12, 86400);
+        $data = Validator::validate($request->body, [
+            'contentType' => ['required', 'string', 'in:professional_comment,review,message'],
+            'contentId' => ['required', 'uuid'],
+            'reason' => ['required', 'string', 'min:8', 'max:500'],
+        ]);
+        $type = (string) $data['contentType'];
+        $content = match ($type) {
+            'professional_comment' => $this->requireRow('SELECT author_id AS authorId FROM professional_comments WHERE public_id = :id', ['id' => $data['contentId']], 'Comentário não encontrado.'),
+            'review' => $this->requireRow('SELECT customer_id AS authorId FROM reviews WHERE public_id = :id', ['id' => $data['contentId']], 'Avaliação não encontrada.'),
+            'message' => $this->requireRow(
+                'SELECT m.sender_id AS authorId FROM messages m INNER JOIN conversation_participants cp ON cp.conversation_id = m.conversation_id WHERE m.public_id = :id AND cp.user_id = :user_id',
+                ['id' => $data['contentId'], 'user_id' => $auth['id']],
+                'Mensagem não encontrada.'
+            ),
+        };
+        if ((int) $content['authorId'] === (int) $auth['id']) {
+            throw new ApiException(422, 'OWN_CONTENT_REPORT', 'Você não pode denunciar seu próprio conteúdo.');
+        }
+        try {
+            $publicId = Uuid::v4();
+            $this->db->prepare('INSERT INTO content_reports (public_id, reporter_id, content_type, content_public_id, reason, status, action, created_at, updated_at) VALUES (:public_id, :reporter_id, :type, :content_id, :reason, \'pending\', \'none\', UTC_TIMESTAMP(), UTC_TIMESTAMP())')
+                ->execute(['public_id' => $publicId, 'reporter_id' => $auth['id'], 'type' => $type, 'content_id' => $data['contentId'], 'reason' => trim(strip_tags((string) $data['reason']))]);
+        } catch (\PDOException $exception) {
+            if ($exception->getCode() === '23000') {
+                throw new ApiException(409, 'REPORT_ALREADY_EXISTS', 'Você já denunciou este conteúdo.');
+            }
+            throw $exception;
+        }
+        return Response::data(['id' => $publicId, 'status' => 'pending'], 201);
+    }
+
+    public function replyToReview(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $data = Validator::validate($request->body, ['reply' => ['required', 'string', 'min:3', 'max:2000']]);
+        $reply = trim(strip_tags((string) $data['reply']));
+        $statement = $this->db->prepare('UPDATE reviews SET provider_reply = :reply, updated_at = UTC_TIMESTAMP() WHERE public_id = :id AND professional_id = :professional_id AND status = \'published\'');
+        $statement->execute(['reply' => $reply, 'id' => $params['id'], 'professional_id' => $auth['id']]);
+        if ($statement->rowCount() === 0) {
+            $this->requireRow('SELECT id FROM reviews WHERE public_id = :id AND professional_id = :professional_id', ['id' => $params['id'], 'professional_id' => $auth['id']], 'Avaliação não encontrada.');
+        }
+        return Response::data(['id' => $params['id'], 'providerReply' => $reply]);
+    }
+
     private function conversationForUser(string $publicId, int $userId): array
     {
         return $this->requireRow(
@@ -243,5 +459,60 @@ final class EngagementController extends Controller
             ['public_id' => $publicId, 'user_id' => $userId],
             'Conversa não encontrada.'
         );
+    }
+
+    private function messageRowsAfter(int $conversationId, int $after, int $limit): array
+    {
+        $statement = $this->db->prepare(
+            "SELECT m.id AS sequence, m.public_id AS id, u.public_id AS senderId, u.name AS senderName,
+                    m.body, m.message_type AS messageType, m.created_at AS createdAt
+             FROM messages m INNER JOIN users u ON u.id = m.sender_id
+             WHERE m.conversation_id = :conversation_id AND m.id > :after
+             ORDER BY m.id ASC LIMIT {$limit}"
+        );
+        $statement->execute(['conversation_id' => $conversationId, 'after' => $after]);
+        return $statement->fetchAll();
+    }
+
+    private function messageRowsBefore(int $conversationId, int $before, int $limit): array
+    {
+        $statement = $this->db->prepare(
+            "SELECT m.id AS sequence, m.public_id AS id, u.public_id AS senderId, u.name AS senderName,
+                    m.body, m.message_type AS messageType, m.created_at AS createdAt
+             FROM messages m INNER JOIN users u ON u.id = m.sender_id
+             WHERE m.conversation_id = :conversation_id AND m.id < :before
+             ORDER BY m.id DESC LIMIT {$limit}"
+        );
+        $statement->execute(['conversation_id' => $conversationId, 'before' => $before]);
+        return array_reverse($statement->fetchAll());
+    }
+
+    private function messageByPublicId(string $publicId, int $senderId): array
+    {
+        return $this->requireRow(
+            'SELECT m.id AS sequence, m.public_id AS id, u.public_id AS senderId, u.name AS senderName,
+                    m.body, m.message_type AS messageType, m.created_at AS createdAt
+             FROM messages m INNER JOIN users u ON u.id = m.sender_id
+             WHERE m.public_id = :public_id AND m.sender_id = :sender_id',
+            ['public_id' => $publicId, 'sender_id' => $senderId],
+            'Mensagem não encontrada.'
+        );
+    }
+
+    private function publicProfessional(string $publicId): array
+    {
+        return $this->requireRow(
+            'SELECT u.id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
+             WHERE u.public_id = :id AND u.role = \'provider\' AND u.status = \'active\' AND p.verification_status = \'approved\'',
+            ['id' => $publicId], 'Profissional não encontrado.'
+        );
+    }
+
+    private function avatarUrl(string $publicId, mixed $path, mixed $updatedAt): ?string
+    {
+        if ($publicId === '' || !is_string($path) || $path === '') {
+            return null;
+        }
+        return '/api/v1/avatars/' . rawurlencode($publicId) . '?v=' . urlencode((string) ($updatedAt ?? '0'));
     }
 }

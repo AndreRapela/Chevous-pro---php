@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(190) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     phone VARCHAR(20) NULL,
+    avatar_path VARCHAR(255) NULL,
+    avatar_updated_at DATETIME NULL,
     status ENUM('active', 'suspended') NOT NULL DEFAULT 'active',
     locale VARCHAR(12) NOT NULL DEFAULT 'pt-BR',
     timezone VARCHAR(80) NOT NULL DEFAULT 'America/Sao_Paulo',
@@ -30,6 +32,8 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
     user_id BIGINT UNSIGNED NOT NULL,
     refresh_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    previous_refresh_token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    previous_refresh_expires_at DATETIME NULL,
     ip_address VARCHAR(45) NULL,
     user_agent VARCHAR(500) NULL,
     expires_at DATETIME NOT NULL,
@@ -90,6 +94,41 @@ CREATE TABLE IF NOT EXISTS professional_profiles (
     KEY idx_professional_featured (featured, rating_avg, completed_jobs),
     CONSTRAINT fk_professional_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     CONSTRAINT chk_professional_rating CHECK (rating_avg >= 0 AND rating_avg <= 5)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS professional_experiences (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    professional_id BIGINT UNSIGNED NOT NULL,
+    role_title VARCHAR(120) NOT NULL,
+    company_name VARCHAR(120) NOT NULL,
+    description VARCHAR(1000) NULL,
+    started_at DATE NOT NULL,
+    ended_at DATE NULL,
+    is_current TINYINT(1) NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_professional_experiences_public_id (public_id),
+    KEY idx_professional_experiences_profile (professional_id, started_at DESC),
+    CONSTRAINT fk_professional_experiences_user FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT chk_professional_experience_dates CHECK (ended_at IS NULL OR ended_at >= started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS professional_courses (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    professional_id BIGINT UNSIGNED NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    institution VARCHAR(160) NOT NULL,
+    completed_at DATE NULL,
+    certificate_url VARCHAR(500) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_professional_courses_public_id (public_id),
+    KEY idx_professional_courses_profile (professional_id, completed_at DESC),
+    CONSTRAINT fk_professional_courses_user FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS addresses (
@@ -258,42 +297,6 @@ CREATE TABLE IF NOT EXISTS app_settings (
     PRIMARY KEY (setting_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS coupons (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    code VARCHAR(50) NOT NULL,
-    name VARCHAR(120) NOT NULL,
-    discount_type ENUM('percent', 'fixed') NOT NULL,
-    discount_value DECIMAL(12,2) NOT NULL,
-    max_discount_cents BIGINT UNSIGNED NULL,
-    minimum_order_cents BIGINT UNSIGNED NOT NULL DEFAULT 0,
-    usage_limit INT UNSIGNED NULL,
-    used_count INT UNSIGNED NOT NULL DEFAULT 0,
-    starts_at DATETIME NULL,
-    ends_at DATETIME NULL,
-    active TINYINT(1) NOT NULL DEFAULT 1,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_coupons_public_id (public_id),
-    UNIQUE KEY uq_coupons_code (code),
-    KEY idx_coupons_validity (active, starts_at, ends_at),
-    CONSTRAINT chk_coupon_discount CHECK (discount_value > 0)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS coupon_services (
-    coupon_id BIGINT UNSIGNED NOT NULL,
-    service_id BIGINT UNSIGNED NULL,
-    category_id BIGINT UNSIGNED NULL,
-    KEY idx_coupon_services_coupon (coupon_id),
-    KEY idx_coupon_services_service (service_id),
-    KEY idx_coupon_services_category (category_id),
-    CONSTRAINT fk_coupon_services_coupon FOREIGN KEY (coupon_id) REFERENCES coupons (id) ON DELETE CASCADE,
-    CONSTRAINT fk_coupon_services_service FOREIGN KEY (service_id) REFERENCES services (id) ON DELETE CASCADE,
-    CONSTRAINT fk_coupon_services_category FOREIGN KEY (category_id) REFERENCES service_categories (id) ON DELETE CASCADE,
-    CONSTRAINT chk_coupon_scope CHECK (service_id IS NOT NULL OR category_id IS NOT NULL)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS bookings (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -301,9 +304,8 @@ CREATE TABLE IF NOT EXISTS bookings (
     professional_id BIGINT UNSIGNED NULL,
     service_id BIGINT UNSIGNED NOT NULL,
     address_id BIGINT UNSIGNED NOT NULL,
-    coupon_id BIGINT UNSIGNED NULL,
     mode ENUM('direct', 'marketplace') NOT NULL,
-    status ENUM('draft', 'open', 'awaiting_payment', 'confirmed', 'in_progress', 'completed', 'cancelled', 'disputed', 'refunded') NOT NULL,
+    status ENUM('draft', 'open', 'confirmed', 'provider_on_the_way', 'in_progress', 'completed', 'cancelled', 'disputed') NOT NULL,
     scheduled_start DATETIME NOT NULL,
     scheduled_end DATETIME NOT NULL,
     timezone VARCHAR(80) NOT NULL,
@@ -319,7 +321,6 @@ CREATE TABLE IF NOT EXISTS bookings (
     total_cents BIGINT UNSIGNED NOT NULL,
     professional_amount_cents BIGINT UNSIGNED NOT NULL DEFAULT 0,
     currency CHAR(3) NOT NULL DEFAULT 'BRL',
-    paid_at DATETIME NULL,
     completed_at DATETIME NULL,
     cancelled_at DATETIME NULL,
     cancellation_reason VARCHAR(500) NULL,
@@ -330,12 +331,10 @@ CREATE TABLE IF NOT EXISTS bookings (
     KEY idx_bookings_customer (customer_id, created_at, status),
     KEY idx_bookings_provider_schedule (professional_id, scheduled_start, scheduled_end, status),
     KEY idx_bookings_marketplace (mode, status, service_id, created_at),
-    KEY idx_bookings_coupon (coupon_id),
     CONSTRAINT fk_bookings_customer FOREIGN KEY (customer_id) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT fk_bookings_professional FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT fk_bookings_service FOREIGN KEY (service_id) REFERENCES services (id) ON DELETE RESTRICT,
     CONSTRAINT fk_bookings_address FOREIGN KEY (address_id) REFERENCES addresses (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_bookings_coupon FOREIGN KEY (coupon_id) REFERENCES coupons (id) ON DELETE SET NULL,
     CONSTRAINT chk_booking_schedule CHECK (scheduled_end > scheduled_start),
     CONSTRAINT chk_booking_total CHECK (total_cents >= 0)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -412,65 +411,6 @@ CREATE TABLE IF NOT EXISTS slot_reservations (
     KEY idx_slot_reservation_expiry (status, expires_at),
     CONSTRAINT fk_slot_reservation_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE CASCADE,
     CONSTRAINT fk_slot_reservation_provider FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS payment_intents (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    booking_id BIGINT UNSIGNED NOT NULL,
-    customer_id BIGINT UNSIGNED NOT NULL,
-    status ENUM('pending', 'paid', 'failed', 'cancelled', 'refunded') NOT NULL,
-    amount_cents BIGINT UNSIGNED NOT NULL,
-    currency CHAR(3) NOT NULL,
-    idempotency_key VARCHAR(100) NOT NULL,
-    provider_reference VARCHAR(100) NULL,
-    failure_code VARCHAR(100) NULL,
-    expires_at DATETIME NOT NULL,
-    paid_at DATETIME NULL,
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_payment_intents_public_id (public_id),
-    UNIQUE KEY uq_payment_intents_idempotency (booking_id, idempotency_key),
-    KEY idx_payment_intents_customer (customer_id, created_at),
-    KEY idx_payment_intents_status (status, expires_at),
-    CONSTRAINT fk_payment_intents_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_payment_intents_customer FOREIGN KEY (customer_id) REFERENCES users (id) ON DELETE RESTRICT
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS payment_transactions (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    booking_id BIGINT UNSIGNED NOT NULL,
-    payment_intent_id BIGINT UNSIGNED NULL,
-    type ENUM('charge', 'refund', 'adjustment') NOT NULL,
-    status ENUM('pending', 'succeeded', 'failed') NOT NULL,
-    amount_cents BIGINT UNSIGNED NOT NULL,
-    currency CHAR(3) NOT NULL,
-    provider_reference VARCHAR(100) NULL,
-    metadata JSON NULL,
-    created_at DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_payment_transactions_public_id (public_id),
-    KEY idx_payment_transactions_booking (booking_id, created_at),
-    KEY idx_payment_transactions_intent (payment_intent_id),
-    CONSTRAINT fk_payment_transactions_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_payment_transactions_intent FOREIGN KEY (payment_intent_id) REFERENCES payment_intents (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS coupon_redemptions (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    coupon_id BIGINT UNSIGNED NOT NULL,
-    user_id BIGINT UNSIGNED NOT NULL,
-    booking_id BIGINT UNSIGNED NOT NULL,
-    discount_cents BIGINT UNSIGNED NOT NULL,
-    redeemed_at DATETIME NOT NULL,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_coupon_redemptions_booking (booking_id),
-    KEY idx_coupon_redemptions_coupon_user (coupon_id, user_id, redeemed_at),
-    CONSTRAINT fk_coupon_redemptions_coupon FOREIGN KEY (coupon_id) REFERENCES coupons (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_coupon_redemptions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE RESTRICT,
-    CONSTRAINT fk_coupon_redemptions_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS idempotency_keys (
@@ -576,6 +516,45 @@ CREATE TABLE IF NOT EXISTS reviews (
     CONSTRAINT fk_reviews_customer FOREIGN KEY (customer_id) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT fk_reviews_professional FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE RESTRICT,
     CONSTRAINT chk_reviews_rating CHECK (rating BETWEEN 1 AND 5)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS professional_comments (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    professional_id BIGINT UNSIGNED NOT NULL,
+    author_id BIGINT UNSIGNED NOT NULL,
+    body VARCHAR(1200) NOT NULL,
+    status ENUM('published', 'hidden') NOT NULL DEFAULT 'published',
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_professional_comments_public_id (public_id),
+    KEY idx_professional_comments_public (professional_id, status, created_at),
+    KEY idx_professional_comments_author (author_id, created_at),
+    CONSTRAINT fk_professional_comments_professional FOREIGN KEY (professional_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_professional_comments_author FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS content_reports (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    reporter_id BIGINT UNSIGNED NOT NULL,
+    content_type ENUM('professional_comment', 'review', 'message') NOT NULL,
+    content_public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    reason VARCHAR(500) NOT NULL,
+    status ENUM('pending', 'resolved', 'dismissed') NOT NULL DEFAULT 'pending',
+    action ENUM('none', 'hidden', 'retained') NOT NULL DEFAULT 'none',
+    resolved_by BIGINT UNSIGNED NULL,
+    resolved_at DATETIME NULL,
+    resolution_note VARCHAR(1000) NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_content_reports_reporter_content (reporter_id, content_type, content_public_id),
+    UNIQUE KEY uq_content_reports_public_id (public_id),
+    KEY idx_content_reports_queue (status, created_at),
+    CONSTRAINT fk_content_reports_reporter FOREIGN KEY (reporter_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT fk_content_reports_resolver FOREIGN KEY (resolved_by) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS api_rate_limits (

@@ -10,8 +10,8 @@
 - Uma imagem editada a partir da referência autorizada é usada na capa e uma foto de eletricista gerada a pedido do usuário é usada no acesso.
 - Por solicitação do produto, criação complementar e execução da suíte de testes ficam
   exclusivamente para a fase final, depois do congelamento funcional.
-- Pagamento, contas, endereços e comunicação usam dados fictícios; nenhum serviço real
-  deve ser acionado.
+- Contas, endereços e comunicação usam dados fictícios no ambiente local; nenhum serviço
+  externo deve ser acionado.
 
 ## Legenda de status
 
@@ -34,15 +34,14 @@ A versão local pode buscar aceite funcional para este núcleo:
 - cadastro, login, refresh, logout, verificação e recuperação no limite dos adapters
   locais disponíveis;
 - endereços;
-- cotação autoritativa, cupom, reserva direta e solicitação ao marketplace;
+- estimativa autoritativa, reserva direta e solicitação ao marketplace;
 - proposta/aceite, bloqueio de agenda e transições básicas;
-- intenção e pagamento simulados;
 - favoritos, conversa de texto, notificações e avaliação;
 - perfil, serviços, disponibilidade, jobs e oportunidades de prestador;
-- administração básica de usuários, prestadores, catálogo, cupons, promoções e auditoria.
+- administração básica de usuários, prestadores, catálogo, promoções e auditoria.
 
-KYC, uploads, gateway real, webhook, estorno, crédito, ledger, repasse, recorrência,
-reagendamento completo, disputa/ticket, privacidade automatizada, múltiplos papéis, PWA e
+KYC, uploads, recorrência
+automática, disputa/ticket, privacidade automatizada, múltiplos papéis, PWA e
 fornecedores externos não fazem parte do gate local atual. Eles possuem gate próprio
 quando forem implementados.
 
@@ -52,21 +51,20 @@ quando forem implementados.
 | --- | --- | --- | --- |
 | PUB-01 | Landing, categorias e profissionais em mobile/desktop. | Implementado. | Verificar 360, 390, 768, 1024 e 1440 px sem sobreposição ou CTA inacessível. |
 | PUB-02 | Busca sem expor contato/endereço exato. | Parcial: serviço, cidade, estado e nota existem; data, distância, preço e slots não formam busca completa. | Aceitar apenas os filtros existentes e comprovar minimização de dados. |
-| AUTH-01 | Cadastro, login, refresh e logout. | Implementado. | Comprovar expiração, rotação, revogação, papéis e mensagens de erro. |
+| AUTH-01 | Cadastro, login, refresh e logout. | Implementado. | Comprovar expiração, rotação inclusive em abas concorrentes, revogação, papéis e mensagens de erro. |
 | AUTH-02 | Verificação e recuperação de senha. | Parcial: API, tokens e worker existem; o ambiente local usa token debug e não entrega e-mail real. | Comprovar fluxo local sem enumeração e documentar claramente a entrega demo. |
 | CLI-01 | Configuração de endereço, serviço, quantidade/área, data e horário. | Implementado no núcleo. Recorrência, materiais e formulário dinâmico são roadmap. | Validar campos aplicáveis aos três tipos de preço. |
 | CLI-02 | Cotação e composição do preço antes da confirmação. | Implementado na API e integrado ao fluxo web pelo endpoint de cotação. | Comparar UI, snapshot e valores persistidos em todos os cenários. |
-| CLI-03 | Reserva direta, hold e pagamento simulado. | Implementado com simulador. | Comprovar idempotência, expiração, sucesso, recusa e timeout sem dupla reserva. |
+| CLI-03 | Reserva direta e bloqueio de agenda. | Implementado. | Comprovar idempotência, conflito de agenda e confirmação sem dupla reserva. |
 | CLI-04 | Solicitação aberta, proposta e aceite. | Implementado na API e nas telas de cliente/prestador. | Comprovar que só prestador aprovado/compatível propõe e apenas uma oferta é aceita. |
-| CLI-05 | Lista/detalhe/cancelamento de reserva. | Parcial: lista, detalhe e cancelamento básico existem; reagendamento, política versionada e disputa são roadmap. | Testar propriedade, estados permitidos e histórico. |
-| CLI-06 | Conversa, favorito, notificação e avaliação. | API e jornadas web implementadas, incluindo leitura de notificações. | Testar participantes, leitura, remoção de favorito e avaliação única após conclusão. |
+| CLI-05 | Lista/detalhe/cancelamento/reagendamento de reserva. | Implementado para reserva confirmada; política versionada e disputa são roadmap. | Testar propriedade, conflito de agenda, estados permitidos e histórico. |
+| CLI-06 | Conversa, favorito, notificação e avaliação. | API e jornadas web implementadas, incluindo leitura, consulta incremental curta autenticada e idempotência no envio. | Testar participantes, entrega incremental, repetição de mensagem, leitura, remoção de favorito e avaliação única após conclusão. |
 | PRE-01 | Perfil, serviços, preço e disponibilidade. | Implementado sem documentos/KYC e sem área geográfica calculada. | Comprovar ownership, validação e que aprovação é operacional, não identidade verificada. |
 | PRE-02 | Jobs, oportunidades e propostas. | Implementado no núcleo. | Comprovar filtro por serviço, aprovação, concorrência e ausência de acesso alheio. |
-| PRE-03 | Ganhos e repasses. | Parcial: há métrica local de ganhos; saldo, banco e repasse real são roadmap. | Não aceitar alegação financeira além da métrica derivada de dados locais. |
+| PRE-03 | Histórico de serviços. | Implementado como agenda, status e histórico, sem conta, saldo ou movimentação financeira. | Conferir dados, paginação e ações permitidas. |
 | ADM-01 | Dashboard, usuários e aprovação de perfil. | Implementado no núcleo da API. | Testar papel, filtros, estados, auditoria e integração das ações expostas. |
-| ADM-02 | Catálogo, cupons, promoções e auditoria. | Implementado no núcleo da API. | Testar validação, paginação quando aplicável e persistência. |
+| ADM-02 | Catálogo, promoções e auditoria. | Implementado no núcleo da API. | Testar validação, paginação quando aplicável e persistência. |
 | OPS-01 | Tickets, suporte e disputas. | Roadmap. | Criar modelo, rotas, autorização, UI e auditoria antes de abrir gate. |
-| FIN-01 | Gateway, webhook, refund, ledger e repasse. | Roadmap; somente simulador local existe. | Exigir sandbox, assinatura, idempotência, reconciliação e segregação de papéis. |
 | PRIV-01 | Consentimentos e solicitações do titular. | Roadmap; há apenas documentação orientativa em `LGPD.md`. | Implementar protocolo, autenticação, retenção e resposta operacional. |
 | PRIV-02 | Documentos e anexos privados. | Roadmap; não há upload atual. | Implementar armazenamento privado, autorização, MIME/tamanho, retenção e auditoria. |
 
@@ -74,7 +72,7 @@ quando forem implementados.
 
 Uma capacidade só muda de “implementada” para “aceita” quando:
 
-- interface mobile/desktop possui loading, vazio, erro e texto `pt-BR` quando aplicável;
+- interface mobile/desktop possui loading, vazio, erro e texto em inglês ou francês conforme a preferência;
 - regra e autorização são aplicadas no servidor, não apenas ocultadas no frontend;
 - dados persistem com integridade e operações sensíveis deixam trilha adequada;
 - contrato de request, response e erro coincide com `API.md`;
@@ -87,16 +85,16 @@ Uma capacidade só muda de “implementada” para “aceita” quando:
 
 - Login demo funciona com as três contas documentadas após inicialização limpa.
 - Cotação e criação calculam os mesmos valores para preço fixo, horário e por área.
-- Cupom respeita validade, mínimo, limite e concorrência.
 - Snapshot e itens da reserva preservam a composição aceita.
 - Dois fluxos concorrentes não ocupam o mesmo prestador no mesmo intervalo.
-- Hold/pagamento expirado não mantém agenda bloqueada.
-- Repetir criação com a mesma chave idempotente não duplica reserva ou intenção.
+- Uma reserva cancelada não mantém agenda bloqueada.
+- Repetir criação com a mesma chave idempotente não duplica reserva.
 - Aceitar proposta mantém preço, itens e snapshot coerentes.
 - Status muda somente para ator/estado autorizado e registra histórico.
-- Simulação de pagamento não aceita reserva cancelada, hold vencido ou usuário alheio.
 - Avaliação só é criada após conclusão e não duplica a mesma reserva/cliente.
 - Mensagem e detalhe de reserva não vazam para não participante.
+- Mensagens novas aparecem ao outro participante pela sincronização incremental, sem sobrepor requisições nem manter processos PHP ocupados em espera.
+- Repetir uma mensagem com a mesma chave idempotente não cria uma segunda mensagem.
 - Admin não acessa senha, token bruto ou dado de cartão inexistente.
 - Outbox não registra token/segredo em log técnico.
 
@@ -107,7 +105,7 @@ Uma capacidade só muda de “implementada” para “aceita” quando:
 - labels, mensagens de erro associadas e estados ARIA coerentes;
 - contraste WCAG 2.2 AA nas jornadas essenciais;
 - alvos de toque confortáveis e navegação inferior sem cobrir conteúdo;
-- datas, moeda e pluralização em `pt-BR` sem deslocamento de fuso;
+- datas, moeda e pluralização em `en-US` ou `fr-FR`, com EUR/USD, sem deslocamento de fuso;
 - envio duplicado bloqueado durante ações longas;
 - loading não mascara falha e vazio oferece próximo passo;
 - nenhuma tela depende de fotografia;
@@ -136,15 +134,15 @@ Após o congelamento funcional, a execução seguiu esta ordem de referência:
 
 1. Revisão estática final de configuração, schema, rotas, contratos e permissões.
 2. Instalação/build reproduzível de frontend, backend e containers.
-3. Testes unitários de preço, cupom, validação, estado e autorização.
+3. Testes unitários de estimativa, validação, estado, paginação e autorização.
 4. Integração com MySQL para transações, locks, idempotência, outbox e expiração.
 5. E2E das jornadas públicas e dos papéis `customer`, `provider` e `admin`.
 6. Matriz manual responsiva e navegadores suportados.
 7. Acessibilidade automatizada e manual por teclado/leitor de tela.
 8. Segurança: autenticação, IDOR, injeção, XSS, CSRF/CORS, rate limit e vazamento.
 9. Desempenho: Web Vitals, consultas principais e p95 da API em ambiente definido.
-10. Recuperação: sessão expirada, pagamento recusado/expirado, conflito de agenda e
-    restauração de backup quando aplicável.
+10. Recuperação: sessão expirada, conflito de agenda e restauração de backup quando
+    aplicável.
 11. Regressão integral após correções, com relatório e riscos residuais.
 
 Não executar testes destrutivos contra serviços reais. Nesta versão, gateway e e-mail
@@ -161,7 +159,7 @@ devem permanecer em modo local/fictício.
 | Núcleo PHP (UUID, JWT, validação e proxy confiável) | 8/8 cenários aprovados. |
 | Estrutura | 95 registros de rota, 35 tabelas e 6 variantes WebP autorizadas. |
 | Navegador local | Landing, reserva, notificações e painéis dos três papéis aprovados em 390 px, 1280 px e 1440 px; console sem erros ou avisos. |
-| Integração MySQL/Compose | Smoke e fluxo HTTP completo aprovados: quatro serviços ativos, healthcheck, seed, autenticação, agenda, reserva, proposta, pagamento, execução, mensagens, notificações e administração. |
+| Integração MySQL/Compose | Smoke e fluxo HTTP completo aprovados: quatro serviços ativos, healthcheck, seed, autenticação, agenda, reserva, proposta, execução, mensagens, notificações e administração. |
 
 O resultado acima valida a construção e a demonstração local, mas não encerra os
 gates de concorrência transacional, matriz completa de acessibilidade, segurança
@@ -174,10 +172,9 @@ A versão local só pode ser declarada aceita quando:
 - todos os cenários do núcleo marcados como implementados passam na fase final;
 - nenhum defeito bloqueador, crítico ou alto permanece aberto;
 - não há acesso indevido, divergência de preço/snapshot ou conflito de agenda;
-- telas não apresentam KYC, repasse, banco, pagamento real ou operação fictícia como fato;
+- telas não apresentam KYC, banco ou operação financeira fictícia como fato;
 - itens parciais estão desabilitados, rotulados ou removidos da jornada principal;
 - riscos moderados/baixos possuem registro e decisão explícita.
 
-O aceite local não autoriza produção. Fornecedores, contratos, homologação financeira,
-revisão jurídica/LGPD, infraestrutura, observabilidade e autorização de deploy formam um
-gate separado.
+O aceite local não autoriza produção. Fornecedores, contratos, revisão jurídica/LGPD,
+infraestrutura, observabilidade e autorização de deploy formam um gate separado.

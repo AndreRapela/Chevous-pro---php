@@ -7,12 +7,16 @@
 ## Visão executável atual
 
 A solução é um monólito modular local: Angular standalone no navegador, Nginx como
-servidor/proxy no container web, API REST em PHP 8.2/Apache e MySQL 8.
+servidor/proxy no container web, um processo Angular SSR para as páginas públicas,
+API REST em PHP 8.4/Apache e MySQL 8.4.
 
 ```mermaid
 flowchart LR
-    U["Navegador"] --> W["Angular + Nginx"]
+    U["Navegador"] --> W["Nginx web"]
+    W -->|"páginas públicas"| S["Angular SSR"]
     W -->|"/api/v1"| A["Apache + PHP"]
+    W -->|"/robots.txt e /sitemap.xml"| A
+    S -->|"API interna"| A
     A --> D[("MySQL 8")]
     K["worker.php no serviço worker"] --> D
     M["MockApiService no ng serve"] -. "modo demonstração" .-> U
@@ -22,11 +26,14 @@ No desenvolvimento com `npm start`, `environment.ts` usa a API real por `/api/v1
 servidor Angular a encaminha a `localhost:8080`. O modo demonstrativo isolado permanece
 disponível com `npm run start:mock`. No build de produção usado pelo Compose,
 `environment.prod.ts` também usa a API real e o Nginx encaminha esse prefixo ao serviço
-`api`.
+`api`. No Compose, o Nginx atende assets versionados diretamente e encaminha rotas
+públicas ao SSR; painéis autenticados continuam client-side e recebem `noindex`.
+`robots.txt` e `sitemap.xml` são gerados pela API a partir do catálogo e dos perfis
+aprovados.
 
 O Compose inclui um serviço worker que executa `worker.php` a cada 30 segundos. Fora dos
 containers, ele precisa ser agendado separadamente. A expiração crítica também é
-revalidada nas operações de agenda/pagamento, sem depender somente da execução eventual.
+revalidada nas operações de agenda, sem depender somente da execução eventual.
 
 ## Organização real do código
 
@@ -43,7 +50,6 @@ backend/
     Users/                        endereços
     Catalog/                      home, categorias, serviços e profissionais
     Bookings/                     cotação, reserva, propostas e agenda
-    Payments/                     intenção e simulador local
     Engagement/                   favoritos, conversa, notificações e avaliações
     Professionals/                perfil, oferta, disponibilidade e oportunidades
     Admin/                        operação administrativa básica
@@ -93,10 +99,9 @@ são componentes de apresentação, enquanto o rascunho versionado fica em `data
 | Áreas cliente/prestador/admin | Mistas | Somente ações ligadas a endpoint real são operacionais; fallbacks devem indicar demonstração. |
 | API PHP | Implementada para o núcleo listado em `API.md` | Não equivale ao roadmap completo do marketplace. |
 | MySQL | Schema e seed implementados | Não há sistema de migrações incrementais versionadas. |
-| Pagamento | Simulador local | Não é gateway, liquidação, estorno ou repasse real. |
-| E-mail/outbox | Parcial | Worker no Compose e driver de log redigido; não há entrega transacional real. |
-| Upload/armazenamento | Roadmap | Não há endpoint de upload ou mídia no contrato atual. |
-| KYC, mapas, SMS, seguro e repasse | Roadmap | Nenhum fornecedor foi integrado. |
+| E-mail/outbox | Implementado | Worker entrega e-mails via Resend quando configurado; desenvolvimento usa log redigido. |
+| Upload/armazenamento | Implementado para avatar | Foto de perfil autenticada em JPG/PNG/WebP, validada, redimensionada/convertida para WebP e servida por rota pública controlada. Anexos e galeria profissional permanecem roadmap. |
+| KYC, mapas, SMS e seguro | Roadmap | Nenhum fornecedor foi integrado. |
 
 ## Modelo de dados implementado
 
@@ -107,11 +112,10 @@ O schema atual contém estas tabelas:
 - prestadores e conta: `professional_profiles`, `addresses`,
   `professional_services`, `availability_rules`, `availability_exceptions`;
 - catálogo e configuração: `service_categories`, `services`, `service_addons`,
-  `promotions`, `app_settings`, `coupons`, `coupon_services`;
+  `promotions` e `app_settings`;
 - reserva e agenda: `bookings`, `booking_items`, `booking_status_history`,
   `booking_offers`, `schedule_day_locks`, `slot_reservations`;
-- pagamento local: `payment_intents`, `payment_transactions`, `coupon_redemptions`,
-  `idempotency_keys`;
+- idempotência: `idempotency_keys`;
 - relacionamento: `favorites`, `conversations`, `conversation_participants`,
   `messages`, `notifications`, `reviews`;
 - operação: `api_rate_limits`, `audit_logs`, `outbox_events`.
@@ -121,8 +125,9 @@ Valores monetários são persistidos em centavos inteiros. Datas do banco são m
 UTC; endpoints de agenda/reserva devem expor RFC 3339 com fuso explícito.
 
 Não existem atualmente tabelas de documentos/KYC, consentimentos, solicitações de
-privacidade, preferências de notificação, service area geográfica, recorrência, mídia,
-ticket, disputa, refund, crédito, payout ou ledger. Esses conceitos pertencem ao roadmap.
+privacidade, preferências de notificação, service area geográfica, recorrência, galeria
+de mídia, ticket ou disputa. Esses conceitos pertencem ao roadmap. Avatares usam um
+arquivo interno associado a `users`, sem uma tabela de mídia genérica.
 
 Uma conta possui um único papel em `users.role`: `customer`, `provider` ou `admin`.
 Conta simultaneamente cliente e prestador exigirá mudança de modelo no roadmap.
@@ -133,9 +138,10 @@ Conta simultaneamente cliente e prestador exigirá mudança de modelo no roadmap
 
 1. Cadastro cria usuário, hash de senha e token de verificação.
 2. Login valida credencial e cria `auth_sessions` com refresh token armazenado como hash.
-3. Access token JWT autoriza rotas; refresh rotaciona a sessão.
-4. Logout revoga uma ou todas as sessões.
-5. Verificação e recuperação usam tokens descartáveis e outbox.
+3. Access token JWT autoriza rotas; refresh rotaciona a sessão. Uma repetição concorrente do token anterior só recebe access token durante uma janela de 10 segundos, sem regravar o cookie já rotacionado.
+4. O access token fica apenas em memória no Angular; o refresh permanece inacessível ao JavaScript.
+5. Logout revoga uma ou todas as sessões; o usuário pode listar e revogar outros dispositivos.
+6. Verificação e recuperação usam tokens descartáveis e outbox.
 
 O envio externo não está implementado. Em ambiente local/debug, a API pode devolver o
 token de demonstração; o worker processa a outbox sem registrar o segredo no log.
@@ -143,38 +149,34 @@ token de demonstração; o worker processa a outbox sem registrar o segredo no l
 ### Cotação e reserva
 
 1. A API valida serviço, profissional opcional e parâmetros de preço.
-2. `PricingService` recalcula preço fixo, horário ou por área, adicionais, cupom, taxa e
-   comissão.
+2. `PricingService` recalcula o valor de referência fixo, horário ou por área e os
+   adicionais, sem cobrança, cupom, taxa ou comissão da plataforma.
 3. A criação valida endereço próprio, horário e prestador.
-4. Reserva direta cria hold de agenda e fica `awaiting_payment`; solicitação ao
-   marketplace fica `open` para propostas.
+4. Reserva direta confirma e reserva a agenda; solicitação ao marketplace fica `open`
+   para propostas.
 5. A API persiste snapshot, itens e histórico.
 6. Prestador aprovado pode propor; cliente pode aceitar uma proposta elegível.
 7. Participantes autorizados podem cancelar e prestador/admin podem iniciar/concluir nos
    estados implementados.
+8. Cliente pode reagendar reserva confirmada; prestador pode registrar chegada, início e conclusão.
 
-Recorrência, reagendamento, chegada, disputa e política de cancelamento versionada não
+Recorrência automática, disputa e política de cancelamento versionada não
 fazem parte desse fluxo atual.
-
-### Pagamento local
-
-1. Cliente cria uma intenção para reserva `awaiting_payment`.
-2. O driver `fake` aceita os cenários `success`, `declined` e `timeout`.
-3. Sucesso registra transação local, confirma reserva e atualiza o hold.
-
-Esse fluxo prova integração interna de estados; não representa autorização financeira,
-webhook, captura, estorno, split, razão ou repasse.
 
 ### Relacionamento
 
 - favoritos pertencem ao cliente;
 - conversas são vinculadas à reserva e limitadas aos participantes;
 - mensagens atuais são texto sem anexo;
-- o cliente Angular consulta somente mensagens posteriores ao último `sequence`, em lotes
-  de até 100, sem requisições sobrepostas; a conversa ativa atualiza a cada dois segundos
-  e a lista de conversas a cada dez segundos;
+- o cliente Angular inicia a conversa pelos 50 itens mais recentes e solicita histórico
+  anterior sob demanda; atualizações posteriores usam `sequence`, sem requisições
+  sobrepostas. A conversa ativa mantém uma única espera autenticada de até 15 segundos
+  e reabre-a assim que ela termina, entregando novas mensagens com latência de até um
+  segundo; a lista é atualizada a cada quinze segundos;
 - a sincronização é suspensa quando a aba fica oculta e retomada imediatamente ao voltar,
-  reduzindo tráfego e trabalho do PHP/MySQL sem manter workers presos em long polling;
+  reduzindo tráfego e trabalho do PHP/MySQL;
+- cada envio recebe uma `Idempotency-Key`: mensagem, atualização da conversa e notificação
+  são persistidas em uma transação, sem duplicar conteúdo em uma repetição de rede;
 - notificações podem ser listadas e marcadas como lidas;
 - avaliação é criada pelo cliente para reserva concluída e possui unicidade no schema.
 
@@ -182,30 +184,34 @@ webhook, captura, estorno, split, razão ou repasse.
 
 O Compose atual:
 
-- inicia MySQL 8 com health check e aplica `schema.sql` apenas na criação do volume;
-- constrói a imagem PHP/Apache e executa `seed.php` antes do Apache;
+- inicia MySQL 8.4 com health check e usa `schema.sql` para volumes novos;
+- constrói PHP 8.4/Apache, aplica migrações incrementais versionadas e só então executa o seed local;
 - monta o diretório do backend e um volume separado para `storage` local;
 - constrói Angular para produção e o serve por Nginx na porta configurada;
-- executa `worker.php` a cada 30 segundos em um serviço dedicado;
-- não contém health check profundo da API.
+- publica um health check da API depois das migrações e faz web/worker aguardarem esse estado;
+- executa `worker.php` a cada 30 segundos em um serviço dedicado.
+
+O health check de inicialização confirma o processo HTTP migrado, mas não substitui uma
+sonda profunda de dependências para um ambiente distribuído de produção.
 
 Com `AUTO_SEED=true` — valor local padrão — o seed recria dados demonstrativos e senhas
 conhecidas quando o serviço API inicia. O comportamento pode ser desabilitado e deve
 permanecer restrito a ambientes locais descartáveis.
 
-O schema usa `CREATE TABLE IF NOT EXISTS`; ele inicializa banco vazio, mas não substitui
-uma ferramenta de migrations incrementais com versões e `ALTER` para bancos existentes.
+O schema usa `CREATE TABLE IF NOT EXISTS` para bancos vazios. Alterações posteriores ficam
+em `database/migrations` e são registradas em `schema_migrations` sob bloqueio no banco.
 
 ## Segurança realmente presente
 
 - senha com Argon2id quando disponível e fallback seguro do PHP;
 - JWT HS256 com emissor, audiência, tipo, validade e sessão persistida;
 - refresh token rotativo armazenado como SHA-256;
+- access token mantido somente em memória no navegador e sessão restaurada pelo cookie HttpOnly;
 - RBAC por `customer`, `provider` e `admin`, além de verificações de propriedade em rotas;
 - PDO com prepared statements reais e validação de entrada;
 - CORS por allowlist, rate limit em MySQL, request ID e auditoria administrativa;
 - bloqueios transacionais de agenda e chaves de idempotência nas operações cobertas;
-- nenhum dado bruto de cartão é aceito pelo simulador.
+- a plataforma não recebe dados de pagamento.
 
 Esses controles não constituem certificação nem prontidão de produção. Permanecem como
 trabalho de liberação:
@@ -230,7 +236,7 @@ São objetivos de qualidade para a fase final, não resultados já alcançados:
 - API comum com p95 alvo abaixo de 500 ms em ambiente de referência;
 - LCP alvo até 2,5 s, INP até 200 ms e CLS até 0,1 no percentil 75;
 - coleções paginadas onde houver crescimento relevante;
-- operações financeiras e de agenda idempotentes e auditáveis;
+- operações de agenda idempotentes e auditáveis;
 - falha de notificação sem reversão de reserva já confirmada.
 
 Nenhuma dessas metas é considerada comprovada antes da fase final de testes.
@@ -238,12 +244,11 @@ Nenhuma dessas metas é considerada comprovada antes da fase final de testes.
 ## Evolução arquitetural priorizada
 
 1. Adaptador real de e-mail, retry/backoff e fila morta para a outbox já agendada.
-2. Migrations incrementais versionadas e pipeline de atualização/rollback.
+2. Pipeline de rollback e validação prévia para as migrations incrementais versionadas.
 3. Contratos OpenAPI e serialização temporal uniforme.
 4. Camadas de aplicação/repositório para reduzir SQL e regra dentro de controllers.
 5. Upload privado apenas quando houver requisito e política de retenção aprovados.
-6. Gateway real por adaptador, webhook assinado, refunds e ledger antes de repasses.
-7. Service areas, recorrência, suporte/disputa, privacidade e permissões granulares.
-8. KYC somente após fornecedor, base legal, processo operacional e evidência verificável.
+6. Service areas, recorrência automática, suporte/disputa, privacidade e permissões granulares.
+7. KYC somente após fornecedor, base legal, processo operacional e evidência verificável.
 
 Nenhuma decisão deste documento autoriza publicação ou deploy.

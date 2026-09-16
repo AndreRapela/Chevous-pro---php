@@ -2,11 +2,12 @@ import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
 import { BrandComponent } from '../shared/components';
+import { LocaleControlsComponent } from '../shared/localization/locale-controls.component';
 
 @Component({
   selector: 'cvp-public-shell',
   standalone: true,
-  imports: [BrandComponent, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [BrandComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
     <header class="site-header">
@@ -28,6 +29,7 @@ import { BrandComponent } from '../shared/components';
             <a class="btn btn-ghost desktop-only" routerLink="/entrar">Entrar</a>
             <a class="btn btn-primary" routerLink="/cadastro">Criar conta</a>
           }
+          <cvp-locale-controls />
           <button class="menu-button" type="button" (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()" aria-controls="mobile-menu" [attr.aria-label]="menuOpen() ? 'Fechar menu' : 'Abrir menu'">
             <span></span><span></span><span></span>
           </button>

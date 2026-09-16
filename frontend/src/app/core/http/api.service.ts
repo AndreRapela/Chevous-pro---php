@@ -4,6 +4,8 @@ import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../models';
 import { MockApiService } from '../testing/mock-api.service';
+import { API_BASE_URL } from './api-base-url.token';
+import { SERVER_API_HEADERS } from './server-api-headers.token';
 
 export type ApiQueryValue = string | number | boolean | undefined;
 export type ApiQuery = Record<string, ApiQueryValue>;
@@ -13,6 +15,8 @@ export interface ApiRequestOptions { headers?: Record<string, string>; }
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly mock = inject(MockApiService);
+  private readonly apiBaseUrl = inject(API_BASE_URL);
+  private readonly serverApiHeaders = inject(SERVER_API_HEADERS);
 
   get<T>(path: string, query: ApiQuery = {}): Observable<T> {
     return this.request<T>('GET', path, undefined, query);
@@ -23,6 +27,10 @@ export class ApiService {
   }
 
   post<T>(path: string, body: unknown, options: ApiRequestOptions = {}): Observable<T> {
+    return this.request<T>('POST', path, body, {}, options);
+  }
+
+  upload<T>(path: string, body: FormData, options: ApiRequestOptions = {}): Observable<T> {
     return this.request<T>('POST', path, body, {}, options);
   }
 
@@ -48,10 +56,10 @@ export class ApiService {
     const cleanPath = path.replace(/^\//, '');
     const source = environment.useMockApi
       ? this.mock.request<T>(method, cleanPath, body, query)
-      : this.http.request<ApiEnvelope<T> | null>(method, `${environment.apiUrl}/${cleanPath}`, {
+      : this.http.request<ApiEnvelope<T> | null>(method, `${this.apiBaseUrl}/${cleanPath}`, {
           body,
           params: this.toHttpParams(query),
-          headers: new HttpHeaders(options.headers ?? {}),
+          headers: new HttpHeaders({ ...this.serverApiHeaders, ...(options.headers ?? {}) }),
           withCredentials: true
         });
 

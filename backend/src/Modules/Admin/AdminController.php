@@ -22,19 +22,19 @@ final class AdminController extends Controller
 
     public function dashboard(Request $request, array $params, ?array $auth): Response
     {
-        $metrics = $this->db->query(
+        $metricsStatement = $this->db->prepare(
             'SELECT
                 (SELECT COUNT(*) FROM users WHERE role = \'customer\' AND deleted_at IS NULL) AS customers,
                 (SELECT COUNT(*) FROM users WHERE role = \'provider\' AND deleted_at IS NULL) AS professionals,
                 (SELECT COUNT(*) FROM professional_profiles WHERE verification_status = \'pending\') AS professionalsPending,
                 (SELECT COUNT(*) FROM bookings) AS bookings,
                 (SELECT COUNT(*) FROM bookings WHERE status = \'confirmed\') AS confirmedBookings,
-                (SELECT COUNT(*) FROM bookings WHERE status = \'completed\') AS completedBookings,
-                (SELECT COALESCE(SUM(total_cents), 0) FROM bookings WHERE paid_at IS NOT NULL) AS grossVolumeCents,
-                (SELECT COUNT(*) FROM payment_intents WHERE status = \'paid\') AS paidPayments'
-        )->fetch();
+                (SELECT COUNT(*) FROM bookings WHERE status = \'completed\') AS completedBookings'
+        );
+        $metricsStatement->execute();
+        $metrics = $metricsStatement->fetch();
         $recent = $this->db->query(
-            'SELECT b.public_id AS id, b.status, b.total_cents AS totalCents,
+            'SELECT b.public_id AS id, b.status,
                     DATE_FORMAT(b.created_at, \'%Y-%m-%dT%H:%i:%sZ\') AS createdAt,
                     c.name AS customerName, p.name AS professionalName, s.name AS serviceName
              FROM bookings b INNER JOIN users c ON c.id = b.customer_id
@@ -227,52 +227,6 @@ final class AdminController extends Controller
         return Response::data(['id' => $params['id']] + $data);
     }
 
-    public function coupons(Request $request, array $params, ?array $auth): Response
-    {
-        [$page, $perPage, $offset] = $this->pagination($request, 30, 100);
-        $total = (int) $this->db->query('SELECT COUNT(*) FROM coupons')->fetchColumn();
-        $rows = $this->db->query(
-            'SELECT public_id AS id, code, name, discount_type AS discountType, discount_value AS discountValue,
-                    max_discount_cents AS maxDiscountCents, minimum_order_cents AS minimumOrderCents,
-                    usage_limit AS usageLimit, used_count AS usedCount, starts_at AS startsAt, ends_at AS endsAt, active
-             FROM coupons ORDER BY created_at DESC LIMIT ' . $perPage . ' OFFSET ' . $offset
-        )->fetchAll();
-        return Response::data($rows, 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
-        ]);
-    }
-
-    public function createCoupon(Request $request, array $params, ?array $auth): Response
-    {
-        $data = Validator::validate($request->body, [
-            'code' => ['required', 'string', 'min:3', 'max:50'], 'name' => ['required', 'string', 'max:120'],
-            'discountType' => ['required', 'string', 'in:percent,fixed'], 'discountValue' => ['required', 'numeric', 'min:1', 'max:10000000'],
-            'maxDiscountCents' => ['nullable', 'integer', 'min:1', 'max:10000000'], 'minimumOrderCents' => ['nullable', 'integer', 'min:0', 'max:10000000'],
-            'usageLimit' => ['nullable', 'integer', 'min:1', 'max:1000000'], 'startsAt' => ['nullable', 'date'],
-            'endsAt' => ['nullable', 'date'], 'active' => ['sometimes', 'boolean'],
-        ]);
-        if ($data['discountType'] === 'percent' && (float) $data['discountValue'] > 100) {
-            throw new ApiException(422, 'INVALID_DISCOUNT', 'O desconto percentual não pode ultrapassar 100%.');
-        }
-        if (!empty($data['startsAt']) && !empty($data['endsAt']) && strtotime((string) $data['endsAt']) <= strtotime((string) $data['startsAt'])) {
-            throw new ApiException(422, 'INVALID_DATE_RANGE', 'O término do cupom deve ser posterior ao início.');
-        }
-        $publicId = Uuid::v4();
-        $this->db->prepare(
-            'INSERT INTO coupons
-                (public_id, code, name, discount_type, discount_value, max_discount_cents, minimum_order_cents,
-                 usage_limit, used_count, starts_at, ends_at, active, created_at, updated_at)
-             VALUES (:public_id, :code, :name, :type, :value, :max_discount, :minimum_order, :usage_limit, 0,
-                     :starts_at, :ends_at, :active, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
-        )->execute([
-            'public_id' => $publicId, 'code' => strtoupper(trim((string) $data['code'])), 'name' => $data['name'],
-            'type' => $data['discountType'], 'value' => $data['discountValue'], 'max_discount' => $data['maxDiscountCents'] ?? null,
-            'minimum_order' => $data['minimumOrderCents'] ?? 0, 'usage_limit' => $data['usageLimit'] ?? null,
-            'starts_at' => $data['startsAt'] ?? null, 'ends_at' => $data['endsAt'] ?? null, 'active' => isset($data['active']) ? (int) (bool) $data['active'] : 1,
-        ]);
-        return Response::data(['id' => $publicId, 'code' => strtoupper(trim((string) $data['code']))], 201);
-    }
-
     public function promotions(Request $request, array $params, ?array $auth): Response
     {
         return Response::data($this->db->query(
@@ -319,6 +273,69 @@ final class AdminController extends Controller
         }
         unset($row);
         return Response::data($rows, 200, ['page' => $page, 'perPage' => $perPage]);
+    }
+
+    public function contentReports(Request $request, array $params, ?array $auth): Response
+    {
+        [$page, $perPage, $offset] = $this->pagination($request, 30, 100);
+        $where = '';
+        $values = [];
+        if (in_array(($request->query['status'] ?? ''), ['pending', 'resolved', 'dismissed'], true)) {
+            $where = 'WHERE cr.status = :status';
+            $values['status'] = $request->query['status'];
+        }
+        $count = $this->db->prepare("SELECT COUNT(*) FROM content_reports cr {$where}");
+        $count->execute($values);
+        $total = (int) $count->fetchColumn();
+        $statement = $this->db->prepare(
+            "SELECT cr.public_id AS id, cr.content_type AS contentType, cr.content_public_id AS contentId, cr.reason, cr.status, cr.action,
+                    cr.created_at AS createdAt, u.name AS reporterName
+             FROM content_reports cr INNER JOIN users u ON u.id = cr.reporter_id {$where}
+             ORDER BY FIELD(cr.status, 'pending', 'resolved', 'dismissed'), cr.created_at ASC LIMIT {$perPage} OFFSET {$offset}"
+        );
+        $statement->execute($values);
+        return Response::data($statement->fetchAll(), 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
+    }
+
+    public function resolveContentReport(Request $request, array $params, ?array $auth): Response
+    {
+        $data = Validator::validate($request->body, [
+            'action' => ['required', 'string', 'in:hide,retain'],
+            'note' => ['required', 'string', 'min:3', 'max:1000'],
+        ]);
+        $this->db->beginTransaction();
+        try {
+            $report = $this->requireRow('SELECT id, content_type AS contentType, content_public_id AS contentId, status FROM content_reports WHERE public_id = :id FOR UPDATE', ['id' => $params['id']], 'Denúncia não encontrada.');
+            if ($report['status'] !== 'pending') {
+                throw new ApiException(409, 'REPORT_ALREADY_RESOLVED', 'Esta denúncia já foi resolvida.');
+            }
+            $action = (string) $data['action'];
+            if ($action === 'hide') {
+                $table = match ($report['contentType']) {
+                    'professional_comment' => 'professional_comments',
+                    'review' => 'reviews',
+                    default => throw new ApiException(422, 'MESSAGE_HIDE_UNSUPPORTED', 'Mensagens exigem tratamento operacional e não podem ser ocultadas por esta ação.'),
+                };
+                $hidden = $this->db->prepare("UPDATE {$table} SET status = 'hidden', updated_at = UTC_TIMESTAMP() WHERE public_id = :id");
+                $hidden->execute(['id' => $report['contentId']]);
+                if ($hidden->rowCount() === 0) {
+                    throw new ApiException(404, 'REPORTED_CONTENT_NOT_FOUND', 'O conteúdo denunciado não está mais disponível.');
+                }
+            }
+            $this->db->prepare('UPDATE content_reports SET status = :status, action = :action, resolved_by = :resolver, resolved_at = UTC_TIMESTAMP(), resolution_note = :note, updated_at = UTC_TIMESTAMP() WHERE id = :id')
+                ->execute([
+                    'status' => $action === 'hide' ? 'resolved' : 'dismissed', 'action' => $action === 'hide' ? 'hidden' : 'retained',
+                    'resolver' => $auth['id'], 'note' => trim(strip_tags((string) $data['note'])), 'id' => $report['id'],
+                ]);
+            $this->audit->record((int) $auth['id'], 'admin.content_report_resolved', 'content_report', $params['id'], $request, ['action' => $action]);
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
+        }
+        return Response::data(['id' => $params['id'], 'status' => $action === 'hide' ? 'resolved' : 'dismissed', 'action' => $action]);
     }
 
     private function dynamicUpdate(string $table, string $publicId, array $data, array $map): void

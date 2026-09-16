@@ -34,9 +34,5 @@ final class RateLimiter
             $retry = max(1, (int) $bucket['retry_after']);
             throw new ApiException(429, 'RATE_LIMITED', "Muitas tentativas. Tente novamente em {$retry} segundos.");
         }
-
-        if (random_int(1, 100) === 1) {
-            $this->db->exec('DELETE FROM api_rate_limits WHERE expires_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 DAY)');
-        }
     }
 }

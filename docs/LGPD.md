@@ -28,7 +28,6 @@ Antes de produção:
 | CPF/CNPJ e documentos do prestador | Verificação, fraude, contrato e repasse | Contrato; obrigação legal/regulatória | Configurável por tipo e exigência do fornecedor/jurídico. |
 | Endereço do serviço | Busca, preço e execução | Contrato | Na reserva pelo prazo de defesa; endereços salvos até remoção/encerramento. |
 | Agenda, respostas e histórico | Contratar, executar, suportar e comprovar | Contrato; exercício regular de direitos | Até expirar obrigação/defesa definida na tabela de retenção. |
-| Pagamento e razão | Cobrar, estornar, conciliar, repassar e prestar contas | Contrato; obrigação legal | Prazo fiscal/financeiro aprovado; cartão bruto nunca é coletado. |
 | Chat, anexos e tickets | Coordenação, segurança e disputa | Contrato; exercício regular de direitos | Janela limitada, com bloqueio quando houver litígio. |
 | Localização | Compatibilidade e, se ativada, acompanhamento | Contrato para área aproximada; consentimento destacado para precisão | Precisa somente durante a necessidade; depois reduzir/anonimizar. |
 | Logs e auditoria | Segurança, fraude e responsabilização | Legítimo interesse; exercício regular de direitos | Janela proporcional ao risco, com acesso restrito. |
@@ -76,7 +75,7 @@ eliminação, revogação e revisão automatizada, em sua página de
 - Chat oculta contato pessoal por padrão; anexos exigem autorização contextual.
 - Perfil público contém apenas nome de exibição, região aproximada, oferta, avaliações e
   verificações permitidas — nunca CPF, documento, telefone, e-mail ou dados bancários.
-- Painéis mascaram dados e separam permissões de suporte, verificação e financeiro.
+- Painéis mascaram dados e separam permissões de suporte e verificação.
 - Exportações têm finalidade, filtro, expiração e log; não são enviadas por link público.
 - Ambientes de desenvolvimento usam dados fictícios; cópia de produção é proibida sem
   anonimização formal.

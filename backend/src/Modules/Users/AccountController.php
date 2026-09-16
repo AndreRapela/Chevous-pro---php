@@ -7,12 +7,105 @@ namespace ChezVoust\Modules\Users;
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\Controller;
 use ChezVoust\Core\Request;
+use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Response;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
 
 final class AccountController extends Controller
 {
+    public function __construct(\PDO $db, array $config, private readonly RateLimiter $rateLimiter)
+    {
+        parent::__construct($db, $config);
+    }
+
+    public function updateAvatar(Request $request, array $params, ?array $auth): Response
+    {
+        $this->rateLimiter->check('avatar:user:' . $auth['id'], 12, 3600);
+        $this->rateLimiter->check('avatar:ip:' . $request->ip, 36, 3600);
+        $file = $request->files['avatar'] ?? null;
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            throw new ApiException(422, 'AVATAR_REQUIRED', 'Escolha uma imagem válida para o perfil.');
+        }
+        if ((int) ($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
+            throw new ApiException(422, 'AVATAR_UPLOAD_FAILED', 'Não foi possível receber a foto. Use uma imagem de até 5 MB e tente novamente.');
+        }
+        $maxBytes = max(1, (int) ($this->config['upload_max_bytes'] ?? 5 * 1024 * 1024));
+        $size = (int) ($file['size'] ?? 0);
+        $temporaryPath = (string) ($file['tmp_name'] ?? '');
+        if ($size < 1 || $size > $maxBytes || !is_uploaded_file($temporaryPath)) {
+            throw new ApiException(422, 'INVALID_AVATAR', 'A foto deve ter no máximo 5 MB.');
+        }
+        $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($temporaryPath);
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true)) {
+            throw new ApiException(422, 'INVALID_AVATAR', 'Envie uma imagem JPG, PNG ou WebP.');
+        }
+        $dimensions = @getimagesize($temporaryPath);
+        if ($dimensions === false || $dimensions[0] < 96 || $dimensions[1] < 96 || $dimensions[0] > 2048 || $dimensions[1] > 2048 || $dimensions[0] * $dimensions[1] > 4_000_000) {
+            throw new ApiException(422, 'INVALID_AVATAR_DIMENSIONS', 'A foto precisa ter entre 96 e 2048 pixels por lado e até 4 megapixels.');
+        }
+        $user = $this->requireRow('SELECT public_id, avatar_path FROM users WHERE id = :id', ['id' => $auth['id']]);
+        $directory = dirname(__DIR__, 3) . '/storage/uploads/avatars';
+        if (!is_dir($directory) && !mkdir($directory, 0750, true) && !is_dir($directory)) {
+            throw new ApiException(500, 'AVATAR_STORAGE_UNAVAILABLE', 'Não foi possível salvar a foto agora.');
+        }
+        $target = $directory . DIRECTORY_SEPARATOR . $user['public_id'] . '-' . bin2hex(random_bytes(8)) . '.webp';
+        $image = match ($mime) {
+            'image/jpeg' => @imagecreatefromjpeg($temporaryPath),
+            'image/png' => @imagecreatefrompng($temporaryPath),
+            'image/webp' => @imagecreatefromwebp($temporaryPath),
+        };
+        if ($image === false) {
+            throw new ApiException(422, 'INVALID_AVATAR', 'Não foi possível ler esta imagem.');
+        }
+        if ($dimensions[0] > 1024 || $dimensions[1] > 1024) {
+            $ratio = min(1024 / $dimensions[0], 1024 / $dimensions[1]);
+            $resized = imagescale($image, max(1, (int) round($dimensions[0] * $ratio)), max(1, (int) round($dimensions[1] * $ratio)));
+            if ($resized === false) {
+                imagedestroy($image);
+                throw new ApiException(422, 'INVALID_AVATAR', 'Não foi possível processar esta imagem.');
+            }
+            imagedestroy($image);
+            $image = $resized;
+        }
+        imagepalettetotruecolor($image);
+        imagealphablending($image, true);
+        imagesavealpha($image, true);
+        $saved = @imagewebp($image, $target, 85);
+        imagedestroy($image);
+        if (!$saved) {
+            throw new ApiException(500, 'AVATAR_UPLOAD_FAILED', 'Não foi possível salvar a foto agora.');
+        }
+        $this->db->prepare('UPDATE users SET avatar_path = :path, avatar_updated_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = :id')
+            ->execute(['path' => $target, 'id' => $auth['id']]);
+        $oldPath = (string) ($user['avatar_path'] ?? '');
+        $realDirectory = realpath($directory);
+        $realOldPath = $oldPath !== '' ? realpath($oldPath) : false;
+        if ($realDirectory !== false && $realOldPath !== false && str_starts_with($realOldPath, $realDirectory . DIRECTORY_SEPARATOR)) {
+            @unlink($realOldPath);
+        }
+        return $this->profile($auth['id']);
+    }
+
+    private function profile(int $userId): Response
+    {
+        $row = $this->requireRow(
+            'SELECT public_id AS id, role, name, email, phone, avatar_path AS avatarPath, avatar_updated_at AS avatarUpdatedAt FROM users WHERE id = :id',
+            ['id' => $userId]
+        );
+        $row['avatarUrl'] = $this->avatarUrl((string) $row['id'], $row['avatarPath'] ?? null, $row['avatarUpdatedAt'] ?? null);
+        unset($row['avatarPath'], $row['avatarUpdatedAt']);
+        return Response::data($row);
+    }
+
+    private function avatarUrl(string $publicId, mixed $path, mixed $updatedAt): ?string
+    {
+        if (!is_string($path) || $path === '') {
+            return null;
+        }
+        return '/api/v1/avatars/' . rawurlencode($publicId) . '?v=' . urlencode((string) ($updatedAt ?? '0'));
+    }
+
     public function addresses(Request $request, array $params, ?array $auth): Response
     {
         $statement = $this->db->prepare(

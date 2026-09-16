@@ -30,6 +30,7 @@ final class Auth
 
         $statement = $this->db->prepare(
             'SELECT u.id, u.public_id AS publicId, u.name, u.email, u.phone, u.role, u.status,
+                    (u.email_verified_at IS NOT NULL) AS emailVerified,
                     s.public_id AS sessionId
              FROM users u
              INNER JOIN auth_sessions s ON s.user_id = u.id

@@ -1,7 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, finalize, map, tap } from 'rxjs';
 import { ApiService } from '../http/api.service';
-import { AuthSession, User, UserRole } from '../models';
+import { AuthSession, AuthSessionInfo, User, UserRole } from '../models';
 import { SessionStoreService } from './session-store.service';
 
 export interface LoginPayload { email: string; password: string; remember?: boolean; }
@@ -16,20 +16,11 @@ export class AuthService {
   readonly authenticated = computed(() => !!this.session.user() && !!this.session.accessToken);
   readonly busy = signal(false);
 
-  constructor() {
-    if (this.session.user()) {
-      this.api.get<User>('me').pipe(map((user) => this.normalizeUser(user))).subscribe({
-        next: (user) => this.session.updateUser(user),
-        error: () => this.session.clear()
-      });
-    }
-  }
-
   login(payload: LoginPayload): Observable<User> {
     this.busy.set(true);
     const { remember, ...credentials } = payload;
     return this.api.post<AuthSession>('auth/login', { ...credentials, remember: !!remember }).pipe(
-      tap((session) => this.setSession(session, !!remember)),
+      tap((session) => this.setSession(session)),
       map(() => this.session.user() as User),
       finalize(() => this.busy.set(false))
     );
@@ -46,6 +37,22 @@ export class AuthService {
   logout(): void {
     this.api.post<void>('auth/logout', {}).subscribe({ error: () => undefined });
     this.session.clear();
+  }
+
+  logoutAll(): Observable<void> {
+    return this.api.post<void>('auth/logout-all', {}).pipe(finalize(() => this.session.clear()));
+  }
+
+  sessions(): Observable<AuthSessionInfo[]> {
+    return this.api.get<AuthSessionInfo[]>('auth/sessions');
+  }
+
+  revokeSession(id: string): Observable<void> {
+    return this.api.delete<void>(`auth/sessions/${encodeURIComponent(id)}`);
+  }
+
+  changePassword(currentPassword: string, newPassword: string): Observable<void> {
+    return this.api.post<unknown>('auth/password/change', { currentPassword, newPassword }).pipe(map(() => undefined));
   }
 
   forgotPassword(email: string): Observable<void> {
@@ -67,15 +74,24 @@ export class AuthService {
     );
   }
 
+  uploadAvatar(file: File): Observable<User> {
+    const form = new FormData();
+    form.append('avatar', file, file.name);
+    return this.api.upload<User>('me/avatar', form).pipe(
+      map((user) => this.normalizeUser(user)),
+      tap((user) => this.session.updateUser(user))
+    );
+  }
+
   homeFor(user: User | null = this.session.user()): string {
     if (user?.role === 'provider') return '/prestador';
     if (user?.role === 'admin') return '/admin';
     return '/conta';
   }
 
-  private setSession(session: AuthSession, remember: boolean): void {
+  private setSession(session: AuthSession): void {
     const user = this.normalizeUser(session.user);
-    this.session.save(user, session.accessToken, remember);
+    this.session.save(user, session.accessToken);
   }
 
   private normalizeUser(raw: User): User {

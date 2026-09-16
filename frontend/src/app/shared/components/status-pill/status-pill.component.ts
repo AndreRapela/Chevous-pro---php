@@ -15,7 +15,6 @@ export class StatusPillComponent {
   get label(): string {
     const labels: Record<BookingStatus, string> = {
       open: 'Aberto a propostas',
-      awaiting_payment: 'Aguardando pagamento',
       awaiting_confirmation: 'Aguardando confirmação',
       confirmed: 'Confirmado',
       provider_on_the_way: 'Profissional a caminho',
@@ -23,7 +22,6 @@ export class StatusPillComponent {
       completed: 'Concluído',
       cancelled: 'Cancelado',
       disputed: 'Em análise',
-      refunded: 'Estornado'
     };
     return labels[this.status];
   }

@@ -16,16 +16,16 @@ export const routes: Routes = [
   },
   ...authRoutes,
   {
-    path: 'conta', component: PortalShellComponent, canActivate: [authGuard, roleGuard('customer')], data: { portal: 'customer' },
+    path: 'conta', component: PortalShellComponent, canActivate: [authGuard, roleGuard('customer')], data: { portal: 'customer', seo: { noindex: true } },
     children: customerRoutes
   },
   {
-    path: 'prestador', component: PortalShellComponent, canActivate: [authGuard, roleGuard('provider')], data: { portal: 'provider' },
+    path: 'prestador', component: PortalShellComponent, canActivate: [authGuard, roleGuard('provider')], data: { portal: 'provider', seo: { noindex: true } },
     children: providerRoutes
   },
   {
-    path: 'admin', component: PortalShellComponent, canActivate: [authGuard, roleGuard('admin')], data: { portal: 'admin' },
+    path: 'admin', component: PortalShellComponent, canActivate: [authGuard, roleGuard('admin')], data: { portal: 'admin', seo: { noindex: true } },
     children: adminRoutes
   },
-  { path: '**', title: 'Página não encontrada | ChezVoust Pro', loadComponent: () => import('./features/public/pages/not-found/not-found.component').then((m) => m.NotFoundComponent) }
+  { path: '**', title: 'Página não encontrada | ChezVoust Pro', data: { seo: { title: 'Página não encontrada | ChezVoust Pro', description: 'A página solicitada não foi encontrada.', noindex: true } }, loadComponent: () => import('./features/public/pages/not-found/not-found.component').then((m) => m.NotFoundComponent) }
 ];

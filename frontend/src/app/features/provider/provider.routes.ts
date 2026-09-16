@@ -5,6 +5,6 @@ export const providerRoutes: Routes = [
   { path: 'solicitacoes', title: 'Solicitações | ChezVoust Pro', loadComponent: () => import('./pages/requests/provider-requests.component').then((m) => m.ProviderRequestsComponent) },
   { path: 'agenda', title: 'Agenda profissional | ChezVoust Pro', loadComponent: () => import('./pages/schedule/provider-schedule.component').then((m) => m.ProviderScheduleComponent) },
   { path: 'mensagens', title: 'Mensagens profissionais | ChezVoust Pro', loadComponent: () => import('../messaging/pages/messages/messages.component').then((m) => m.MessagesComponent) },
-  { path: 'ganhos', title: 'Ganhos e repasses | ChezVoust Pro', loadComponent: () => import('./pages/earnings/provider-earnings.component').then((m) => m.ProviderEarningsComponent) },
+  { path: 'atividade', title: 'Histórico de serviços | ChezVoust Pro', loadComponent: () => import('./pages/earnings/provider-earnings.component').then((m) => m.ProviderActivityComponent) },
   { path: 'perfil', title: 'Serviços e perfil | ChezVoust Pro', loadComponent: () => import('./pages/profile/provider-profile.component').then((m) => m.ProviderProfileComponent) }
 ];

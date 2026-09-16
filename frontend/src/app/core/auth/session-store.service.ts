@@ -1,43 +1,48 @@
-import { Injectable, signal } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { User, UserRole } from '../models';
 
-export const ACCESS_TOKEN_KEY = 'cvp_access_token';
-export const REFRESH_TOKEN_KEY = 'cvp_refresh_token';
-export const USER_KEY = 'cvp_user';
-
+const LEGACY_ACCESS_TOKEN_KEY = 'cvp_access_token';
+const LEGACY_REFRESH_TOKEN_KEY = 'cvp_refresh_token';
+const LEGACY_USER_KEY = 'cvp_user';
+const SESSION_HINT_KEY = 'cvp_has_session';
 const ROLES: readonly UserRole[] = ['customer', 'provider', 'admin'];
 
 @Injectable({ providedIn: 'root' })
 export class SessionStoreService {
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly currentUser = signal<User | null>(null);
+  private accessTokenValue: string | null = null;
   readonly user = this.currentUser.asReadonly();
 
   constructor() {
-    const restored = this.restore();
-    if (restored) this.currentUser.set(restored);
+    // Remove dados deixados por versões antigas. Tokens nunca devem persistir no
+    // armazenamento do navegador; a renovação fica restrita ao cookie HttpOnly.
+    this.removeLegacyStorage(this.sessionStorage);
+    this.removeLegacyStorage(this.localStorage);
   }
 
   get accessToken(): string | null {
-    return this.readStorage(sessionStorage, ACCESS_TOKEN_KEY) ?? this.readStorage(localStorage, ACCESS_TOKEN_KEY);
+    return this.accessTokenValue;
   }
 
-  get remember(): boolean {
-    return !!this.readStorage(localStorage, ACCESS_TOKEN_KEY);
+  get hasSessionHint(): boolean {
+    return this.readStorage(this.sessionStorage, SESSION_HINT_KEY) === '1' || this.readStorage(this.localStorage, SESSION_HINT_KEY) === '1';
   }
 
-  save(user: User, accessToken: string, remember: boolean): void {
+  save(user: User, accessToken: string): void {
     if (!accessToken || !this.isUser(user)) {
       this.clear();
       throw new Error('Sessão inválida recebida do servidor.');
     }
 
-    const target = remember ? localStorage : sessionStorage;
-    const other = remember ? sessionStorage : localStorage;
-    this.clearStorage(other);
-    this.writeStorage(target, USER_KEY, JSON.stringify(user));
-    this.writeStorage(target, ACCESS_TOKEN_KEY, accessToken);
-    // Tokens de renovação antigos não devem permanecer acessíveis ao JavaScript.
-    this.removeStorage(target, REFRESH_TOKEN_KEY);
+    this.removeStorage(this.sessionStorage, SESSION_HINT_KEY);
+    this.removeStorage(this.localStorage, SESSION_HINT_KEY);
+    // O indicador não contém credencial. Mantê-lo entre abas permite recuperar
+    // o cookie de sessão ao abrir uma nova aba; após fechar o navegador, um
+    // cookie sem "manter acesso" deixa de existir e este indicador é limpo.
+    this.writeStorage(this.localStorage, SESSION_HINT_KEY, '1');
+    this.accessTokenValue = accessToken;
     this.currentUser.set(user);
   }
 
@@ -46,8 +51,6 @@ export class SessionStoreService {
       this.clear();
       return;
     }
-    const target = this.readStorage(sessionStorage, ACCESS_TOKEN_KEY) ? sessionStorage : localStorage;
-    this.writeStorage(target, USER_KEY, JSON.stringify(user));
     this.currentUser.set(user);
   }
 
@@ -57,36 +60,21 @@ export class SessionStoreService {
       this.clear();
       throw new Error('Não foi possível renovar a sessão.');
     }
-    this.save(current, accessToken, this.remember);
+    this.accessTokenValue = accessToken;
+    this.currentUser.set(current);
   }
 
   clear(): void {
-    this.clearStorage(sessionStorage);
-    this.clearStorage(localStorage);
+    this.accessTokenValue = null;
+    this.removeStorage(this.sessionStorage, SESSION_HINT_KEY);
+    this.removeStorage(this.localStorage, SESSION_HINT_KEY);
+    this.removeLegacyStorage(this.sessionStorage);
+    this.removeLegacyStorage(this.localStorage);
     this.currentUser.set(null);
   }
 
   isAllowedRole(value: unknown): value is UserRole {
     return typeof value === 'string' && ROLES.includes(value as UserRole);
-  }
-
-  private restore(): User | null {
-    if (!this.accessToken) {
-      this.clearStorage(sessionStorage);
-      this.clearStorage(localStorage);
-      return null;
-    }
-    try {
-      const raw = this.readStorage(sessionStorage, USER_KEY) ?? this.readStorage(localStorage, USER_KEY);
-      if (!raw) return null;
-      const user = JSON.parse(raw) as unknown;
-      if (!this.isUser(user)) throw new Error('invalid-user');
-      return user;
-    } catch {
-      this.clearStorage(sessionStorage);
-      this.clearStorage(localStorage);
-      return null;
-    }
   }
 
   private isUser(value: unknown): value is User {
@@ -96,21 +84,32 @@ export class SessionStoreService {
       typeof user.email === 'string' && this.isAllowedRole(user.role);
   }
 
-  private clearStorage(storage: Storage): void {
-    this.removeStorage(storage, USER_KEY);
-    this.removeStorage(storage, ACCESS_TOKEN_KEY);
-    this.removeStorage(storage, REFRESH_TOKEN_KEY);
+  private get sessionStorage(): Storage | null {
+    return isPlatformBrowser(this.platformId) ? sessionStorage : null;
   }
 
-  private readStorage(storage: Storage, key: string): string | null {
+  private get localStorage(): Storage | null {
+    return isPlatformBrowser(this.platformId) ? localStorage : null;
+  }
+
+  private removeLegacyStorage(storage: Storage | null): void {
+    this.removeStorage(storage, LEGACY_USER_KEY);
+    this.removeStorage(storage, LEGACY_ACCESS_TOKEN_KEY);
+    this.removeStorage(storage, LEGACY_REFRESH_TOKEN_KEY);
+  }
+
+  private readStorage(storage: Storage | null, key: string): string | null {
+    if (!storage) return null;
     try { return storage.getItem(key); } catch { return null; }
   }
 
-  private writeStorage(storage: Storage, key: string, value: string): void {
+  private writeStorage(storage: Storage | null, key: string, value: string): void {
+    if (!storage) return;
     try { storage.setItem(key, value); } catch { /* storage indisponível */ }
   }
 
-  private removeStorage(storage: Storage, key: string): void {
+  private removeStorage(storage: Storage | null, key: string): void {
+    if (!storage) return;
     try { storage.removeItem(key); } catch { /* storage indisponível */ }
   }
 }

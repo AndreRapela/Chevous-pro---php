@@ -18,8 +18,7 @@ final class ProviderController extends Controller
         $statement = $this->db->prepare(
             'SELECT
                 SUM(status = \'confirmed\' AND scheduled_start >= UTC_TIMESTAMP()) AS upcomingJobs,
-                SUM(status = \'completed\') AS completedJobs,
-                COALESCE(SUM(CASE WHEN status = \'completed\' THEN professional_amount_cents ELSE 0 END), 0) AS earningsCents
+                SUM(status = \'completed\') AS completedJobs
              FROM bookings WHERE professional_id = :id'
         );
         $statement->execute(['id' => $auth['id']]);
@@ -76,6 +75,105 @@ final class ProviderController extends Controller
         $this->db->prepare('UPDATE professional_profiles SET ' . implode(', ', $sets) . ', updated_at = UTC_TIMESTAMP() WHERE user_id = :id')
             ->execute($values);
         return $this->profile($request, [], $auth);
+    }
+
+    public function experiences(Request $request, array $params, ?array $auth): Response
+    {
+        $statement = $this->db->prepare(
+            'SELECT public_id AS id, role_title AS role, company_name AS company, description,
+                    DATE_FORMAT(started_at, \'%Y-%m-%d\') AS startedAt, DATE_FORMAT(ended_at, \'%Y-%m-%d\') AS endedAt,
+                    is_current AS current
+             FROM professional_experiences WHERE professional_id = :id ORDER BY is_current DESC, started_at DESC'
+        );
+        $statement->execute(['id' => $auth['id']]);
+        return Response::data($statement->fetchAll());
+    }
+
+    public function createExperience(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $data = $this->validatedExperience($request->body);
+        $publicId = Uuid::v4();
+        $this->db->prepare(
+            'INSERT INTO professional_experiences
+                (public_id, professional_id, role_title, company_name, description, started_at, ended_at, is_current, created_at, updated_at)
+             VALUES (:public_id, :professional_id, :role, :company, :description, :started_at, :ended_at, :current, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+        )->execute(['public_id' => $publicId, 'professional_id' => $auth['id'], ...$data]);
+        return $this->experienceResponse($publicId, (int) $auth['id'], 201);
+    }
+
+    public function updateExperience(Request $request, array $params, ?array $auth): Response
+    {
+        $data = $this->validatedExperience($request->body);
+        $statement = $this->db->prepare(
+            'UPDATE professional_experiences SET role_title = :role, company_name = :company, description = :description,
+                    started_at = :started_at, ended_at = :ended_at, is_current = :current, updated_at = UTC_TIMESTAMP()
+             WHERE public_id = :id AND professional_id = :professional_id'
+        );
+        $statement->execute(['id' => $params['id'], 'professional_id' => $auth['id'], ...$data]);
+        if ($statement->rowCount() === 0) {
+            $this->requireRow('SELECT id FROM professional_experiences WHERE public_id = :id AND professional_id = :professional_id', ['id' => $params['id'], 'professional_id' => $auth['id']], 'Experiência não encontrada.');
+        }
+        return $this->experienceResponse($params['id'], (int) $auth['id']);
+    }
+
+    public function deleteExperience(Request $request, array $params, ?array $auth): Response
+    {
+        $statement = $this->db->prepare('DELETE FROM professional_experiences WHERE public_id = :id AND professional_id = :professional_id');
+        $statement->execute(['id' => $params['id'], 'professional_id' => $auth['id']]);
+        if ($statement->rowCount() === 0) {
+            throw new ApiException(404, 'EXPERIENCE_NOT_FOUND', 'Experiência não encontrada.');
+        }
+        return Response::noContent();
+    }
+
+    public function courses(Request $request, array $params, ?array $auth): Response
+    {
+        $statement = $this->db->prepare(
+            'SELECT public_id AS id, title, institution, DATE_FORMAT(completed_at, \'%Y-%m-%d\') AS completedAt,
+                    certificate_url AS certificateUrl
+             FROM professional_courses WHERE professional_id = :id ORDER BY completed_at DESC, created_at DESC'
+        );
+        $statement->execute(['id' => $auth['id']]);
+        return Response::data($statement->fetchAll());
+    }
+
+    public function createCourse(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $data = $this->validatedCourse($request->body);
+        $publicId = Uuid::v4();
+        $this->db->prepare(
+            'INSERT INTO professional_courses
+                (public_id, professional_id, title, institution, completed_at, certificate_url, created_at, updated_at)
+             VALUES (:public_id, :professional_id, :title, :institution, :completed_at, :certificate_url, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+        )->execute(['public_id' => $publicId, 'professional_id' => $auth['id'], ...$data]);
+        return $this->courseResponse($publicId, (int) $auth['id'], 201);
+    }
+
+    public function updateCourse(Request $request, array $params, ?array $auth): Response
+    {
+        $data = $this->validatedCourse($request->body);
+        $statement = $this->db->prepare(
+            'UPDATE professional_courses SET title = :title, institution = :institution, completed_at = :completed_at,
+                    certificate_url = :certificate_url, updated_at = UTC_TIMESTAMP()
+             WHERE public_id = :id AND professional_id = :professional_id'
+        );
+        $statement->execute(['id' => $params['id'], 'professional_id' => $auth['id'], ...$data]);
+        if ($statement->rowCount() === 0) {
+            $this->requireRow('SELECT id FROM professional_courses WHERE public_id = :id AND professional_id = :professional_id', ['id' => $params['id'], 'professional_id' => $auth['id']], 'Curso não encontrado.');
+        }
+        return $this->courseResponse($params['id'], (int) $auth['id']);
+    }
+
+    public function deleteCourse(Request $request, array $params, ?array $auth): Response
+    {
+        $statement = $this->db->prepare('DELETE FROM professional_courses WHERE public_id = :id AND professional_id = :professional_id');
+        $statement->execute(['id' => $params['id'], 'professional_id' => $auth['id']]);
+        if ($statement->rowCount() === 0) {
+            throw new ApiException(404, 'COURSE_NOT_FOUND', 'Curso não encontrado.');
+        }
+        return Response::noContent();
     }
 
     public function services(Request $request, array $params, ?array $auth): Response
@@ -209,6 +307,7 @@ final class ProviderController extends Controller
 
     public function createAvailabilityException(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
         $data = Validator::validate($request->body, [
             'date' => ['required', 'date'], 'type' => ['required', 'string', 'in:available,unavailable'],
             'startTime' => ['nullable', 'string', 'max:5'], 'endTime' => ['nullable', 'string', 'max:5'],
@@ -259,7 +358,7 @@ final class ProviderController extends Controller
             "SELECT b.public_id AS id, b.status,
                     DATE_FORMAT(b.scheduled_start, '%Y-%m-%dT%H:%i:%sZ') AS scheduledStart,
                     DATE_FORMAT(b.scheduled_end, '%Y-%m-%dT%H:%i:%sZ') AS scheduledEnd,
-                    b.total_cents AS totalCents, b.professional_amount_cents AS professionalAmountCents,
+                    b.total_cents AS totalCents, b.currency,
                     s.name AS serviceName, u.name AS customerName,
                     JSON_UNQUOTE(JSON_EXTRACT(b.address_snapshot, '$.city')) AS city,
                     JSON_UNQUOTE(JSON_EXTRACT(b.address_snapshot, '$.state')) AS state,
@@ -282,7 +381,7 @@ final class ProviderController extends Controller
             "SELECT DISTINCT b.public_id AS id,
                     DATE_FORMAT(b.scheduled_start, '%Y-%m-%dT%H:%i:%sZ') AS scheduledStart,
                     b.duration_minutes AS durationMinutes,
-                    b.quantity, b.area_sqm AS areaSqm, b.subtotal_cents AS suggestedSubtotalCents,
+                    b.quantity, b.area_sqm AS areaSqm, b.subtotal_cents AS suggestedSubtotalCents, b.currency,
                     s.name AS serviceName, a.city, a.state,
                     DATE_FORMAT(b.created_at, '%Y-%m-%dT%H:%i:%sZ') AS createdAt
              FROM bookings b
@@ -298,6 +397,7 @@ final class ProviderController extends Controller
 
     public function createOffer(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
         $this->assertApprovedProvider((int) $auth['id']);
         $data = Validator::validate($request->body, [
             'amountCents' => ['required', 'integer', 'min:1000', 'max:10000000'],
@@ -335,6 +435,7 @@ final class ProviderController extends Controller
 
     public function withdrawOffer(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
         $statement = $this->db->prepare(
             'UPDATE booking_offers SET status = \'withdrawn\', updated_at = UTC_TIMESTAMP()
              WHERE public_id = :id AND professional_id = :professional_id AND status = \'pending\''
@@ -355,5 +456,64 @@ final class ProviderController extends Controller
         if ($statement->fetchColumn() !== 'approved') {
             throw new ApiException(403, 'PROVIDER_NOT_APPROVED', 'Seu cadastro profissional precisa estar aprovado para acessar oportunidades.');
         }
+    }
+
+    private function validatedExperience(array $body): array
+    {
+        $data = Validator::validate($body, [
+            'role' => ['required', 'string', 'min:2', 'max:120'],
+            'company' => ['required', 'string', 'min:2', 'max:120'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'startedAt' => ['required', 'date'], 'endedAt' => ['nullable', 'date'], 'current' => ['sometimes', 'boolean'],
+        ]);
+        $current = !empty($data['current']);
+        $endedAt = $current ? null : ($data['endedAt'] ?? null);
+        if ($endedAt !== null && $endedAt < $data['startedAt']) {
+            throw new ApiException(422, 'INVALID_EXPERIENCE_DATES', 'O término não pode ser anterior ao início.');
+        }
+        return [
+            'role' => trim((string) $data['role']), 'company' => trim((string) $data['company']),
+            'description' => isset($data['description']) ? trim((string) $data['description']) ?: null : null,
+            'started_at' => $data['startedAt'], 'ended_at' => $endedAt, 'current' => $current ? 1 : 0,
+        ];
+    }
+
+    private function validatedCourse(array $body): array
+    {
+        $data = Validator::validate($body, [
+            'title' => ['required', 'string', 'min:2', 'max:160'], 'institution' => ['required', 'string', 'min:2', 'max:160'],
+            'completedAt' => ['nullable', 'date'], 'certificateUrl' => ['nullable', 'string', 'max:500'],
+        ]);
+        $certificateUrl = isset($data['certificateUrl']) ? trim((string) $data['certificateUrl']) : '';
+        if ($certificateUrl !== '' && filter_var($certificateUrl, FILTER_VALIDATE_URL) === false) {
+            throw new ApiException(422, 'INVALID_CERTIFICATE_URL', 'Informe um link de certificado válido.');
+        }
+        return [
+            'title' => trim((string) $data['title']), 'institution' => trim((string) $data['institution']),
+            'completed_at' => $data['completedAt'] ?? null, 'certificate_url' => $certificateUrl ?: null,
+        ];
+    }
+
+    private function experienceResponse(string $publicId, int $professionalId, int $status = 200): Response
+    {
+        $row = $this->requireRow(
+            'SELECT public_id AS id, role_title AS role, company_name AS company, description,
+                    DATE_FORMAT(started_at, \'%Y-%m-%d\') AS startedAt, DATE_FORMAT(ended_at, \'%Y-%m-%d\') AS endedAt,
+                    is_current AS current
+             FROM professional_experiences WHERE public_id = :id AND professional_id = :professional_id',
+            ['id' => $publicId, 'professional_id' => $professionalId], 'Experiência não encontrada.'
+        );
+        return Response::data($row, $status);
+    }
+
+    private function courseResponse(string $publicId, int $professionalId, int $status = 200): Response
+    {
+        $row = $this->requireRow(
+            'SELECT public_id AS id, title, institution, DATE_FORMAT(completed_at, \'%Y-%m-%d\') AS completedAt,
+                    certificate_url AS certificateUrl
+             FROM professional_courses WHERE public_id = :id AND professional_id = :professional_id',
+            ['id' => $publicId, 'professional_id' => $professionalId], 'Curso não encontrado.'
+        );
+        return Response::data($row, $status);
     }
 }

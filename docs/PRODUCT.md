@@ -23,16 +23,15 @@ Existe código de frontend, API e banco para:
 - landing page, catálogo, promoções textuais e profissionais;
 - cadastro, login, sessão rotativa, logout, verificação e recuperação na API;
 - endereços de cliente;
-- cotação autoritativa no servidor com preço fixo, por hora ou por área, adicionais,
-  cupom, taxa e comissão;
+- estimativa autoritativa no servidor com preço fixo, por hora ou por área e adicionais,
+  sem cobrança, cupom, taxa ou comissão da plataforma;
 - reserva direta e solicitação ao marketplace;
 - proposta do prestador e aceite do cliente;
 - bloqueio de agenda, histórico básico e estados de reserva;
-- intenção e transação de pagamento inteiramente simuladas;
-- favoritos, conversas de texto, notificações e avaliação;
-- perfil, serviços, disponibilidade, jobs e oportunidades do prestador;
+- favoritos, conversas de texto, notificações, comentários de comunidade e avaliação verificada;
+- foto de perfil, dados pessoais, vitrine profissional, experiências, cursos, serviços, disponibilidade, jobs e oportunidades do prestador;
 - métricas e operações administrativas básicas de usuário, aprovação de perfil,
-  catálogo, cupom, promoção e auditoria.
+  catálogo, promoção e auditoria.
 
 “Implementado” descreve a existência do fluxo no código; não substitui a validação final
 de concorrência, segurança, acessibilidade, desempenho e navegadores.
@@ -41,16 +40,15 @@ de concorrência, segurança, acessibilidade, desempenho e navegadores.
 
 - `npm start` usa `MockApiService` por padrão para navegação sem API.
 - O build de container usa a API PHP real.
-- Pagamento usa driver `fake`; `success`, `declined` e `timeout` são cenários locais.
-- E-mail usa outbox/driver de log; o Compose executa o worker, mas não há entrega externa.
+- E-mail usa outbox/driver de log no desenvolvimento e Resend na configuração de produção.
 - Quando uma tela apresenta fallback sem endpoint correspondente, ela deve trazer rótulo
   visível de “Demonstração” e não simular confirmação operacional silenciosamente.
 - Dados do seed e mock são fictícios e existem somente para desenvolvimento.
 
 ### 3. Roadmap
 
-Não estão prontos hoje: KYC/documentos, upload, mapas, SMS/WhatsApp, seguro, gateway real,
-webhook, estorno, crédito, ledger, split, repasse, recorrência, reagendamento completo,
+Não estão prontos hoje: KYC/documentos, upload, mapas, SMS/WhatsApp, seguro,
+recorrência automática,
 disputa/ticket, privacidade automatizada, múltiplos papéis por conta, PWA e aplicativo de
 loja. Esses itens preservam a evolução profissional sem criar promessa de disponibilidade.
 
@@ -63,7 +61,6 @@ loja. Esses itens preservam a evolução profissional sem criar promessa de disp
 | Prestador | Papel `provider`; perfil, serviços, disponibilidade, jobs e propostas no núcleo. |
 | Administrador | Papel `admin`; dashboard e operações administrativas básicas. |
 | Suporte especializado | Roadmap; não existe papel separado nem módulo de ticket/disputa. |
-| Financeiro especializado | Roadmap; não existe papel separado, conciliação ou repasse real. |
 
 Cada conta possui hoje um único papel. A combinação cliente + prestador na mesma conta
 exige mudança futura do modelo de autorização.
@@ -92,7 +89,7 @@ futuramente sob regras comerciais e de segurança adequadas.
   profissionais recomendados, benefícios, FAQ e CTA;
 - catálogo por categoria e texto;
 - busca de profissional por serviço, cidade, estado e nota na API;
-- perfil público com região, oferta e avaliações, sem contato ou endereço exato;
+- perfil público com região, oferta, foto, experiência, cursos, comentários de comunidade e avaliações verificadas, sem contato ou endereço exato;
 - páginas informativas de funcionamento, segurança, ajuda, termos e privacidade;
 - layouts responsivos baseados em CSS, sem fotografia obrigatória.
 
@@ -106,29 +103,28 @@ No núcleo atual, o cliente pode:
 1. cadastrar-se, entrar e manter sessão;
 2. salvar endereço;
 3. escolher serviço, tamanho/quantidade, data, horário e profissional;
-4. solicitar cotação calculada pelo backend e validar cupom;
-5. criar reserva direta ou, pela API, solicitação para propostas;
-6. criar intenção e simular o resultado de pagamento local;
-7. acompanhar reservas e usar as ações existentes de cancelar e avaliar;
-8. favoritar profissional e conversar pelo fluxo web; notificações permanecem
-   disponíveis na API e podem ter apresentação parcial na interface;
-9. consultar histórico básico.
+4. solicitar estimativa calculada pelo backend;
+5. criar reserva direta ou publicar pela interface uma solicitação para propostas;
+6. acompanhar reservas e usar as ações existentes de cancelar e avaliar;
+7. favoritar profissional, conversar pelo fluxo web e abrir o destino das notificações;
+8. consultar histórico básico.
 
-Recorrência, materiais, política versionada de cancelamento, reagendamento, chegada,
-confirmação bilateral, disputa, suporte e meios de pagamento reais são roadmap.
+Recorrência automática, materiais, política versionada de cancelamento,
+confirmação bilateral, disputa e suporte são roadmap.
 
 ### Prestador
 
 No núcleo da API, o prestador pode:
 
 1. cadastrar perfil inicial sujeito a aprovação operacional;
-2. atualizar apresentação, cidade, estado e raio informativo;
-3. ativar serviços e definir preço;
-4. definir regras semanais de disponibilidade;
-5. consultar dashboard e jobs;
-6. consultar solicitações compatíveis por serviço;
-7. enviar ou retirar proposta;
-8. iniciar e concluir reservas autorizadas.
+2. atualizar foto, dados pessoais, apresentação, cidade, estado e raio informativo;
+3. cadastrar experiências profissionais e cursos/certificados exibidos na vitrine pública;
+4. ativar serviços e definir preço;
+5. definir regras semanais de disponibilidade;
+6. consultar dashboard e jobs;
+7. consultar solicitações compatíveis por serviço;
+8. enviar ou retirar proposta;
+9. iniciar e concluir reservas autorizadas.
 
 Área geográfica com cálculo de distância, documentos, verificação de identidade, conta
 bancária, saldo, extrato e repasse são roadmap. Números exibidos sem fonte de API devem
@@ -142,17 +138,16 @@ O núcleo administrativo da API oferece:
 - listagem e suspensão/reativação de usuários;
 - fila e decisão de aprovação operacional de prestadores;
 - criação/edição básica de categorias e serviços;
-- listagem/criação de cupons e promoções textuais;
-- consulta de reservas, pagamentos simulados e auditoria.
+- gestão de promoções textuais;
+- consulta de reservas, moderação de conteúdo e auditoria.
 
-Relatórios exportáveis, documentos, moderação completa, suporte, disputas, refund,
-repasse, conciliação e permissões granulares são roadmap. A interface não deve apresentar
-transferências, bancos ou eventos financeiros fictícios como ocorrências reais.
+Relatórios exportáveis, documentos, suporte, disputas e permissões granulares são
+roadmap.
 
 ## Regras que o produto já assume
 
 - Valores de reserva são recalculados pelo servidor e congelados em snapshot.
-- Dinheiro trafega em centavos; cartão bruto nunca entra no sistema.
+- Valores de referência trafegam em centavos e não há coleta de dados de pagamento.
 - Reserva direta exige profissional que ofereça o serviço.
 - Agenda usa locks/holds para reduzir dupla reserva; a garantia final depende dos testes
   concorrentes da fase de aceite.
@@ -172,26 +167,24 @@ transferências, bancos ou eventos financeiros fictícios como ocorrências reai
 - Verde como ação principal, fundo menta e acentos coral/amarelo, sem reproduzir a
   identidade de terceiros.
 - Estados de loading, vazio e erro nas jornadas integradas.
-- Datas, moeda, CEP, telefone e textos em padrão brasileiro.
+- Datas e textos em inglês ou francês; moeda em EUR ou USD conforme a preferência do usuário.
 - Navegação por teclado, foco visível, rótulos e contraste WCAG 2.2 AA como critérios da
   fase final de validação, não como certificação já concluída.
-- Nenhuma tela depende de fotografia; mídia enviada por usuário só poderá existir quando
-  houver upload privado e política de retenção.
+- Fotos de perfil usam upload autenticado, validação de tipo/tamanho/dimensão, armazenamento fora da pasta pública e entrega por endpoint com tipo de conteúdo validado. Política de retenção e varredura antimalware continuam dependentes da operação de produção.
 
 ## Roadmap funcional priorizado
 
 ### Próxima evolução do núcleo
 
 - disponibilidade por slots descontando reservas e região real de atendimento;
-- recorrência e reagendamento com histórico e política versionada;
+- recorrência automática e política de cancelamento versionada;
 - suporte, disputa e moderação;
 - preferências, consentimentos e solicitações do titular;
-- migrations incrementais e worker agendado;
-- contrato OpenAPI e testes automatizados na fase autorizada.
+- pipeline de rollback e validação prévia das migrações;
+- contrato OpenAPI e ampliação da cobertura automatizada.
 
 ### Dependente de fornecedores e decisão comercial
 
-- gateway marketplace com tokenização externa, webhook, refund, split e repasse;
 - KYC/documentos com processo verificável e base legal;
 - mapas/CEP, geolocalização e acompanhamento;
 - e-mail transacional, SMS/WhatsApp e push;
@@ -203,7 +196,7 @@ transferências, bancos ou eventos financeiros fictícios como ocorrências reai
 
 - Código e dados permanecem locais, sem commit, push, publicação ou deploy.
 - Uma imagem editada a partir da referência autorizada é incorporada à capa e uma foto de eletricista gerada a pedido do usuário é usada na tela de acesso.
-- O pagamento é somente simulado e não movimenta dinheiro.
+- A plataforma não processa pagamentos nem coleta dados financeiros.
 - Contas, endereços, mensagens e valores de demonstração são fictícios.
 - Operação real exige credenciais, contratos, homologação, política de privacidade,
   segurança, testes finais e autorização explícita.

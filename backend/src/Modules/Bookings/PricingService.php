@@ -17,6 +17,12 @@ final class PricingService
 
     public function quote(array $input, ?int $professionalId = null): array
     {
+        $currency = strtoupper((string) ($input['currency'] ?? $this->config['currency'] ?? 'BRL'));
+        $rates = is_array($this->config['currency_rates'] ?? null) ? $this->config['currency_rates'] : ['BRL' => 1.0];
+        if (!in_array($currency, ['BRL', 'EUR', 'USD'], true) || !isset($rates[$currency]) || !is_numeric($rates[$currency]) || (float) $rates[$currency] <= 0) {
+            throw new ApiException(422, 'UNSUPPORTED_CURRENCY', 'The selected currency is not supported.');
+        }
+        $exchangeRate = (float) $rates[$currency];
         $statement = $this->db->prepare(
             'SELECT s.id, s.public_id, s.category_id, s.name, s.pricing_type, s.price_cents,
                     s.default_duration_minutes, s.minimum_quantity, s.maximum_quantity,
@@ -49,7 +55,7 @@ final class PricingService
         $duration = isset($input['durationMinutes'])
             ? (int) $input['durationMinutes']
             : (int) $service['default_duration_minutes'];
-        $unitPrice = (int) ($service['professional_price'] ?? $service['price_cents']);
+        $unitPrice = (int) round((int) ($service['professional_price'] ?? $service['price_cents']) * $exchangeRate);
 
         $pricedQuantity = $service['pricing_type'] === 'area' ? ($areaSqm ?? 0.0) : $quantity;
         if ($pricedQuantity < (float) $service['minimum_quantity'] || $pricedQuantity > (float) $service['maximum_quantity']) {
@@ -92,28 +98,27 @@ final class PricingService
                 throw new ApiException(422, 'INVALID_ADDON', 'Um ou mais adicionais não pertencem ao serviço.');
             }
             foreach ($rows as $addon) {
+                $addonUnitPrice = (int) round((int) $addon['price_cents'] * $exchangeRate);
                 $addonTotal = match ($addon['pricing_type']) {
-                    'hourly' => (int) round((int) $addon['price_cents'] * ($duration / 60)),
-                    'quantity' => (int) round((int) $addon['price_cents'] * $quantity),
-                    default => (int) $addon['price_cents'],
+                    'hourly' => (int) round($addonUnitPrice * ($duration / 60)),
+                    'quantity' => (int) round($addonUnitPrice * $quantity),
+                    default => $addonUnitPrice,
                 };
                 $addonsCents += $addonTotal;
                 $items[] = [
                     'type' => 'addon', 'referenceId' => (int) $addon['id'], 'name' => $addon['name'],
                     'quantity' => $addon['pricing_type'] === 'quantity' ? $quantity : 1,
-                    'unitPriceCents' => (int) $addon['price_cents'], 'totalCents' => $addonTotal,
+                    'unitPriceCents' => $addonUnitPrice, 'totalCents' => $addonTotal,
                 ];
             }
         }
 
+        // A plataforma não processa pagamentos. O valor exibido é apenas uma
+        // referência inicial, sem taxa ou comissão da plataforma.
         $subtotal = $baseCents + $addonsCents;
-        $coupon = $this->resolveCoupon($input['couponCode'] ?? null, (int) $service['id'], (int) $service['category_id'], $subtotal);
-        $discount = $coupon['discountCents'] ?? 0;
-        $feePercent = $this->numericSetting('service_fee_percent', 12.0);
-        $commissionPercent = $this->numericSetting('professional_commission_percent', 15.0);
-        $serviceFee = (int) round($subtotal * $feePercent / 100);
-        $professionalAmount = max(0, (int) round($subtotal * (100 - $commissionPercent) / 100));
-        $total = max(0, $subtotal + $serviceFee - $discount);
+        $discount = 0;
+        $serviceFee = 0;
+        $total = $subtotal;
 
         return [
             'serviceInternalId' => (int) $service['id'],
@@ -128,56 +133,7 @@ final class PricingService
             'discountCents' => $discount,
             'serviceFeeCents' => $serviceFee,
             'totalCents' => $total,
-            'professionalAmountCents' => $professionalAmount,
-            'currency' => $this->config['currency'],
-            'couponInternalId' => $coupon['id'] ?? null,
-            'couponCode' => $coupon['code'] ?? null,
+            'currency' => $currency,
         ];
-    }
-
-    private function resolveCoupon(mixed $code, int $serviceId, int $categoryId, int $subtotal): ?array
-    {
-        if (!is_string($code) || trim($code) === '') {
-            return null;
-        }
-        $statement = $this->db->prepare(
-            'SELECT c.id, c.code, c.discount_type, c.discount_value, c.max_discount_cents, c.minimum_order_cents,
-                    c.usage_limit, c.used_count
-             FROM coupons c
-             WHERE c.code = :code AND c.active = 1
-               AND (c.starts_at IS NULL OR c.starts_at <= UTC_TIMESTAMP())
-               AND (c.ends_at IS NULL OR c.ends_at >= UTC_TIMESTAMP())
-               AND (c.usage_limit IS NULL OR c.used_count < c.usage_limit)
-               AND (NOT EXISTS (SELECT 1 FROM coupon_services cs WHERE cs.coupon_id = c.id)
-                    OR EXISTS (SELECT 1 FROM coupon_services cs WHERE cs.coupon_id = c.id AND (cs.service_id = :service_id OR cs.category_id = :category_id)))
-             LIMIT 1'
-        );
-        $statement->execute(['code' => strtoupper(trim($code)), 'service_id' => $serviceId, 'category_id' => $categoryId]);
-        $coupon = $statement->fetch();
-        if (!$coupon) {
-            throw new ApiException(422, 'INVALID_COUPON', 'Cupom inválido, expirado ou esgotado.');
-        }
-        if ($subtotal < (int) $coupon['minimum_order_cents']) {
-            throw new ApiException(422, 'COUPON_MINIMUM_NOT_REACHED', 'O valor mínimo deste cupom ainda não foi atingido.');
-        }
-        $discount = $coupon['discount_type'] === 'percent'
-            ? (int) round($subtotal * (float) $coupon['discount_value'] / 100)
-            : (int) $coupon['discount_value'];
-        if ($coupon['max_discount_cents'] !== null) {
-            $discount = min($discount, (int) $coupon['max_discount_cents']);
-        }
-        return ['id' => (int) $coupon['id'], 'code' => $coupon['code'], 'discountCents' => min($subtotal, $discount)];
-    }
-
-    private function numericSetting(string $key, float $fallback): float
-    {
-        $statement = $this->db->prepare('SELECT setting_value FROM app_settings WHERE setting_key = :key LIMIT 1');
-        $statement->execute(['key' => $key]);
-        $value = $statement->fetchColumn();
-        if ($value === false) {
-            return $fallback;
-        }
-        $decoded = json_decode((string) $value, true);
-        return is_numeric($decoded) ? (float) $decoded : (is_numeric($value) ? (float) $value : $fallback);
     }
 }
