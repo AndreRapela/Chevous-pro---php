@@ -25,7 +25,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
           <div class="category-grid" cvpHorizontalScroll aria-label="Do que sua casa precisa? Deslize horizontalmente para ver mais categorias.">
             @for (category of categories(); track category.id) {
               <a class="category-card" [routerLink]="categoryPath(category)">
-                <span class="category-symbol" aria-hidden="true"><cvp-service-icon [category]="category.id" [serviceSlug]="category.slug" /></span><strong>{{ category.shortName }}</strong><small>{{ category.serviceCount }} {{ category.serviceCount === 1 ? 'opção' : 'opções' }}</small>
+                <span class="category-symbol" aria-hidden="true"><cvp-service-icon [category]="category.id" [serviceSlug]="category.slug" [icon]="category.symbol" /></span><strong>{{ category.shortName }}</strong><small>{{ category.serviceCount }} {{ category.serviceCount === 1 ? 'opção' : 'opções' }}</small>
               </a>
             }
           </div>

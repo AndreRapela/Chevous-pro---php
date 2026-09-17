@@ -2694,7 +2694,7 @@ cvp-provider-card { display: block; height: 100%; }
 
 /* Auditoria final de densidade: cada contexto usa a mesma escala, sem
    transformar o perfil ou os ícones em elementos de destaque desnecessário. */
-.service-icon { display: block; width: 1.18rem; height: 1.18rem; }
+.service-icon { display: block; width: 1.18rem; height: 1.18rem; stroke-width: 2; vector-effect: non-scaling-stroke; }
 .service-visual .service-icon { width: 2rem; height: 2rem; }
 
 @media (min-width: 64rem) {
@@ -2705,7 +2705,7 @@ cvp-provider-card { display: block; height: 100%; }
   .home-categories .category-card small { font-size: .78rem; }
   .home-categories .category-symbol,
   .home-categories .service-symbol { width: 2.25rem; height: 2.25rem; border-radius: .68rem; }
-  .home-categories .service-icon { width: 1.05rem; height: 1.05rem; }
+  .home-categories .service-icon { width: 1.08rem; height: 1.08rem; stroke-width: 2.1; }
 
   /* O cabeçalho do profissional é introdutório; o conteúdo começa na dobra. */
   .profile-hero { padding: 1.35rem 0 1.25rem; }
