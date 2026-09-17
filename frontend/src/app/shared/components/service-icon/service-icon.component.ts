@@ -30,7 +30,7 @@ export class ServiceIconComponent {
 
   iconName(): ServiceIconName {
     const value = `${this.icon} ${this.category} ${this.serviceSlug}`.toLocaleLowerCase('pt-BR');
-    if (/laundry|lavander|lavar|passar/.test(value)) return 'laundry';
+    if (/laundry|lavander|lavagem|lavar|passar/.test(value)) return 'laundry';
     if (/painting|pint/.test(value)) return 'painting';
     if (/gardening|jardin|garden/.test(value)) return 'gardening';
     if (/package|assembly|assemble|montagem|moveis|móveis/.test(value)) return 'assembly';
