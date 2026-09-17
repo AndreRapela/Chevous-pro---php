@@ -130,11 +130,16 @@ assert.doesNotMatch(apiRoutes, /coupons/i, 'A API não deve expor recursos de cu
 const engagement = await text('backend/src/Modules/Engagement/EngagementController.php');
 assert.match(engagement, /m\.id > :after/, 'Leitura de mensagens deve aceitar cursor incremental.');
 assert.match(engagement, /function messageUpdates\(/, 'Chat deve expor atualização autenticada de baixa latência.');
+assert.match(engagement, /function messageStream\(/, 'Chat deve expor um fluxo autenticado em tempo real.');
+assert.match(apiRoutes, /\/api\/v1\/conversations\/\{id\}\/stream/, 'Rota de stream do chat ausente.');
+assert.match(apiRoutes, /\/api\/v1\/professionals\/\{id\}\/conversation/, 'Cliente deve poder iniciar conversa antes de contratar.');
 const apiIndex = await text('backend/public/index.php');
 assert.match(apiIndex, /\['rateLimiter'\]->check\([\s\S]*global:/, 'Atualizações do chat devem atravessar o limite global antes do roteamento.');
 assert.doesNotMatch(engagement, /chat-events:user:|chat-events:ip:/, 'Polling do chat não deve duplicar buckets persistentes além do limite global.');
 assert.match(engagement, /pollAfterSeconds.*10/, 'A API deve orientar a cadência de sincronização incremental sustentável.');
-assert.doesNotMatch(engagement, /connection_aborted\(\)|usleep\(1_000_000\)/, 'A atualização do chat não deve reter workers PHP em espera longa.');
+assert.match(engagement, /deadline = microtime\(true\) \+ 25/, 'O stream deve encerrar em janela limitada para não reter workers indefinidamente.');
+assert.doesNotMatch(engagement, /ignore_user_abort\(true\)/, 'O stream deve parar quando o cliente fecha a conexão.');
+assert.match(engagement, /LEFT JOIN conversation_participants contact_participant/, 'A lista do chat deve reutilizar join indexado para o contato, sem subconsultas repetidas.');
 assert.match(engagement, /INNER JOIN conversation_participants cp/, 'Mensagens devem ser restritas aos participantes da conversa.');
 assert.match(engagement, /senderName[\s\S]*messageType[\s\S]*createdAt/, 'Envio deve devolver um ChatMessage completo.');
 assert.match(engagement, /operation = \\'chat\.message\\'/, 'Envio de mensagem deve suportar idempotência.');
@@ -184,6 +189,9 @@ const messageSync = await text('frontend/src/app/features/messaging/data-access/
 assert.match(messageSync, /exhaustMap/, 'Sincronização de mensagens não deve sobrepor requisições.');
 assert.match(messageSync, /visibilityState/, 'Sincronização deve pausar quando a página não estiver visível.');
 assert.match(messageSync, /conversationMessageUpdates/, 'Mensagens novas devem usar atualização autenticada de baixa latência.');
+assert.match(messageSync, /liveStream/, 'Cliente deve abrir fluxo em tempo real para a conversa ativa.');
+assert.match(messageSync, /Authorization: `Bearer \$\{token\}`/, 'Fluxo em tempo real deve manter autenticação do chat.');
+assert.match(messageSync, /visible \? this\.liveStream/, 'O stream do chat deve ser interrompido em segundo plano para proteger bateria e capacidade do servidor.');
 assert.match(messageSync, /repeat\(/, 'O cliente deve abrir a próxima espera apenas após a anterior terminar.');
 assert.match(messageSync, /messagesLatest/, 'A conversa deve iniciar pela janela recente, sem baixar todo o histórico.');
 assert.match(messageSync, /before: Number\.MAX_SAFE_INTEGER/, 'A janela recente deve ser solicitada pelo cursor anterior.');
@@ -214,6 +222,15 @@ for (const endpoint of ['/api/v1/me/avatar', '/api/v1/professionals/{id}/comment
 for (const table of ['professional_experiences', 'professional_courses', 'professional_comments']) {
   assert.match(schema, new RegExp(`CREATE TABLE IF NOT EXISTS ${table}`), `Tabela de perfil profissional ausente: ${table}.`);
 }
+
+const showcaseMigration = await text('database/migrations/202609020001_add_professional_showcase_and_feedback.sql');
+assert.doesNotMatch(showcaseMigration, /ADD COLUMN IF NOT EXISTS/, 'Migração de perfil deve ser compatível com o MySQL suportado.');
+assert.match(showcaseMigration, /information_schema\.columns/, 'Migração de perfil deve verificar colunas antes de alterá-las.');
+const brlMigration = await text('database/migrations/202609160002_set_brl_as_base_currency.sql');
+assert.match(brlMigration, /INSERT INTO app_settings/, 'Migração de moeda deve usar a tabela de configurações existente.');
+const inquiryMigration = await text('database/migrations/202609170001_add_pre_booking_conversations.sql');
+assert.doesNotMatch(inquiryMigration, /ADD COLUMN IF NOT EXISTS|ADD UNIQUE INDEX IF NOT EXISTS/, 'Migração de conversa deve ser compatível com o MySQL suportado.');
+assert.match(inquiryMigration, /uq_conversations_contact_key/, 'Migração de conversa deve preservar a unicidade do contato pré-reserva.');
 
 const compose = await text('compose.yaml');
 for (const service of ['database', 'api', 'web', 'ssr', 'worker']) {

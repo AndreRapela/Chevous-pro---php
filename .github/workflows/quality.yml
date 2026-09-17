@@ -1,0 +1,38 @@
+name: Quality gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npm audit --omit=dev --audit-level=high
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl, gd, mbstring, pdo_mysql
+      - run: php tests/backend_core.php
+      - run: find backend -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 php -l
+      - run: node tests/structure.mjs
+      - run: docker compose -f compose.yaml -f compose.production.yaml --env-file .env.production.example config --quiet

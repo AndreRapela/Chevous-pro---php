@@ -11,6 +11,7 @@ use ChezVoust\Core\Jwt;
 use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Request;
 use ChezVoust\Core\Response;
+use ChezVoust\Core\SensitivePayload;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
 use PDO;
@@ -28,7 +29,8 @@ final class AuthController extends Controller
         array $config,
         private readonly Jwt $jwt,
         private readonly RateLimiter $rateLimiter,
-        private readonly Audit $audit
+        private readonly Audit $audit,
+        private readonly SensitivePayload $sensitivePayload
     ) {
         parent::__construct($db, $config);
     }
@@ -112,7 +114,7 @@ final class AuthController extends Controller
             );
             $event->execute([
                 'aggregate_id' => $userPublicId,
-                'payload' => json_encode(['email' => $email, 'token' => $verificationToken], JSON_THROW_ON_ERROR),
+                'payload' => $this->sensitivePayload->encrypt(['email' => $email, 'token' => $verificationToken]),
             ]);
             $this->db->commit();
         } catch (PDOException $exception) {
@@ -426,7 +428,7 @@ final class AuthController extends Controller
                  VALUES (\'email.password_reset\', \'user\', :aggregate_id, :payload, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
             )->execute([
                 'aggregate_id' => $user['public_id'],
-                'payload' => json_encode(['email' => $user['email'], 'token' => $token], JSON_THROW_ON_ERROR),
+                'payload' => $this->sensitivePayload->encrypt(['email' => $user['email'], 'token' => $token]),
             ]);
         }
         $response = ['message' => 'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.'];

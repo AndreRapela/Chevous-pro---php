@@ -151,7 +151,7 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'avaliação média', en: 'average rating', fr: 'note moyenne' },
   { pt: 'Serviços oferecidos', en: 'Services offered', fr: 'Services proposés' },
   { pt: 'Avaliações', en: 'Reviews', fr: 'Avis' },
-  { pt: 'Perfil verificado', en: 'Verified profile', fr: 'Profil vérifié' },
+  { pt: 'Perfil aprovado na plataforma', en: 'Platform-approved profile', fr: 'Profil approuvé par la plateforme' },
   { pt: 'Avaliações de reservas', en: 'booking reviews', fr: 'avis de réservations' },
   { pt: 'Trajetória', en: 'Career path', fr: 'Parcours' },
   { pt: 'Experiência profissional', en: 'Professional experience', fr: 'Expérience professionnelle' },

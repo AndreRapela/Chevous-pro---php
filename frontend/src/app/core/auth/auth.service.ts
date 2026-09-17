@@ -89,6 +89,8 @@ export class AuthService {
     return '/conta';
   }
 
+  accessToken(): string | null { return this.session.accessToken; }
+
   private setSession(session: AuthSession): void {
     const user = this.normalizeUser(session.user);
     this.session.save(user, session.accessToken);

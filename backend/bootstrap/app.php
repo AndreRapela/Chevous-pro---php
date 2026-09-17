@@ -9,6 +9,7 @@ use ChezVoust\Core\Env;
 use ChezVoust\Core\Jwt;
 use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Router;
+use ChezVoust\Core\SensitivePayload;
 
 require __DIR__ . '/autoload.php';
 
@@ -22,6 +23,7 @@ $jwt = new Jwt($config['jwt']);
 $auth = new Auth($pdo, $jwt);
 $rateLimiter = new RateLimiter($pdo);
 $audit = new Audit($pdo);
+$sensitivePayload = new SensitivePayload($config['outbox_encryption_key']);
 $router = new Router($auth);
 
 $services = [
@@ -32,6 +34,7 @@ $services = [
     'auth' => $auth,
     'rateLimiter' => $rateLimiter,
     'audit' => $audit,
+    'sensitivePayload' => $sensitivePayload,
     'router' => $router,
 ];
 

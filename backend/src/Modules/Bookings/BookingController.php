@@ -682,7 +682,7 @@ final class BookingController extends Controller
     private function createConversation(int $bookingId, int $customerId, ?int $professionalId): int
     {
         $publicId = Uuid::v4();
-        $this->db->prepare('INSERT INTO conversations (public_id, booking_id, created_at, updated_at) VALUES (:public_id, :booking_id, UTC_TIMESTAMP(), UTC_TIMESTAMP())')
+        $this->db->prepare("INSERT INTO conversations (public_id, booking_id, kind, created_at, updated_at) VALUES (:public_id, :booking_id, 'booking', UTC_TIMESTAMP(), UTC_TIMESTAMP())")
             ->execute(['public_id' => $publicId, 'booking_id' => $bookingId]);
         $conversationId = (int) $this->db->lastInsertId();
         $insert = $this->db->prepare('INSERT INTO conversation_participants (conversation_id, user_id, joined_at) VALUES (:conversation_id, :user_id, UTC_TIMESTAMP())');

@@ -15,6 +15,8 @@ $localJwtSecret = 'local-only-change-this-secret-32-chars';
 $jwtSecret = Env::get('JWT_SECRET', $isLocalEnvironment ? $localJwtSecret : '');
 $localProxySecret = 'local-only-proxy-secret-change-before-public-use';
 $proxySharedSecret = Env::get('PROXY_SHARED_SECRET', $isLocalEnvironment ? $localProxySecret : '');
+$localOutboxKey = 'local-only-outbox-encryption-key-change-before-public-use-2026';
+$outboxEncryptionKey = Env::get('OUTBOX_ENCRYPTION_KEY', $isLocalEnvironment ? $localOutboxKey : '');
 $cookieSecure = Env::bool('REFRESH_COOKIE_SECURE', !$isLocalEnvironment);
 $autoSeed = Env::bool('AUTO_SEED', false);
 $mailDriver = Env::get('MAIL_DRIVER', 'disabled');
@@ -38,6 +40,9 @@ if (!$isLocalEnvironment) {
     ];
     if (in_array($proxySharedSecret, $unsafeProxySecrets, true) || strlen($proxySharedSecret) < 32) {
         throw new RuntimeException('PROXY_SHARED_SECRET seguro e exclusivo é obrigatório fora do ambiente local.');
+    }
+    if ($outboxEncryptionKey === '' || $outboxEncryptionKey === $localOutboxKey || strlen($outboxEncryptionKey) < 32) {
+        throw new RuntimeException('OUTBOX_ENCRYPTION_KEY seguro e exclusivo é obrigatório fora do ambiente local.');
     }
     if (!$cookieSecure) {
         throw new RuntimeException('REFRESH_COOKIE_SECURE deve permanecer habilitado fora do ambiente local.');
@@ -71,6 +76,7 @@ return [
     ],
     'cors_origins' => $origins,
     'proxy_shared_secret' => $proxySharedSecret,
+    'outbox_encryption_key' => $outboxEncryptionKey,
     'database' => [
         'host' => Env::get('DB_HOST', '127.0.0.1'),
         'port' => Env::int('DB_PORT', 3306),

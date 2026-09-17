@@ -11,7 +11,7 @@ desnecessários em celulares.
 - catálogo, busca, perfis, favoritos e navegação pública responsiva;
 - estimativa autoritativa e reserva em cinco etapas, com endereço, agenda, profissional
   e resumo;
-- agenda, cancelamento básico, conversa vinculada à reserva e avaliação pós-serviço;
+- agenda, cancelamento básico, conversa pré-reserva e vinculada à reserva, atualizada em tempo real, e avaliação pós-serviço;
 - painéis separados de cliente, profissional e administrador, protegidos por papel;
 - perfil, serviços, disponibilidade, oportunidades, propostas e jobs do profissional;
 - administração básica de usuários, prestadores, reservas, catálogo, promoções e auditoria;
@@ -89,6 +89,8 @@ dos registros é intencional. Configure `APP_URL`, `FRONTEND_ORIGINS` e
 realmente usada), defina segredos aleatórios e mantenha `AUTO_SEED=false`. Após a
 publicação, envie `https://seu-dominio/sitemap.xml` ao Search Console; `robots.txt`,
 canonicals e metadados sociais são entregues automaticamente pela aplicação.
+O procedimento de backup, alertas e cuidados de privacidade está em
+[docs/OPERATIONS.md](docs/OPERATIONS.md).
 
 ## Execução sem containers
 
@@ -120,14 +122,15 @@ ou substituídas em qualquer implantação real:
 
 Resultado da validação local mais recente:
 
-- lint Angular/TypeScript/templates e build de produção aprovados;
-- testes unitários do frontend: 12/12, cobrindo agenda, chat, perfil, registros profissionais e paginação;
-- inspeção estrutural: 107 rotas REST, 34 tabelas e seis variantes WebP autorizadas;
-- lint, build de produção e testes do Angular aprovados por `npm run check`.
+- lint Angular/TypeScript/templates, build de produção, SSR e inspeção do bundle aprovados;
+- testes unitários do frontend: 19/19, cobrindo agenda, chat, perfil, registros profissionais, SEO e paginação;
+- testes centrais PHP: 9/9, incluindo JWT, validação, IP confiável e cifra da outbox;
+- inspeção estrutural: 112 rotas REST, 34 tabelas e seis variantes WebP autorizadas;
+- migração limpa, health check, conversa pré-reserva, SSE autenticado, limpeza da outbox e sintaxe do Nginx validados em MySQL 8.4/Docker.
 
-Os fluxos PHP/MySQL, Compose, testes reais em dispositivos, matriz de concorrência,
-acessibilidade e segurança dinâmica permanecem gates obrigatórios antes da
-homologação. Comandos e escopo estão em `tests/README.md` e `docs/ACCEPTANCE.md`.
+Testes reais em dispositivos, matriz de concorrência, acessibilidade e segurança
+dinâmica continuam gates obrigatórios antes da homologação. Comandos e escopo estão
+em `tests/README.md` e `docs/ACCEPTANCE.md`.
 
 ## Limites intencionais
 
