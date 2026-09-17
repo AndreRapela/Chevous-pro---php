@@ -7,13 +7,17 @@ VALUES
     ('10000000-0000-4000-8000-000000000001', 'customer', 'Mariana Costa', 'cliente@chezvoust.test', '{{CLIENT_PASSWORD_HASH}}', '11987654321', 'active', 'pt-BR', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('10000000-0000-4000-8000-000000000002', 'provider', 'Carlos Oliveira', 'profissional@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11976543210', 'active', 'pt-BR', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('10000000-0000-4000-8000-000000000003', 'admin', 'Admin ChezVoust', 'admin@chezvoust.test', '{{ADMIN_PASSWORD_HASH}}', NULL, 'active', 'pt-BR', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
-    ('10000000-0000-4000-8000-000000000004', 'provider', 'Ana Beatriz Souza', 'ana.souza@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11971234567', 'active', 'pt-BR', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    ('10000000-0000-4000-8000-000000000004', 'provider', 'Ana Beatriz Souza', 'ana.souza@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11971234567', 'active', 'pt-BR', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('10000000-0000-4000-8000-000000000005', 'provider', 'Fernanda Alves', 'fernanda.alves@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11972345678', 'active', 'en-US', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('10000000-0000-4000-8000-000000000006', 'provider', 'Diego Martins', 'diego.martins@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11973456789', 'active', 'en-US', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
     name = VALUES(name), phone = VALUES(phone), status = 'active', updated_at = UTC_TIMESTAMP();
 
 SET @customer_id := (SELECT id FROM users WHERE email = 'cliente@chezvoust.test');
 SET @provider_id := (SELECT id FROM users WHERE email = 'profissional@chezvoust.test');
 SET @provider_ana_id := (SELECT id FROM users WHERE email = 'ana.souza@chezvoust.test');
+SET @provider_fernanda_id := (SELECT id FROM users WHERE email = 'fernanda.alves@chezvoust.test');
+SET @provider_diego_id := (SELECT id FROM users WHERE email = 'diego.martins@chezvoust.test');
 SET @admin_id := (SELECT id FROM users WHERE email = 'admin@chezvoust.test');
 
 INSERT INTO professional_profiles
@@ -25,7 +29,13 @@ VALUES
      8, 'São Paulo', 'SP', 25, 'approved', UTC_TIMESTAMP(), 5.00, 1, 1, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     (@provider_ana_id, 'Limpeza residencial com atenção aos detalhes',
      'Profissional verificada, especializada em limpeza, lavanderia e organização doméstica.',
-     6, 'São Paulo', 'SP', 20, 'approved', UTC_TIMESTAMP(), 4.90, 12, 46, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+     6, 'São Paulo', 'SP', 20, 'approved', UTC_TIMESTAMP(), 4.90, 12, 46, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_fernanda_id, 'Especialista em organização e lavanderia',
+     'Atendimento residencial cuidadoso para organização de ambientes e tratamento de roupas.',
+     7, 'São Paulo', 'SP', 18, 'approved', UTC_TIMESTAMP(), 4.95, 38, 91, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_diego_id, 'Reparos e pintura residencial',
+     'Profissional para pequenos reparos, montagem e pintura de interiores.',
+     9, 'São Paulo', 'SP', 22, 'approved', UTC_TIMESTAMP(), 4.87, 29, 74, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
     headline = VALUES(headline), bio = VALUES(bio), years_experience = VALUES(years_experience),
     base_city = VALUES(base_city), base_state = VALUES(base_state), verification_status = 'approved',
@@ -118,7 +128,13 @@ VALUES
     (@provider_ana_id, @service_deep_cleaning, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     (@provider_ana_id, @service_laundry, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     (@provider_ana_id, @service_ironing, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
-    (@provider_ana_id, @service_organization, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    (@provider_ana_id, @service_organization, NULL, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_fernanda_id, @service_laundry, 6500, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_fernanda_id, @service_ironing, 6000, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_fernanda_id, @service_organization, 7500, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_diego_id, @service_electric, 9800, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_diego_id, @service_painting, 2700, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    (@provider_diego_id, @service_assembly, 9000, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE price_cents = VALUES(price_cents), active = 1, updated_at = UTC_TIMESTAMP();
 
 INSERT INTO availability_rules

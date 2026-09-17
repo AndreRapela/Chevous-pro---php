@@ -27,7 +27,6 @@ import { AppCurrency, AppLanguage, LocalizationService } from '../../core/locali
           <div class="locale-setting" role="group" aria-label="Idioma">
             <span class="locale-setting-label">Idioma</span>
             <div class="locale-option-grid">
-              <button type="button" class="locale-option" [class.active]="localization.language() === 'pt'" [attr.aria-pressed]="localization.language() === 'pt'" (click)="chooseLanguage('pt')"><span class="locale-code">PT</span><span>Português (Brasil)</span></button>
               <button type="button" class="locale-option" [class.active]="localization.language() === 'en'" [attr.aria-pressed]="localization.language() === 'en'" (click)="chooseLanguage('en')"><span class="locale-code">EN</span><span>Inglês</span></button>
               <button type="button" class="locale-option" [class.active]="localization.language() === 'fr'" [attr.aria-pressed]="localization.language() === 'fr'" (click)="chooseLanguage('fr')"><span class="locale-code">FR</span><span>Francês</span></button>
             </div>

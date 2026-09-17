@@ -7,8 +7,8 @@ import { SeoPage, SeoService } from './core/seo/seo.service';
 import { LocalizedContentDirective } from './shared/localization/localized-content.directive';
 
 const DEFAULT_SEO: SeoPage = {
-  title: 'ChezVoust Pro | Serviços domésticos com confiança',
-  description: 'Encontre profissionais aprovados para cuidar da sua casa no dia e horário que você escolher.',
+  title: 'Pro | Home services',
+  description: 'Find trusted professionals for your home.',
   canonicalPath: '/'
 };
 

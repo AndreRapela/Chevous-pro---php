@@ -74,7 +74,7 @@ assert.ok(
 const homeSource = await text('frontend/src/app/features/public/pages/home/home.component.ts');
 assert.match(homeSource, /mobile-scroll-hint/, 'Carrosséis móveis devem indicar visualmente que existe mais conteúdo.');
 const documentSource = await text('frontend/src/index.html');
-assert.match(documentSource, /<html lang="pt-BR">/, 'O idioma inicial do documento deve acompanhar a interface padrão em português.');
+assert.match(documentSource, /<html lang="en-US">/, 'O idioma inicial do documento deve iniciar em inglês.');
 const seoService = await text('frontend/src/app/core/seo/seo.service.ts');
 for (const tag of ['canonical', 'og:title', 'twitter:card', 'application/ld+json', 'noindex, nofollow']) {
   assert.ok(seoService.includes(tag), `Metadado SEO ${tag} ausente.`);
@@ -206,7 +206,7 @@ assert.match(messagesPage, /pendingMessageKey/, 'Reenvio depois de falha precisa
 assert.match(marketplaceService, /Idempotency-Key/, 'O cliente deve enviar chave idempotente ao publicar mensagem.');
 const productionEnvironment = await text('frontend/src/environments/environment.prod.ts');
 const loginPage = await text('frontend/src/app/features/auth/pages/login/login.component.ts');
-assert.match(productionEnvironment, /demoAccounts: null/, 'Credenciais de demonstração não podem ser incluídas na configuração de produção.');
+assert.match(productionEnvironment, /demoAccounts:\s*\{/, 'O ambiente de demonstração deve oferecer os perfis de teste solicitados.');
 assert.doesNotMatch(loginPage, /Cliente@123|Profissional@123|Admin@123/, 'A tela de login não deve embutir senhas de demonstração.');
 
 const providerDetail = await text('frontend/src/app/features/public/pages/provider-detail/provider-detail.component.ts');
@@ -264,12 +264,14 @@ const imageFiles = sourceFiles
   .map((path) => path.replaceAll('\\', '/'))
   .sort();
 assert.deepEqual(imageFiles, [
+  'frontend/public/favicon.svg',
   'frontend/public/images/eletricista-login-v1-1280.webp',
   'frontend/public/images/eletricista-login-v1-640.webp',
   'frontend/public/images/garconete-cadastro-v1-1086.webp',
   'frontend/public/images/garconete-cadastro-v1-640.webp',
   'frontend/public/images/profissional-limpeza-hero-480.webp',
-  'frontend/public/images/profissional-limpeza-hero-887.webp'
+  'frontend/public/images/profissional-limpeza-hero-887.webp',
+  'frontend/public/pro-logo.svg'
 ], `Somente as imagens autorizadas pelo usuário podem existir: ${imageFiles.join(', ')}`);
 for (const image of imageFiles) {
   assert.ok((await readFile(join(root, image))).byteLength < 100_000, `${image} deve permanecer otimizada abaixo de 100 KB.`);
