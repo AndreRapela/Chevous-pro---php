@@ -1,6 +1,31 @@
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS avatar_path VARCHAR(255) NULL AFTER phone,
-    ADD COLUMN IF NOT EXISTS avatar_updated_at DATETIME NULL AFTER avatar_path;
+-- MySQL não aceita IF NOT EXISTS dentro de ADD COLUMN em todas as versões
+-- suportadas. Consulte o catálogo e execute somente a alteração necessária,
+-- inclusive quando o schema-base já contém as colunas.
+SET @has_avatar_path := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'avatar_path'
+);
+SET @avatar_sql := IF(
+    @has_avatar_path = 0,
+    'ALTER TABLE users ADD COLUMN avatar_path VARCHAR(255) NULL AFTER phone',
+    'SELECT 1'
+);
+PREPARE avatar_statement FROM @avatar_sql;
+EXECUTE avatar_statement;
+DEALLOCATE PREPARE avatar_statement;
+
+SET @has_avatar_updated_at := (
+    SELECT COUNT(*) FROM information_schema.columns
+    WHERE table_schema = DATABASE() AND table_name = 'users' AND column_name = 'avatar_updated_at'
+);
+SET @avatar_sql := IF(
+    @has_avatar_updated_at = 0,
+    'ALTER TABLE users ADD COLUMN avatar_updated_at DATETIME NULL AFTER avatar_path',
+    'SELECT 1'
+);
+PREPARE avatar_statement FROM @avatar_sql;
+EXECUTE avatar_statement;
+DEALLOCATE PREPARE avatar_statement;
 
 CREATE TABLE IF NOT EXISTS professional_experiences (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

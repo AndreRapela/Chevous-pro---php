@@ -44,26 +44,26 @@ final class EngagementController extends Controller
         $count->execute(['user_id' => $auth['id']]);
         $total = (int) $count->fetchColumn();
         $statement = $this->db->prepare(
-            'SELECT c.public_id AS id, b.public_id AS bookingId, b.status AS bookingStatus,
-                    s.name AS serviceName, c.updated_at AS updatedAt,
-                    (SELECT u2.name FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
-                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_user_id LIMIT 1) AS contactName,
-                    (SELECT u2.public_id FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
-                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_public_user_id LIMIT 1) AS contactId,
-                    (SELECT u2.avatar_path FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
-                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_avatar_user_id LIMIT 1) AS contactAvatarPath,
-                    (SELECT u2.avatar_updated_at FROM conversation_participants cp2 INNER JOIN users u2 ON u2.id = cp2.user_id
-                     WHERE cp2.conversation_id = c.id AND cp2.user_id <> :contact_updated_user_id LIMIT 1) AS contactAvatarUpdatedAt,
-                    (SELECT m.body FROM messages m WHERE m.conversation_id = c.id ORDER BY m.id DESC LIMIT 1) AS lastMessage,
+            "SELECT c.public_id AS id, COALESCE(b.public_id, '') AS bookingId,
+                    CASE WHEN c.kind = 'inquiry' THEN 'inquiry' ELSE b.status END AS bookingStatus,
+                    COALESCE(s.name, 'Contato antes da reserva') AS serviceName, c.updated_at AS updatedAt,
+                    contact.name AS contactName, contact.public_id AS contactId,
+                    contact.avatar_path AS contactAvatarPath, contact.avatar_updated_at AS contactAvatarUpdatedAt,
+                    last_message.body AS lastMessage,
                     (SELECT COUNT(*) FROM messages m
                      WHERE m.conversation_id = c.id AND m.id > COALESCE(cp.last_read_message_id, 0) AND m.sender_id <> :sender_id) AS unreadCount
              FROM conversation_participants cp INNER JOIN conversations c ON c.id = cp.conversation_id
-             INNER JOIN bookings b ON b.id = c.booking_id INNER JOIN services s ON s.id = b.service_id
-             WHERE cp.user_id = :user_id ORDER BY c.updated_at DESC LIMIT ' . $perPage . ' OFFSET ' . $offset
+             LEFT JOIN conversation_participants contact_participant
+                ON contact_participant.conversation_id = c.id AND contact_participant.user_id <> cp.user_id
+             LEFT JOIN users contact ON contact.id = contact_participant.user_id
+             LEFT JOIN bookings b ON b.id = c.booking_id LEFT JOIN services s ON s.id = b.service_id
+             LEFT JOIN messages last_message ON last_message.id = (
+                SELECT MAX(last_message_id.id) FROM messages last_message_id WHERE last_message_id.conversation_id = c.id
+             )
+             WHERE cp.user_id = :user_id ORDER BY c.updated_at DESC LIMIT " . $perPage . ' OFFSET ' . $offset
         );
         $statement->execute([
-            'sender_id' => $auth['id'], 'user_id' => $auth['id'], 'contact_user_id' => $auth['id'],
-            'contact_public_user_id' => $auth['id'], 'contact_avatar_user_id' => $auth['id'], 'contact_updated_user_id' => $auth['id'],
+            'sender_id' => $auth['id'], 'user_id' => $auth['id'],
         ]);
         $conversations = $statement->fetchAll();
         foreach ($conversations as &$conversation) {
@@ -129,6 +129,54 @@ final class EngagementController extends Controller
         return Response::data($this->messageRowsAfter((int) $conversation['id'], $after, $limit), 200, ['after' => $after, 'limit' => $limit]);
     }
 
+    /** Cria uma conversa privada e idempotente antes da contratação. */
+    public function startProfessionalConversation(Request $request, array $params, ?array $auth): Response
+    {
+        $this->requireVerifiedEmail($auth);
+        $this->rateLimiter->check('inquiry:user:' . $auth['id'], 12, 3600);
+        $professional = $this->requireRow(
+            "SELECT u.id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
+             WHERE u.public_id = :id AND u.role = 'provider' AND u.status = 'active' AND p.verification_status = 'approved'",
+            ['id' => $params['id']],
+            'Profissional não encontrado.'
+        );
+        if ((int) $professional['id'] === (int) $auth['id']) {
+            throw new ApiException(422, 'OWN_CONVERSATION', 'Você não pode iniciar uma conversa com o próprio perfil.');
+        }
+        $contactKey = (int) $auth['id'] . ':' . (int) $professional['id'];
+        $this->db->beginTransaction();
+        try {
+            $insert = $this->db->prepare("INSERT INTO conversations (public_id, booking_id, kind, contact_key, created_at, updated_at)
+                VALUES (:public_id, NULL, 'inquiry', :contact_key, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+                ON DUPLICATE KEY UPDATE updated_at = updated_at");
+            $insert->execute(['public_id' => Uuid::v4(), 'contact_key' => $contactKey]);
+            $conversation = $this->db->prepare(
+                'SELECT id, public_id FROM conversations WHERE contact_key = :contact_key LIMIT 1 FOR UPDATE'
+            );
+            $conversation->execute(['contact_key' => $contactKey]);
+            $created = $insert->rowCount() === 1;
+            $existing = $conversation->fetch();
+            if (!$existing) {
+                throw new \RuntimeException('Não foi possível criar a conversa inicial.');
+            }
+            $conversationId = (string) $existing['public_id'];
+            if ($created) {
+                $internalId = (int) $existing['id'];
+                $participant = $this->db->prepare('INSERT INTO conversation_participants (conversation_id, user_id, joined_at) VALUES (:conversation_id, :user_id, UTC_TIMESTAMP())');
+                $participant->execute(['conversation_id' => $internalId, 'user_id' => $auth['id']]);
+                $participant->execute(['conversation_id' => $internalId, 'user_id' => $professional['id']]);
+                $this->notify((int) $professional['id'], 'chat.inquiry', 'Novo contato', $auth['name'] . ' iniciou uma conversa sobre seus serviços.', ['conversationId' => $conversationId]);
+            }
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
+        }
+        return Response::data(['conversationId' => $conversationId], 201);
+    }
+
     /**
      * Consulta incremental curta para a conversa ativa. O limite global do
      * bootstrap já protege o IP antes do roteamento; não repetir dois buckets
@@ -148,6 +196,36 @@ final class EngagementController extends Controller
         ]);
     }
 
+    /**
+     * Entrega mensagens novas imediatamente para a conversa ativa. O fluxo
+     * termina em 25s para liberar workers Apache e o cliente reconecta.
+     */
+    public function messageStream(Request $request, array $params, ?array $auth): Response
+    {
+        $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
+        $after = max(0, (int) ($request->query['after'] ?? 0));
+        $conversationId = (int) $conversation['id'];
+        return Response::eventStream(function () use ($conversationId, $after): void {
+            @set_time_limit(30);
+            $cursor = $after;
+            $deadline = microtime(true) + 25;
+            echo "retry: 1000\n\n";
+            @ob_flush(); flush();
+            while (microtime(true) < $deadline && connection_aborted() === 0) {
+                $messages = $this->messageRowsAfter($conversationId, $cursor, 50);
+                foreach ($messages as $message) {
+                    $cursor = max($cursor, (int) $message['sequence']);
+                    echo 'event: message' . "\n";
+                    echo 'data: ' . json_encode($message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n\n";
+                }
+                if ($messages !== []) { @ob_flush(); flush(); }
+                usleep(1000000);
+            }
+            echo "event: keepalive\ndata: {}\n\n";
+            @ob_flush(); flush();
+        });
+    }
+
     public function sendMessage(Request $request, array $params, ?array $auth): Response
     {
         $this->requireVerifiedEmail($auth);
@@ -162,7 +240,7 @@ final class EngagementController extends Controller
             throw new ApiException(422, 'CONTACT_DETAILS_NOT_ALLOWED', 'Não envie telefone ou e-mail pelo chat. Use os dados protegidos da reserva.');
         }
         $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
-        if (!in_array($conversation['booking_status'], self::CHAT_BOOKING_STATUSES, true)) {
+        if ($conversation['kind'] !== 'inquiry' && !in_array($conversation['booking_status'], self::CHAT_BOOKING_STATUSES, true)) {
             throw new ApiException(409, 'CHAT_UNAVAILABLE', 'O chat não está disponível para esta reserva.');
         }
         $requestHash = hash('sha256', $params['id'] . "\n" . $body);
@@ -307,7 +385,10 @@ final class EngagementController extends Controller
              ORDER BY r.created_at DESC LIMIT {$perPage} OFFSET {$offset}"
         );
         $statement->execute(['id' => $professional['id']]);
-        return Response::data($statement->fetchAll(), 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
+        $rows = $statement->fetchAll();
+        foreach ($rows as &$row) { $row['customerName'] = $this->publicName((string) $row['customerName']); }
+        unset($row);
+        return Response::data($rows, 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
     }
 
     public function professionalComments(Request $request, array $params, ?array $auth): Response
@@ -324,7 +405,10 @@ final class EngagementController extends Controller
              ORDER BY c.created_at DESC LIMIT {$perPage} OFFSET {$offset}"
         );
         $statement->execute(['id' => $professional['id']]);
-        return Response::data($statement->fetchAll(), 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
+        $rows = $statement->fetchAll();
+        foreach ($rows as &$row) { $row['author'] = $this->publicName((string) $row['author']); }
+        unset($row);
+        return Response::data($rows, 200, ['page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage))]);
     }
 
     public function createProfessionalComment(Request $request, array $params, ?array $auth): Response
@@ -355,7 +439,7 @@ final class EngagementController extends Controller
              VALUES (:public_id, :professional_id, :author_id, :body, \'published\', UTC_TIMESTAMP(), UTC_TIMESTAMP())'
         )->execute(['public_id' => $publicId, 'professional_id' => $professional['id'], 'author_id' => $auth['id'], 'body' => $comment]);
         return Response::data([
-            'id' => $publicId, 'author' => $auth['name'], 'comment' => $comment, 'createdAt' => gmdate('Y-m-d H:i:s'),
+            'id' => $publicId, 'author' => $this->publicName((string) $auth['name']), 'comment' => $comment, 'createdAt' => gmdate('Y-m-d H:i:s'),
         ], 201);
     }
 
@@ -452,13 +536,21 @@ final class EngagementController extends Controller
     private function conversationForUser(string $publicId, int $userId): array
     {
         return $this->requireRow(
-            'SELECT c.id, b.status AS booking_status FROM conversations c
+            'SELECT c.id, c.kind, b.status AS booking_status FROM conversations c
              INNER JOIN conversation_participants cp ON cp.conversation_id = c.id
-             INNER JOIN bookings b ON b.id = c.booking_id
+             LEFT JOIN bookings b ON b.id = c.booking_id
              WHERE c.public_id = :public_id AND cp.user_id = :user_id',
             ['public_id' => $publicId, 'user_id' => $userId],
             'Conversa não encontrada.'
         );
+    }
+
+    private function publicName(string $name): string
+    {
+        $parts = preg_split('/\s+/u', trim($name)) ?: [];
+        if ($parts === []) return 'Membro da comunidade';
+        if (count($parts) === 1) return $parts[0];
+        return $parts[0] . ' ' . mb_strtoupper(mb_substr((string) end($parts), 0, 1)) . '.';
     }
 
     private function messageRowsAfter(int $conversationId, int $after, int $limit): array

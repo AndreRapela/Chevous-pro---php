@@ -11,7 +11,8 @@ final class Response
         public readonly int $status = 200,
         public readonly array $headers = [],
         public readonly ?string $filePath = null,
-        public readonly bool $rawBody = false
+        public readonly bool $rawBody = false,
+        public readonly ?\Closure $stream = null
     ) {
     }
 
@@ -47,6 +48,16 @@ final class Response
         ], null, true);
     }
 
+    /** Fluxo SSE autenticado; a função é executada somente depois dos headers. */
+    public static function eventStream(\Closure $stream): self
+    {
+        return new self(null, 200, [
+            'Content-Type' => 'text/event-stream; charset=utf-8',
+            'Cache-Control' => 'no-cache, no-store, private',
+            'X-Accel-Buffering' => 'no',
+        ], null, true, $stream);
+    }
+
     public static function error(ApiException $exception, string $requestId): self
     {
         $error = [
@@ -63,7 +74,7 @@ final class Response
     public function send(string $requestId): void
     {
         http_response_code($this->status);
-        if ($this->filePath === null && !$this->rawBody) {
+        if ($this->filePath === null && !$this->rawBody && $this->stream === null) {
             header('Content-Type: application/json; charset=utf-8');
             // A API retorna endereços, sessões e conversas. Nunca permita que um
             // navegador ou proxy guarde essas respostas autenticadas em cache.
@@ -78,6 +89,11 @@ final class Response
 
         if ($this->filePath !== null) {
             readfile($this->filePath);
+            return;
+        }
+
+        if ($this->stream !== null) {
+            ($this->stream)();
             return;
         }
 

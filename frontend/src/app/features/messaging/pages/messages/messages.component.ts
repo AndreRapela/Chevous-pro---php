@@ -22,10 +22,10 @@ import { mergeUniqueById, pageFromMeta, totalFromMeta } from '../../../../shared
       <cvp-page-header eyebrow="Conversa protegida" title="Mensagens" description="Alinhe detalhes da reserva com segurança, sem compartilhar seus dados de contato." />
       @if (loading()) { <cvp-state-panel kind="loading" /> }
       @else if (error()) { <cvp-state-panel kind="error" title="Mensagens indisponíveis" [message]="error()" (retry)="load()" /> }
-      @else if (!conversations().length) { <cvp-state-panel kind="empty" title="Nenhuma conversa ainda" message="As conversas são liberadas assim que uma reserva é confirmada." /> }
+      @else if (!conversations().length) { <cvp-state-panel kind="empty" title="Nenhuma conversa ainda" message="Abra um perfil profissional para iniciar uma conversa antes de agendar." /> }
       @else {
         <div class="chat-layout enhanced-chat-layout" [class.chat-has-selection]="!!selected()">
-          <aside class="conversation-list" aria-label="Conversas de reservas">
+          <aside class="conversation-list" aria-label="Conversas">
             <div class="conversation-list-heading"><strong>Suas conversas</strong><span>{{ conversationTotal() }}</span></div>
             <div class="conversation-list-items">@for (conversation of conversations(); track conversation.id) {
               <button type="button" [class.active]="selected()?.id === conversation.id" (click)="select(conversation)" [attr.aria-current]="selected()?.id === conversation.id ? 'true' : null">
@@ -162,9 +162,9 @@ export class MessagesComponent implements OnInit {
   }
   initials(value: string): string { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0] ?? '').join('').toUpperCase(); }
   contactName(conversation: Conversation): string { return conversation.contactName || conversation.serviceName || 'Contato da reserva'; }
-  canSendMessage(conversation: Conversation): boolean { return ['confirmed', 'provider_on_the_way', 'in_progress', 'completed', 'disputed'].includes(conversation.bookingStatus); }
+  canSendMessage(conversation: Conversation): boolean { return ['inquiry', 'confirmed', 'provider_on_the_way', 'in_progress', 'completed', 'disputed'].includes(conversation.bookingStatus); }
   connectionStatusLabel(): string { return ({ connecting: 'Conectando…', live: 'Sincronizado', reconnecting: 'Reconectando…' } as const)[this.connectionState()]; }
-  bookingStatusLabel(status: string): string { return ({ confirmed: 'Reserva confirmada', provider_on_the_way: 'A caminho', in_progress: 'Em andamento', completed: 'Serviço concluído', disputed: 'Em análise', cancelled: 'Reserva cancelada', awaiting_confirmation: 'Aguardando confirmação', open: 'Aguardando profissional' } as Record<string, string>)[status] ?? 'Reserva em andamento'; }
+  bookingStatusLabel(status: string): string { return ({ inquiry: 'Contato antes da reserva', confirmed: 'Reserva confirmada', provider_on_the_way: 'A caminho', in_progress: 'Em andamento', completed: 'Serviço concluído', disputed: 'Em análise', cancelled: 'Reserva cancelada', awaiting_confirmation: 'Aguardando confirmação', open: 'Aguardando profissional' } as Record<string, string>)[status] ?? 'Reserva em andamento'; }
 
   private applyMessages(conversationId: string, incoming: ChatMessage[], forceScroll = false, initialLoad = false): void {
     if (conversationId !== this.selected()?.id) return;

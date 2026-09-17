@@ -19,7 +19,7 @@ return static function (array $services): void {
     $db = $services['db'];
     $config = $services['config'];
 
-    $auth = new AuthController($db, $config, $services['jwt'], $services['rateLimiter'], $services['audit']);
+    $auth = new AuthController($db, $config, $services['jwt'], $services['rateLimiter'], $services['audit'], $services['sensitivePayload']);
     $catalog = new CatalogController($db, $config);
     $pricing = new PricingService($db, $config);
     $bookings = new BookingController($db, $config, $pricing, $services['audit']);
@@ -29,9 +29,10 @@ return static function (array $services): void {
     $provider = new ProviderController($db, $config);
     $admin = new AdminController($db, $config, $services['audit']);
 
-    $router->add('GET', '/api/v1/health', static fn (Request $request, array $params, ?array $user): Response => Response::data([
-        'status' => 'ok', 'service' => 'ChezVoust Pro API', 'version' => '1.0.0', 'time' => gmdate(DATE_ATOM),
-    ]));
+    $router->add('GET', '/api/v1/health', static function (Request $request, array $params, ?array $user) use ($db): Response {
+        $db->query('SELECT 1');
+        return Response::data(['status' => 'ok', 'service' => 'ChezVoust Pro API', 'version' => '1.0.0', 'time' => gmdate(DATE_ATOM)]);
+    });
     $router->add('GET', '/api/v1/seo/robots.txt', [$catalog, 'robots']);
     $router->add('GET', '/api/v1/seo/sitemap.xml', [$catalog, 'sitemap']);
     $router->add('GET', '/api/v1/app-config', [$catalog, 'appConfig']);
@@ -46,6 +47,7 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/professionals/{id}/reviews', [$engagement, 'professionalReviews']);
     $router->add('GET', '/api/v1/professionals/{id}/comments', [$engagement, 'professionalComments']);
     $router->add('POST', '/api/v1/professionals/{id}/comments', [$engagement, 'createProfessionalComment'], true);
+    $router->add('POST', '/api/v1/professionals/{id}/conversation', [$engagement, 'startProfessionalConversation'], true, ['customer']);
     $router->add('GET', '/api/v1/providers', [$catalog, 'professionals']);
     $router->add('GET', '/api/v1/providers/{id}', [$catalog, 'professional']);
     $router->add('GET', '/api/v1/providers/{id}/availability', [$catalog, 'availability']);
@@ -104,6 +106,7 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/conversations', [$engagement, 'conversations'], true);
     $router->add('GET', '/api/v1/conversations/{id}/messages', [$engagement, 'messages'], true);
     $router->add('GET', '/api/v1/conversations/{id}/events', [$engagement, 'messageUpdates'], true);
+    $router->add('GET', '/api/v1/conversations/{id}/stream', [$engagement, 'messageStream'], true);
     $router->add('POST', '/api/v1/conversations/{id}/messages', [$engagement, 'sendMessage'], true);
     $router->add('POST', '/api/v1/conversations/{id}/read', [$engagement, 'markRead'], true);
 

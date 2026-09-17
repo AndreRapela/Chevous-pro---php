@@ -19,6 +19,7 @@ import {
   timer
 } from 'rxjs';
 import { MarketplaceService } from '../../../core/data-access/marketplace.service';
+import { AuthService } from '../../../core/auth/auth.service';
 import { ChatMessage, Conversation } from '../../../core/models';
 import { pageFromMeta, totalFromMeta } from '../../../shared/utils/pagination.util';
 import { nextChatRetryDelay } from '../utils/chat-sync.util';
@@ -51,6 +52,7 @@ export interface ConversationListBatch {
 export class ConversationSyncService {
   private readonly document = inject(DOCUMENT);
   private readonly marketplace = inject(MarketplaceService);
+  private readonly auth = inject(AuthService);
 
   watchMessages(conversationId: string): Observable<ConversationMessageBatch> {
     return defer(() => {
@@ -78,12 +80,22 @@ export class ConversationSyncService {
           })
         );
 
-      return this.visibleState().pipe(
+      const fallback = this.visibleState().pipe(
         switchMap((visible) => visible
           ? defer(nextBatch).pipe(repeat({ delay: () => timer(nextDelay) }))
           : NEVER
         )
       );
+      // SSE entrega imediatamente; a consulta incremental continua como
+      // contingência para proxies corporativos que não aceitam streaming.
+      // A conexão também é abortada em segundo plano para não gastar bateria
+      // e workers enquanto a conversa não está visível.
+      const realtime = this.visibleState().pipe(
+        switchMap((visible) => visible ? this.liveStream(conversationId, () => cursor) : NEVER),
+        map((message): ConversationMessageBatch => { cursor = Math.max(cursor, message.sequence); return { messages: [message], initial: false }; }),
+        catchError(() => EMPTY)
+      );
+      return merge(fallback, realtime);
     });
   }
 
@@ -112,6 +124,50 @@ export class ConversationSyncService {
 
   private messagesAfter(conversationId: string, after: number): Observable<ChatMessage[]> {
     return this.marketplace.conversationMessageUpdates(conversationId, after);
+  }
+
+  private liveStream(conversationId: string, cursor: () => number): Observable<ChatMessage> {
+    return new Observable<ChatMessage>((subscriber) => {
+      let stopped = false;
+      let controller: AbortController | null = null;
+      let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+      const connect = async (): Promise<void> => {
+        const token = this.auth.accessToken();
+        if (!token || stopped) { subscriber.complete(); return; }
+        controller = new AbortController();
+        try {
+          const response = await fetch(`/api/v1/conversations/${encodeURIComponent(conversationId)}/stream?after=${cursor()}`, {
+            headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' }, credentials: 'same-origin', signal: controller.signal
+          });
+          if (!response.ok || !response.body) throw new Error('Fluxo em tempo real indisponível.');
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+          while (!stopped) {
+            const chunk = await reader.read();
+            if (chunk.done) break;
+            buffer += decoder.decode(chunk.value, { stream: true });
+            const events = buffer.split('\n\n'); buffer = events.pop() ?? '';
+            for (const event of events) {
+              const data = event.split('\n').find((line) => line.startsWith('data: '))?.slice(6);
+              if (!data || data === '{}') continue;
+              const rawMessage = JSON.parse(data) as ChatMessage;
+              const message: ChatMessage = { ...rawMessage, sequence: Number(rawMessage.sequence) };
+              if (message.id && Number.isFinite(message.sequence)) subscriber.next(message);
+            }
+          }
+          if (!stopped) void connect();
+        } catch (failure) {
+          if (!stopped && failure instanceof DOMException && failure.name === 'AbortError') return;
+          // O polling autenticado continua como contingência. Tentar de novo
+          // permite que o stream volte logo após uma renovação de sessão ou um
+          // proxy temporariamente indisponível, sem sobrepor conexões.
+          if (!stopped) reconnectTimer = setTimeout(() => void connect(), 3000);
+        }
+      };
+      void connect();
+      return () => { stopped = true; controller?.abort(); if (reconnectTimer) clearTimeout(reconnectTimer); };
+    });
   }
 
   private visibleTicks(intervalMs: number, refresh: Observable<unknown> = EMPTY): Observable<unknown> {

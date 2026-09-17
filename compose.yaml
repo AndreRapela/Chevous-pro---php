@@ -36,6 +36,7 @@ services:
       APP_URL: ${APP_URL:-http://localhost:4200}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-local-only-outbox-encryption-key-change-before-public-use-2026}
       APP_TIMEZONE: America/Sao_Paulo
       APP_LOCALE: pt-BR
       APP_CURRENCY: BRL
@@ -113,6 +114,7 @@ services:
       APP_URL: ${APP_URL:-http://localhost:4200}
       FRONTEND_ORIGINS: ${FRONTEND_ORIGINS:-http://localhost:4200}
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
+      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-local-only-outbox-encryption-key-change-before-public-use-2026}
       APP_TIMEZONE: America/Sao_Paulo
       APP_LOCALE: pt-BR
       APP_CURRENCY: BRL

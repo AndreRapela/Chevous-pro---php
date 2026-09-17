@@ -5,6 +5,7 @@ declare(strict_types=1);
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\Jwt;
 use ChezVoust\Core\Request;
+use ChezVoust\Core\SensitivePayload;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
 
@@ -145,6 +146,17 @@ check('Request só confia no IP encaminhado com segredo correto', static functio
         $_GET = $originalGet;
         $_COOKIE = $originalCookie;
     }
+});
+
+check('Outbox cifra token efêmero e detecta adulteração', static function (): void {
+    $protector = new SensitivePayload(str_repeat('o', 64));
+    $token = str_repeat('a', 64);
+    $encrypted = $protector->encrypt(['email' => 'cliente@example.com', 'token' => $token]);
+    expect(!str_contains($encrypted, $token), 'Token apareceu no payload persistido.');
+    expect($protector->decrypt($encrypted) === ['email' => 'cliente@example.com', 'token' => $token], 'Payload não foi recuperado corretamente.');
+    $rejected = false;
+    try { $protector->decrypt(substr($encrypted, 0, -2) . 'xx'); } catch (RuntimeException) { $rejected = true; }
+    expect($rejected, 'Envelope adulterado foi aceito.');
 });
 
 fwrite(STDOUT, "\nResultado: {$passed} aprovados, {$failed} falhos.\n");

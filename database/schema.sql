@@ -441,12 +441,16 @@ CREATE TABLE IF NOT EXISTS favorites (
 CREATE TABLE IF NOT EXISTS conversations (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-    booking_id BIGINT UNSIGNED NOT NULL,
+    booking_id BIGINT UNSIGNED NULL,
+    kind ENUM('booking', 'inquiry') NOT NULL DEFAULT 'booking',
+    contact_key VARCHAR(80) NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_conversations_public_id (public_id),
     UNIQUE KEY uq_conversations_booking (booking_id),
+    UNIQUE KEY uq_conversations_contact_key (contact_key),
+    KEY idx_conversations_kind_updated (kind, updated_at),
     KEY idx_conversations_updated (updated_at),
     CONSTRAINT fk_conversations_booking FOREIGN KEY (booking_id) REFERENCES bookings (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

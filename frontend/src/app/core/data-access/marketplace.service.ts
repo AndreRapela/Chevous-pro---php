@@ -44,6 +44,7 @@ export class MarketplaceService {
   providerCommentsPage(id: string, page = 1) { return this.api.getEnvelope<unknown[]>(`professionals/${encodeURIComponent(id)}/comments`, { page, perPage: 20 }).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.commentModel(item)) }))); }
   providerComments(id: string, page = 1) { return this.providerCommentsPage(id, page).pipe(map((response) => response.data)); }
   createProviderComment(id: string, comment: string) { return this.api.post<unknown>(`professionals/${encodeURIComponent(id)}/comments`, { comment }).pipe(map((item) => this.commentModel(item))); }
+  startProfessionalConversation(id: string) { return this.api.post<{ conversationId: string }>(`professionals/${encodeURIComponent(id)}/conversation`, {}); }
   publicProviderAvailability(id: string, query: ApiQuery = {}) { return this.api.get<PublicAvailability>(`professionals/${encodeURIComponent(id)}/availability`, query); }
   bookings(query: ApiQuery = {}) { return this.allPages<unknown>('bookings', query).pipe(map((items) => items.map((item) => this.bookingModel(item)))); }
   booking(id: string) { return this.api.get<unknown>(`bookings/${encodeURIComponent(id)}`).pipe(map((item) => this.bookingModel(item))); }

@@ -379,6 +379,8 @@ legend { color: var(--ink-700); font-weight: 800; font-size: .9rem; margin-botto
 .mobile-sticky-action { position: fixed; z-index: 80; inset: auto 0 var(--public-bottom-nav-height); min-height: var(--mobile-sticky-action-height); display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .75rem 1rem; background: #fff; border-top: 1px solid var(--ink-200); box-shadow: 0 -8px 25px rgba(16,24,22,.08); }
 .mobile-sticky-action > div { display: grid; }
 .mobile-sticky-action small { color: var(--ink-500); }
+.mobile-sticky-action .btn { min-width: 0; padding-inline: .7rem; }
+.mobile-conversation-error { position: fixed; z-index: 81; right: 1rem; bottom: calc(var(--public-bottom-nav-height) + var(--mobile-sticky-action-height) + .45rem); max-width: calc(100% - 2rem); margin: 0; padding: .45rem .65rem; border-radius: .55rem; background: #fff; box-shadow: var(--shadow-sm); font-size: .78rem; }
 .service-detail-hero { padding: 4rem 0; background: linear-gradient(135deg, var(--brand-50), #fff); overflow: hidden; }
 .service-detail-grid { display: grid; align-items: center; gap: 2rem; }
 .service-detail-grid p { max-width: 40rem; font-size: 1.05rem; }
@@ -1817,6 +1819,9 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .site-footer { padding-bottom: calc(var(--public-bottom-nav-height) + 1rem); }
   body:has(cvp-provider-detail) .site-footer { padding-bottom: calc(var(--public-bottom-nav-height) + var(--mobile-sticky-action-height) + 1rem); }
   .mobile-sticky-action .btn { min-width: 9rem; min-height: 2.75rem; }
+  body:has(cvp-provider-detail) .mobile-sticky-action { gap: .4rem; padding-inline: .65rem; }
+  body:has(cvp-provider-detail) .mobile-sticky-action > div { min-width: 3.75rem; }
+  body:has(cvp-provider-detail) .mobile-sticky-action .btn { min-width: 0; flex: 1 1 0; padding-inline: .45rem; font-size: .75rem; }
   .mobile-scroll-hint { display: flex; align-items: center; justify-content: flex-end; gap: .35rem; margin: .15rem 0 0; color: var(--brand-800); font-size: .75rem; font-weight: 750; }
   .mobile-scroll-hint span { font-size: 1rem; }
 
