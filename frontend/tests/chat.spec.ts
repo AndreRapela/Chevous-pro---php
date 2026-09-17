@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import type { ChatMessage } from '../src/app/core/models/index.ts';
-import { shouldSendComposerMessage } from '../src/app/features/messaging/utils/chat-composer.util.ts';
+import { normalizeComposerMessage, shouldSendComposerMessage } from '../src/app/features/messaging/utils/chat-composer.util.ts';
 import { groupChatMessages, isNearChatBottom, mergeChatMessages } from '../src/app/features/messaging/utils/chat.util.ts';
 
 const message = (id: string, sequence: number, createdAt: string): ChatMessage => ({ id, sequence, senderId: 'user', senderName: 'Usuário', body: id, messageType: 'text', createdAt });
@@ -35,5 +35,10 @@ describe('chat utilities', () => {
     assert.equal(shouldSendComposerMessage({ key: 'Enter', ctrlKey: false, metaKey: false, isComposing: false }), false);
     assert.equal(shouldSendComposerMessage({ key: 'Enter', ctrlKey: true, metaKey: false, isComposing: false }), true);
     assert.equal(shouldSendComposerMessage({ key: 'Enter', ctrlKey: false, metaKey: true, isComposing: false }), true);
+  });
+
+  it('normaliza respostas rápidas antes de enviá-las diretamente', () => {
+    assert.equal(normalizeComposerMessage('  Perfeito, obrigado!  '), 'Perfeito, obrigado!');
+    assert.equal(normalizeComposerMessage('   '), '');
   });
 });

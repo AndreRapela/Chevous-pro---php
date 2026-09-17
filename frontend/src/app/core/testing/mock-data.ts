@@ -54,7 +54,11 @@ export const MOCK_PROVIDERS: ProviderProfile[] = [
     city: 'São Paulo', neighborhood: 'Pinheiros', verified: true, rating: 4.91, reviewCount: 86, completedJobs: 147,
     responseTime: 'Responde em até 30 min', priceFromCents: 11000, serviceIds: ['repair-furniture', 'repair-electric', 'tech-wifi'],
     qualities: ['Ferramentas próprias', 'Organizado', 'Bom diagnóstico'], nextAvailability: 'Amanhã, 09:00',
-    reviews: [{ id: 'r3', author: 'Bianca', initials: 'BS', rating: 5, comment: 'Montagem rápida e tudo ficou muito firme.', createdAt: '2026-08-10' }]
+    reviews: [
+      { id: 'r3', author: 'Bianca', initials: 'BS', rating: 5, comment: 'Montagem rápida e tudo ficou muito firme.', createdAt: '2026-08-10' },
+      { id: 'r3b', author: 'Felipe', initials: 'FL', rating: 5, comment: 'Explicou cada etapa e deixou tudo limpo depois da instalação.', createdAt: '2026-08-06' },
+      { id: 'r3c', author: 'Renata', initials: 'RN', rating: 4, comment: 'Foi pontual e resolveu o reparo da tomada com bastante cuidado.', createdAt: '2026-07-28' }
+    ]
   },
   {
     id: 'juliana-lima', name: 'Juliana Lima', initials: 'JL', headline: 'Cuidados com a casa e pets',

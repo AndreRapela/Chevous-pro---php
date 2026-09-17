@@ -97,7 +97,9 @@ services:
       SITE_URL: ${APP_URL:-http://localhost:4200}
       PORT: 4000
       # O SSR só recebe tráfego do Nginx; aceite somente o host público definido.
-      NG_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:-localhost}
+      # Aceita os dois endereços de loopback usados na prévia local. Em
+      # produção, SSR_ALLOWED_HOSTS substitui esta lista por hosts explícitos.
+      NG_ALLOWED_HOSTS: ${SSR_ALLOWED_HOSTS:-localhost,127.0.0.1}
       NG_TRUST_PROXY_HEADERS: x-forwarded-host,x-forwarded-proto
     depends_on:
       api:

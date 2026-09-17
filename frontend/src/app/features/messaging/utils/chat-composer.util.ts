@@ -5,3 +5,7 @@
 export function shouldSendComposerMessage(event: Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'isComposing'>): boolean {
   return event.key === 'Enter' && !event.isComposing && (event.ctrlKey || event.metaKey);
 }
+
+export function normalizeComposerMessage(value: string): string {
+  return value.trim();
+}

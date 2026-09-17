@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -23,7 +23,19 @@ import { ProviderCardComponent, StatePanelComponent } from '../../../../shared/c
         @if (loading()) { <cvp-state-panel kind="loading" /> }
         @else if (error()) { <cvp-state-panel kind="error" title="Não conseguimos buscar profissionais" [message]="error()" (retry)="load()" /> }
         @else if (!providers().length) { <cvp-state-panel kind="empty" title="Nenhum profissional com esses filtros" message="Amplie a cidade, serviço ou avaliação para ver mais opções." /> }
-        @else { <div class="provider-grid provider-list">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div>@if (page() < lastPage()) { <div class="load-more"><button class="btn btn-secondary" type="button" [disabled]="loadingMore()" (click)="loadMore()">{{ loadingMore() ? 'Carregando…' : 'Ver mais profissionais' }}</button></div> } }
+        @else {
+          <div class="provider-grid provider-list">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div>
+          @if (lastPage() > 1) {
+            <nav class="result-pagination" aria-label="Paginação de profissionais">
+              <span>Mostrando {{ firstVisible() }}–{{ lastVisible() }} de {{ total() }} profissionais</span>
+              <div>
+                <button class="btn btn-secondary btn-small" type="button" [disabled]="page() === 1" (click)="goToPage(page() - 1)">Anterior</button>
+                @for (item of pageNumbers(); track item) { <button class="page-button" type="button" [class.active]="item === page()" [attr.aria-current]="item === page() ? 'page' : null" (click)="goToPage(item)">{{ item }}</button> }
+                <button class="btn btn-secondary btn-small" type="button" [disabled]="page() === lastPage()" (click)="goToPage(page() + 1)">Próxima</button>
+              </div>
+            </nav>
+          }
+        }
       </div>
     </div></section>
   `,
@@ -38,11 +50,16 @@ export class ProfessionalsComponent implements OnInit {
   readonly providers = signal<ProviderProfile[]>([]);
   readonly services = signal<Service[]>([]);
   readonly loading = signal(true);
-  readonly loadingMore = signal(false);
   readonly error = signal('');
   readonly total = signal(0);
   readonly page = signal(1);
   readonly lastPage = signal(1);
+  readonly pageSize = 4;
+  readonly pageNumbers = computed(() => {
+    const last = this.lastPage();
+    const start = Math.max(1, Math.min(this.page() - 2, Math.max(1, last - 4)));
+    return Array.from({ length: Math.min(5, last - start + 1) }, (_, index) => start + index);
+  });
   serviceId = ''; city = ''; minRating = 0; sort = 'recommended';
   ngOnInit(): void {
     const params = this.route.snapshot.queryParamMap;
@@ -50,6 +67,7 @@ export class ProfessionalsComponent implements OnInit {
     this.city = params.get('cidade') ?? '';
     this.minRating = Number(params.get('nota')) || 0;
     this.sort = params.get('ordenar') ?? 'recommended';
+    this.page.set(Math.max(1, Number(params.get('pagina')) || 1));
     this.marketplace.services().pipe(takeUntilDestroyed(this.destroyRef)).subscribe({ next: (services) => this.services.set(services) });
     this.filterChanges.pipe(
       startWith(undefined),
@@ -64,23 +82,22 @@ export class ProfessionalsComponent implements OnInit {
     });
   }
   load(): void {
-    this.page.set(1); this.filterChanges.next();
+    this.filterChanges.next();
   }
   filtersChanged(): void {
     this.page.set(1);
-    void this.router.navigate([], { relativeTo: this.route, queryParams: { servico: this.serviceId || null, cidade: this.city.trim() || null, nota: this.minRating || null, ordenar: this.sort === 'recommended' ? null : this.sort }, queryParamsHandling: 'merge', replaceUrl: true });
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { servico: this.serviceId || null, cidade: this.city.trim() || null, nota: this.minRating || null, ordenar: this.sort === 'recommended' ? null : this.sort, pagina: null }, queryParamsHandling: 'merge', replaceUrl: true });
     this.filterChanges.next();
   }
   clearFilters(): void { this.serviceId = ''; this.city = ''; this.minRating = 0; this.sort = 'recommended'; this.filtersChanged(); }
-  loadMore(): void {
-    const next = this.page() + 1;
-    if (this.loadingMore() || next > this.lastPage()) return;
-    this.loadingMore.set(true);
-    this.marketplace.providersPage(this.query(next)).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
-      next: (response) => { this.providers.update((items) => [...items, ...response.data.filter((candidate) => !items.some((item) => item.id === candidate.id))]); this.page.set(this.metaNumber(response.meta, 'page', next)); this.lastPage.set(this.metaNumber(response.meta, 'lastPage', this.lastPage())); this.total.set(this.metaNumber(response.meta, 'total', this.total())); this.loadingMore.set(false); },
-      error: (failure: Error) => { this.error.set(failure.message); this.loadingMore.set(false); }
-    });
+  goToPage(page: number): void {
+    if (page < 1 || page > this.lastPage() || page === this.page()) return;
+    this.page.set(page);
+    void this.router.navigate([], { relativeTo: this.route, queryParams: { pagina: page > 1 ? page : null }, queryParamsHandling: 'merge', replaceUrl: true });
+    this.filterChanges.next();
   }
-  private query(page: number) { return { serviceId: this.serviceId || undefined, city: this.city.trim() || undefined, minRating: this.minRating || undefined, sort: this.sort, page, perPage: 12 }; }
+  firstVisible(): number { return this.total() ? (this.page() - 1) * this.pageSize + 1 : 0; }
+  lastVisible(): number { return Math.min(this.page() * this.pageSize, this.total()); }
+  private query(page: number) { return { serviceId: this.serviceId || undefined, city: this.city.trim() || undefined, minRating: this.minRating || undefined, sort: this.sort, page, perPage: this.pageSize }; }
   private metaNumber(meta: Record<string, unknown> | undefined, key: string, fallback: number): number { const value = Number(meta?.[key]); return Number.isFinite(value) && value >= 0 ? value : fallback; }
 }
