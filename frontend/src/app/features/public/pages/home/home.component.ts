@@ -3,7 +3,7 @@ import { Router, RouterLink } from '@angular/router';
 import { forkJoin } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
-import { ProviderCardComponent, ServiceCardComponent, StatePanelComponent } from '../../../../shared/components';
+import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
 import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
@@ -12,7 +12,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, StatePanelComponent],
+  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
   template: `
     <cvp-home-hero [(query)]="query" (searchRequested)="search()" />
 
@@ -25,7 +25,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
           <div class="category-grid" cvpHorizontalScroll aria-label="Do que sua casa precisa? Deslize horizontalmente para ver mais categorias.">
             @for (category of categories(); track category.id) {
               <a class="category-card" [routerLink]="categoryPath(category)">
-                <span class="category-symbol" aria-hidden="true">{{ category.symbol }}</span><strong>{{ category.shortName }}</strong><small>{{ category.serviceCount }} {{ category.serviceCount === 1 ? 'opção' : 'opções' }}</small>
+                <span class="category-symbol" aria-hidden="true"><cvp-service-icon [category]="category.id" [serviceSlug]="category.slug" /></span><strong>{{ category.shortName }}</strong><small>{{ category.serviceCount }} {{ category.serviceCount === 1 ? 'opção' : 'opções' }}</small>
               </a>
             }
           </div>

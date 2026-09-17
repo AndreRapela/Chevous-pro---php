@@ -8,5 +8,6 @@ export { PageHeaderComponent } from './page-header/page-header.component';
 export { ProviderCardComponent } from './provider-card/provider-card.component';
 export { RatingComponent } from './rating/rating.component';
 export { ServiceCardComponent } from './service-card/service-card.component';
+export { ServiceIconComponent } from './service-icon/service-icon.component';
 export { StatePanelComponent } from './state-panel/state-panel.component';
 export { StatusPillComponent } from './status-pill/status-pill.component';

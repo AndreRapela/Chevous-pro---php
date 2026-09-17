@@ -4,21 +4,21 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProviderProfile, Service } from '../../../../core/models';
-import { ProviderCardComponent, StatePanelComponent } from '../../../../shared/components';
+import { ProviderCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { SeoService } from '../../../../core/seo/seo.service';
 
 @Component({
   selector: 'cvp-service-detail',
   standalone: true,
-  imports: [LocalizedMoneyPipe, ProviderCardComponent, RouterLink, StatePanelComponent],
+  imports: [LocalizedMoneyPipe, ProviderCardComponent, RouterLink, ServiceIconComponent, StatePanelComponent],
   template: `
     @if (loading()) { <div class="container section"><cvp-state-panel kind="loading" /></div> }
     @else if (error()) { <div class="container section"><cvp-state-panel kind="error" title="Serviço indisponível" [message]="error()" (retry)="load()" /></div> }
     @else if (service(); as item) {
-      <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Agendar agora</a><span>A partir de <strong>{{ item.priceFromCents / 100 | appMoney:'BRL':0 }}</strong></span></div></div><div class="service-visual" aria-hidden="true"><span>{{ item.symbol }}</span><i></i><i></i></div></div></section>
+      <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Agendar agora</a><span>A partir de <strong>{{ item.priceFromCents / 100 | appMoney:'BRL':0 }}</strong></span></div></div><div class="service-visual" aria-hidden="true"><span><cvp-service-icon [category]="item.categoryId" [serviceSlug]="item.slug" /></span><i></i><i></i></div></div></section>
       <section class="section"><div class="container benefits-grid"><article><span>✓</span><h2>Perfis aprovados</h2><p>Informações e avaliações para ajudar você a escolher, sem alegação de certificação de identidade.</p></article><article><span>◇</span><h2>Preço transparente</h2><p>Veja a composição do valor antes de confirmar.</p></article><article><span>○</span><h2>Suporte durante o serviço</h2><p>Converse e acompanhe tudo pelo seu painel.</p></article></div></section>
-      <section class="section section-mint"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>Profissionais para {{ item.name.toLocaleLowerCase('pt-BR') }}</h2></div></div><div class="provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
+      <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>Profissionais para {{ item.name.toLocaleLowerCase('pt-BR') }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush

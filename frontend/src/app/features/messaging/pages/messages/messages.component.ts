@@ -9,7 +9,7 @@ import { ChatMessage, Conversation } from '../../../../core/models';
 import { AvatarComponent, PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
 import { LocalizedDatePipe } from '../../../../shared/localization/localized-format.pipe';
 import { ConversationSyncService } from '../../data-access/conversation-sync.service';
-import { shouldSendComposerMessage } from '../../utils/chat-composer.util';
+import { normalizeComposerMessage, shouldSendComposerMessage } from '../../utils/chat-composer.util';
 import { groupChatMessages, isNearChatBottom, mergeChatMessages } from '../../utils/chat.util';
 import { mergeUniqueById, pageFromMeta, totalFromMeta } from '../../../../shared/utils/pagination.util';
 
@@ -47,7 +47,7 @@ import { mergeUniqueById, pageFromMeta, totalFromMeta } from '../../../../shared
               </div>
               <div class="chat-safety-note"><span aria-hidden="true">⌁</span> Use o chat para alinhar detalhes do serviço e proteja suas informações pessoais.</div>
               <form class="chat-composer enhanced-chat-composer" (submit)="send($event)">
-                <div class="quick-replies" aria-label="Respostas rápidas">@for (reply of quickReplies; track reply) { <button type="button" [disabled]="!canSendMessage(conversation)" (click)="useQuickReply(reply)">{{ reply }}</button> }</div>
+                <div class="quick-replies" aria-label="Respostas rápidas">@for (reply of quickReplies; track reply) { <button type="button" [disabled]="sending() || !canSendMessage(conversation)" (click)="sendQuickReply(reply)">{{ reply }}</button> }</div>
                 <label class="sr-only" for="chat-message">Mensagem</label><textarea id="chat-message" name="body" maxlength="4000" required [disabled]="!canSendMessage(conversation)" [placeholder]="canSendMessage(conversation) ? 'Escreva uma mensagem…' : 'Este chat não aceita novas mensagens.'" [value]="draft()" (input)="updateDraft($any($event.target).value)" (keydown.enter)="onComposerKeydown($event)"></textarea><div class="composer-actions"><small>{{ canSendMessage(conversation) ? draft().length + '/4000 · Ctrl/Cmd + Enter envia · Enter quebra linha' : 'A reserva foi encerrada e o histórico permanece disponível.' }}</small><button class="btn btn-primary btn-small" type="submit" [disabled]="sending() || !draft().trim() || !canSendMessage(conversation)" aria-label="Enviar mensagem">{{ sending() ? 'Enviando…' : 'Enviar' }}</button></div>@if (messageError()) { <span class="field-error chat-message-error" role="alert">{{ messageError() }}</span> }@if (syncError()) { <span class="chat-sync-error" role="status">{{ syncError() }}</span> }
               </form>
             }
@@ -136,10 +136,10 @@ export class MessagesComponent implements OnInit {
   }
   select(conversation: Conversation): void { this.selected.set(conversation); this.chatMessages.set([]); this.draft.set(''); this.pendingMessageKey = null; this.loadingMessages.set(true); this.loadingOlder.set(false); this.hasOlderMessages.set(false); this.messageError.set(''); this.syncError.set(''); this.connectionState.set('connecting'); this.liveAnnouncement.set(''); this.oldestSequence = 0; this.acknowledgedSequence = 0; this.readPending = false; this.pendingReadSequence = 0; this.shouldStickToBottom = true; this.conversationSelection.next(conversation.id); }
   backToConversations(): void { this.selected.set(null); this.chatMessages.set([]); this.draft.set(''); this.pendingMessageKey = null; this.hasOlderMessages.set(false); this.connectionState.set('connecting'); this.conversationSelection.next(''); }
-  send(event: Event): void { event.preventDefault(); const conversation = this.selected(); const body = this.draft().trim(); if (!conversation || !this.canSendMessage(conversation) || !body || this.sending()) return; const idempotencyKey = this.pendingMessageKey ?? this.createMessageKey(); this.pendingMessageKey = idempotencyKey; this.sending.set(true); this.messageError.set(''); this.marketplace.sendMessage(conversation.id, body, idempotencyKey).pipe(finalize(() => this.sending.set(false)), takeUntilDestroyed(this.destroyRef)).subscribe({ next: (message) => { this.applyMessages(conversation.id, [message], true); this.draft.set(''); this.pendingMessageKey = null; }, error: (failure: Error) => this.messageError.set(failure.message) }); }
+  send(event: Event): void { event.preventDefault(); this.sendMessage(this.draft(), true); }
   onComposerKeydown(event: Event): void { const keyboardEvent = event as KeyboardEvent; if (shouldSendComposerMessage(keyboardEvent)) { keyboardEvent.preventDefault(); this.send(keyboardEvent); } }
   updateDraft(value: string): void { this.pendingMessageKey = null; this.draft.set(value); }
-  useQuickReply(reply: string): void { this.updateDraft(reply); }
+  sendQuickReply(reply: string): void { this.pendingMessageKey = null; this.sendMessage(reply, false); }
   onChatScroll(): void { const body = this.chatBody?.nativeElement; if (body) this.shouldStickToBottom = isNearChatBottom(body.scrollTop, body.clientHeight, body.scrollHeight); }
   loadOlderMessages(): void {
     const conversation = this.selected();
@@ -180,6 +180,15 @@ export class MessagesComponent implements OnInit {
     if (forceScroll || this.shouldStickToBottom) setTimeout(() => this.scrollToBottom(), 0);
   }
   private scrollToBottom(): void { const body = this.chatBody?.nativeElement ?? this.document.querySelector<HTMLElement>('.chat-body'); if (body) body.scrollTop = body.scrollHeight; }
+  private sendMessage(value: string, clearDraft: boolean): void {
+    const conversation = this.selected(); const body = normalizeComposerMessage(value);
+    if (!conversation || !this.canSendMessage(conversation) || !body || this.sending()) return;
+    const idempotencyKey = this.pendingMessageKey ?? this.createMessageKey(); this.pendingMessageKey = idempotencyKey; this.sending.set(true); this.messageError.set('');
+    this.marketplace.sendMessage(conversation.id, body, idempotencyKey).pipe(finalize(() => this.sending.set(false)), takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (message) => { this.applyMessages(conversation.id, [message], true); if (clearDraft) this.draft.set(''); this.pendingMessageKey = null; },
+      error: (failure: Error) => this.messageError.set(failure.message)
+    });
+  }
   private createMessageKey(): string { return globalThis.crypto?.randomUUID?.() ?? `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`; }
   private acknowledgeRead(conversationId: string, sequence: number): void { if (!sequence || sequence <= this.acknowledgedSequence) return; if (this.readPending) { this.pendingReadSequence = Math.max(this.pendingReadSequence, sequence); return; } this.readPending = true; this.marketplace.markConversationRead(conversationId, sequence).pipe(finalize(() => { this.readPending = false; const pending = this.pendingReadSequence; this.pendingReadSequence = 0; if (pending > this.acknowledgedSequence && conversationId === this.selected()?.id) this.acknowledgeRead(conversationId, pending); }), takeUntilDestroyed(this.destroyRef)).subscribe({ next: () => { if (conversationId === this.selected()?.id) this.acknowledgedSequence = Math.max(this.acknowledgedSequence, sequence); }, error: () => undefined }); }
 }

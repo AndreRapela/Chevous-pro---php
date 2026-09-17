@@ -48,9 +48,18 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
     <footer class="site-footer">
       <div class="container footer-grid">
         <div><cvp-brand /><p>Cuidado profissional para sua casa, do seu jeito.</p></div>
-        <div><h2>ChezVoust Pro</h2><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
-        <div><h2>Atendimento</h2><a routerLink="/ajuda">Central de ajuda</a><a routerLink="/termos">Termos de uso</a><a routerLink="/privacidade">Privacidade</a></div>
-        <div><h2>Para profissionais</h2><a routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero prestar serviços</a><a routerLink="/entrar">Acessar painel</a></div>
+        <details class="footer-group" open>
+          <summary>ChezVoust Pro</summary>
+          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
+        </details>
+        <details class="footer-group" open>
+          <summary>Atendimento</summary>
+          <div class="footer-links"><a routerLink="/ajuda">Central de ajuda</a><a routerLink="/termos">Termos de uso</a><a routerLink="/privacidade">Privacidade</a></div>
+        </details>
+        <details class="footer-group" open>
+          <summary>Para profissionais</summary>
+          <div class="footer-links"><a routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero prestar serviços</a><a routerLink="/entrar">Acessar painel</a></div>
+        </details>
       </div>
       <div class="container footer-bottom"><span>© 2026 ChezVoust Pro</span><span>Feito para servir bem.</span></div>
     </footer>

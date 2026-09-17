@@ -32,6 +32,10 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
 
   @HostListener('pointerdown', ['$event'])
   start(event: PointerEvent): void {
+    // Mobile browsers provide momentum scrolling and reliably decide whether a
+    // gesture is vertical or horizontal. Handling touch here would replace that
+    // native behaviour with one synchronous scrollLeft assignment per move.
+    if (event.pointerType === 'touch') return;
     if (!event.isPrimary || event.button !== 0 || this.element.scrollWidth <= this.element.clientWidth) return;
     this.pointerId = event.pointerId;
     this.originX = event.clientX;

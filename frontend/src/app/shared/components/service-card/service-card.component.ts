@@ -2,14 +2,15 @@ import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Service } from '../../../core/models';
 import { LocalizedMoneyPipe } from '../../localization/localized-format.pipe';
+import { ServiceIconComponent } from '../service-icon/service-icon.component';
 
 @Component({
   selector: 'cvp-service-card',
   standalone: true,
-  imports: [LocalizedMoneyPipe, RouterLink],
+  imports: [LocalizedMoneyPipe, RouterLink, ServiceIconComponent],
   template: `
     <article class="service-card">
-      <span class="service-symbol" aria-hidden="true">{{ service.symbol }}</span>
+      <span class="service-symbol" aria-hidden="true"><cvp-service-icon [category]="service.categoryId" [serviceSlug]="service.slug" /></span>
       <div class="service-card-copy">
         <div class="eyebrow">{{ service.popular ? 'Mais pedido' : 'Serviço' }}</div>
         <h3><a [routerLink]="['/servicos', service.slug]">{{ service.name }}</a></h3>

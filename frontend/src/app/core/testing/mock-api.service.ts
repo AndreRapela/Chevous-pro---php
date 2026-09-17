@@ -26,7 +26,16 @@ export class MockApiService {
   private openRequestsState: Row[] = [{ id: 'request-1', scheduledStart: '2026-08-21T09:30:00-03:00', durationMinutes: 240, quantity: 1, areaSqm: 82, suggestedSubtotalCents: 14400, serviceName: 'Limpeza residencial', city: 'São Paulo', state: 'SP', createdAt: '2026-08-19T10:00:00-03:00', currency: 'BRL' }];
   private conversationsState: Conversation[] = [{ id: 'conversation-1', bookingId: 'bk-1001', bookingStatus: 'confirmed', serviceName: 'Limpeza residencial', contactName: 'Ana Clara Souza', contactId: 'ana-clara', contactAvatarUrl: '/images/garconete-cadastro-v1-640.webp', updatedAt: '2026-08-19T10:42:00-03:00', lastMessage: 'Perfeito! Chego alguns minutos antes.', unreadCount: 1 }];
   private chatState: Record<string, ChatMessage[]> = { 'conversation-1': [{ id: 'chat-1', sequence: 1, senderId: 'provider-1', senderName: 'Ana Clara Souza', body: 'Perfeito! Chego alguns minutos antes.', messageType: 'text', createdAt: '2026-08-19T10:42:00-03:00' }] };
-  private commentsState: Record<string, ProfessionalComment[]> = { 'ana-clara': [{ id: 'comment-1', author: 'Paula N.', initials: 'PN', comment: 'Muito atenciosa desde o primeiro contato.', createdAt: '2026-08-15T10:00:00-03:00' }] };
+  private commentsState: Record<string, ProfessionalComment[]> = {
+    'ana-clara': [
+      { id: 'comment-1', author: 'Paula N.', initials: 'PN', comment: 'Muito atenciosa desde o primeiro contato.', createdAt: '2026-08-15T10:00:00-03:00' },
+      { id: 'comment-2', author: 'Caio M.', initials: 'CM', comment: 'Gostei da organização e das atualizações antes do atendimento.', createdAt: '2026-08-11T10:00:00-03:00' }
+    ],
+    'lucas-mendes': [
+      { id: 'comment-3', author: 'Aline P.', initials: 'AP', comment: 'Foi educado ao explicar o que precisava ser feito.', createdAt: '2026-08-09T10:00:00-03:00' },
+      { id: 'comment-4', author: 'João R.', initials: 'JR', comment: 'Chegou no horário combinado e manteve o ambiente organizado.', createdAt: '2026-08-04T10:00:00-03:00' }
+    ]
+  };
   private experiencesState: ProfessionalExperience[] = [{ id: 'experience-1', role: 'Especialista em limpeza residencial', company: 'Atuação autônoma', description: 'Atendimento residencial com organização e cuidado nos detalhes.', startedAt: '2019-01-01', endedAt: null, current: true }];
   private coursesState: ProfessionalCourse[] = [{ id: 'course-1', title: 'Higienização e limpeza profissional', institution: 'Instituto Casa', completedAt: '2022-10-01', certificateUrl: null }];
 
@@ -38,19 +47,35 @@ export class MockApiService {
   private resolve(method: string, path: string, body: unknown, params: QueryParams): Observable<ApiEnvelope<unknown>> {
     if (method === 'GET' && path === 'categories') return this.ok(MOCK_CATEGORIES);
     if (method === 'GET' && path === 'services') {
-      const category = String(params['category'] ?? '').trim(); const q = String(params['q'] ?? '').trim().toLocaleLowerCase('pt-BR');
+      const category = String(params['category'] ?? '').trim(); const professional = String(params['professional'] ?? '').trim(); const q = String(params['q'] ?? '').trim().toLocaleLowerCase('pt-BR');
       const categoryId = MOCK_CATEGORIES.find((item) => item.id === category || item.slug === category)?.id ?? category;
-      const items = this.servicesState.filter((item) => (!categoryId || item.categoryId === categoryId) && (!q || `${item.name} ${item.description} ${item.slug}`.toLocaleLowerCase('pt-BR').includes(q)));
-      return this.ok(items, { total: items.length, page: 1, perPage: items.length });
+      const professionalServices = professional ? MOCK_PROVIDERS.find((item) => item.id === professional)?.serviceIds ?? [] : null;
+      const items = this.servicesState.filter((item) => (!categoryId || item.categoryId === categoryId) && (!professionalServices || professionalServices.includes(item.id)) && (!q || `${item.name} ${item.description} ${item.slug}`.toLocaleLowerCase('pt-BR').includes(q)));
+      const paginated = this.paginate(items, params);
+      return this.ok(paginated.items, paginated.meta);
     }
     if (method === 'GET' && /^services\//.test(path)) { const id = decodeURIComponent(path.slice(9)); const item = this.servicesState.find((service) => service.id === id || service.slug === id); return item ? this.ok(item) : this.notFound('Serviço não encontrado.'); }
     if (method === 'GET' && path === 'professionals') {
       const service = String(params['service'] ?? params['serviceId'] ?? ''); const city = String(params['city'] ?? '').toLocaleLowerCase('pt-BR'); const rating = Number(params['ratingMin'] ?? params['minRating'] ?? 0);
       const items = MOCK_PROVIDERS.filter((item) => (!service || item.serviceIds.includes(service)) && (!city || item.city.toLocaleLowerCase('pt-BR').includes(city)) && item.rating >= rating);
-      return this.ok(items, { total: items.length, page: 1, perPage: items.length });
+      const paginated = this.paginate(items, params);
+      return this.ok(paginated.items, paginated.meta);
     }
-    const publicReviews = path.match(/^professionals\/([^/]+)\/reviews$/); if (method === 'GET' && publicReviews) { const provider = MOCK_PROVIDERS.find((item) => item.id === decodeURIComponent(publicReviews[1] ?? '')); return provider ? this.ok(provider.reviews) : this.notFound('Profissional não encontrado.'); }
-    const publicComments = path.match(/^professionals\/([^/]+)\/comments$/); if (method === 'GET' && publicComments) { const id = decodeURIComponent(publicComments[1] ?? ''); return MOCK_PROVIDERS.some((item) => item.id === id) ? this.ok(this.commentsState[id] ?? []) : this.notFound('Profissional não encontrado.'); } if (method === 'POST' && publicComments) { const id = decodeURIComponent(publicComments[1] ?? ''); const value = body as Row; const comment: ProfessionalComment = { id: `comment-${Date.now()}`, author: this.currentUser().name, initials: this.currentUser().initials, comment: String(value['comment'] ?? '').trim(), createdAt: new Date().toISOString() }; this.commentsState[id] = [comment, ...(this.commentsState[id] ?? [])]; return this.ok(comment); }
+    const publicReviews = path.match(/^professionals\/([^/]+)\/reviews$/);
+    if (method === 'GET' && publicReviews) {
+      const provider = MOCK_PROVIDERS.find((item) => item.id === decodeURIComponent(publicReviews[1] ?? ''));
+      if (!provider) return this.notFound('Profissional não encontrado.');
+      const paginated = this.paginate(provider.reviews, params);
+      return this.ok(paginated.items, paginated.meta);
+    }
+    const publicComments = path.match(/^professionals\/([^/]+)\/comments$/);
+    if (method === 'GET' && publicComments) {
+      const id = decodeURIComponent(publicComments[1] ?? '');
+      if (!MOCK_PROVIDERS.some((item) => item.id === id)) return this.notFound('Profissional não encontrado.');
+      const paginated = this.paginate(this.commentsState[id] ?? [], params);
+      return this.ok(paginated.items, paginated.meta);
+    }
+    if (method === 'POST' && publicComments) { const id = decodeURIComponent(publicComments[1] ?? ''); const value = body as Row; const comment: ProfessionalComment = { id: `comment-${Date.now()}`, author: this.currentUser().name, initials: this.currentUser().initials, comment: String(value['comment'] ?? '').trim(), createdAt: new Date().toISOString() }; this.commentsState[id] = [comment, ...(this.commentsState[id] ?? [])]; return this.ok(comment); }
     const publicAvailability = path.match(/^professionals\/([^/]+)\/availability$/); if (method === 'GET' && publicAvailability) return this.publicAvailability(params);
     if (method === 'GET' && /^professionals\//.test(path)) { const id = decodeURIComponent(path.slice(14)); const item = MOCK_PROVIDERS.find((provider) => provider.id === id); return item ? this.ok(item) : this.notFound('Profissional não encontrado.'); }
     const inquiry = path.match(/^professionals\/([^/]+)\/conversation$/); if (method === 'POST' && inquiry) { const professional = MOCK_PROVIDERS.find((item) => item.id === decodeURIComponent(inquiry[1] ?? '')); const user = this.currentUser(); if (!professional) return this.notFound('Profissional não encontrado.'); if (user.role !== 'customer') return this.fail('forbidden', 'Apenas clientes podem iniciar esta conversa.', 403); const current = this.conversationsState.find((item) => item.bookingStatus === 'inquiry' && item.contactId === professional.id); if (current) return this.ok({ conversationId: current.id }); const conversationId = `conversation-${Date.now()}`; this.conversationsState = [{ id: conversationId, bookingId: '', bookingStatus: 'inquiry', serviceName: 'Contato antes da reserva', contactName: professional.name, contactId: professional.id, contactAvatarUrl: professional.avatarUrl, updatedAt: new Date().toISOString(), lastMessage: '', unreadCount: 0 }, ...this.conversationsState]; this.chatState[conversationId] = []; return this.ok({ conversationId }); }
@@ -171,6 +196,12 @@ export class MockApiService {
   private accounts(): Record<string, User> { return { 'cliente@chezvoust.test': { id: 'customer-1', name: 'Marina Costa', email: 'cliente@chezvoust.test', phone: '11999991234', role: 'customer', initials: 'MC', city: 'São Paulo' }, 'profissional@chezvoust.test': { id: 'provider-1', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', role: 'provider', initials: 'AS', city: 'São Paulo' }, 'admin@chezvoust.test': { id: 'admin-1', name: 'Caio Martins', email: 'admin@chezvoust.test', role: 'admin', initials: 'CM', city: 'São Paulo' } }; }
   private pricingType(service: { unit: string }): 'fixed' | 'hourly' | 'area' { return service.unit === 'hora' ? 'hourly' : service.unit === 'm²' ? 'area' : 'fixed'; }
   private initials(name: string): string { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join(''); }
+  private paginate<T>(items: T[], params: QueryParams): { items: T[]; meta: Record<string, number> } {
+    const perPage = Math.max(1, Math.min(50, Number(params['perPage']) || 20));
+    const lastPage = Math.max(1, Math.ceil(items.length / perPage));
+    const page = Math.min(lastPage, Math.max(1, Number(params['page']) || 1));
+    return { items: items.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total: items.length, lastPage } };
+  }
   private ok<T>(data: T, meta?: Record<string, unknown>): Observable<ApiEnvelope<T>> { return of({ data, ...(meta ? { meta } : {}) }); }
   private fail(code: string, message: string, status: number): Observable<never> { return throwError(() => new ApiClientError(code, message, status, undefined, 'mock-request')); }
   private notFound(message: string): Observable<never> { return this.fail('not_found', message, 404); }

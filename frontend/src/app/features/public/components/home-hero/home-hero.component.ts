@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { ServiceIconComponent } from '../../../../shared/components/service-icon/service-icon.component';
 
 @Component({
   selector: 'cvp-home-hero',
   standalone: true,
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, ServiceIconComponent],
   template: `
     <section class="hero-section">
       <div class="container desktop-home-hero">
@@ -15,7 +16,7 @@ import { RouterLink } from '@angular/router';
         </div>
         <div class="desktop-hero-lower">
           <a class="desktop-promo-card" routerLink="/profissionais"><span>Escolha com confiança</span><strong>Perfis avaliados e aprovados</strong><small>Compare experiência, avaliações e disponibilidade</small></a>
-          <div class="desktop-service-strip" aria-label="Serviços em destaque"><span>Serviços</span><a routerLink="/servicos" [queryParams]="{ q: 'limpeza' }"><b>LR</b>Limpeza</a><a routerLink="/servicos" [queryParams]="{ q: 'lavagem' }"><b>LV</b>Lavagem</a><a routerLink="/servicos" [queryParams]="{ q: 'reparo' }"><b>RP</b>Reparos</a><a routerLink="/servicos" [queryParams]="{ q: 'pintura' }"><b>PT</b>Pintura</a></div>
+          <div class="desktop-service-strip" aria-label="Serviços em destaque"><span>Serviços</span><a routerLink="/servicos" [queryParams]="{ q: 'limpeza' }"><b><cvp-service-icon category="cleaning" /></b>Limpeza</a><a routerLink="/servicos" [queryParams]="{ q: 'lavagem' }"><b><cvp-service-icon category="laundry" /></b>Lavagem</a><a routerLink="/servicos" [queryParams]="{ q: 'reparo' }"><b><cvp-service-icon category="repairs" /></b>Reparos</a><a routerLink="/servicos" [queryParams]="{ q: 'pintura' }"><b><cvp-service-icon category="painting" /></b>Pintura</a></div>
           <aside class="desktop-booking-preview" aria-label="Prévia de agendamento"><div><span class="avatar avatar-sm">AC</span><span><strong>Ana Clara</strong><small>Perfil aprovado</small></span><b>✓</b></div><dl><div><dt>Serviço</dt><dd>Limpeza residencial</dd></div><div><dt>Horário</dt><dd>Qui, 14h</dd></div></dl><a class="btn btn-primary btn-small" routerLink="/servicos">Agendar agora</a></aside>
         </div>
       </div>
