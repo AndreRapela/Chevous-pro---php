@@ -54,7 +54,7 @@ export class ProfessionalsComponent implements OnInit {
   readonly total = signal(0);
   readonly page = signal(1);
   readonly lastPage = signal(1);
-  readonly pageSize = 4;
+  readonly pageSize = 3;
   readonly pageNumbers = computed(() => {
     const last = this.lastPage();
     const start = Math.max(1, Math.min(this.page() - 2, Math.max(1, last - 4)));

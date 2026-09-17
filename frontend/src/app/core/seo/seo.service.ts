@@ -33,7 +33,7 @@ export class SeoService {
     this.setName('description', description);
     this.setName('robots', robots);
     this.setProperty('og:locale', 'pt_BR');
-    this.setProperty('og:site_name', 'ChezVoust Pro');
+    this.setProperty('og:site_name', 'Pro');
     this.setProperty('og:type', type);
     this.setProperty('og:title', title);
     this.setProperty('og:description', description);

@@ -87,18 +87,18 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.seo.update({
-      title: 'ChezVoust Pro | Serviços domésticos com confiança',
-      description: 'Encontre profissionais aprovados para cuidar da sua casa no dia e horário que você escolher.',
+      title: 'Pro | Home services',
+      description: 'Find trusted professionals for your home, on the day and at the time you choose.',
       canonicalPath: '/',
       structuredData: [
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
-          name: 'ChezVoust Pro',
+          name: 'Pro',
           url: '/',
           potentialAction: { '@type': 'SearchAction', target: '/servicos?q={search_term_string}', 'query-input': 'required name=search_term_string' }
         },
-        { '@context': 'https://schema.org', '@type': 'Organization', name: 'ChezVoust Pro', url: '/' }
+        { '@context': 'https://schema.org', '@type': 'Organization', name: 'Pro', url: '/' }
       ]
     });
     this.load();

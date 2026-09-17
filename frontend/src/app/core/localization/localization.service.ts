@@ -1,12 +1,10 @@
 import { DOCUMENT, registerLocaleData } from '@angular/common';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import localeFr from '@angular/common/locales/fr';
-import localePt from '@angular/common/locales/pt';
 
-registerLocaleData(localePt);
 registerLocaleData(localeFr);
 
-export type AppLanguage = 'pt' | 'en' | 'fr';
+export type AppLanguage = 'en' | 'fr';
 export type AppCurrency = 'BRL' | 'EUR' | 'USD';
 
 interface TranslationEntry {
@@ -82,6 +80,8 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Escolha as oportunidades', en: 'Choose your opportunities', fr: 'Choisissez vos missions' },
   { pt: 'Quero ser profissional', en: 'Become a professional', fr: 'Devenir professionnel' },
   { pt: 'Profissionais disponíveis', en: 'Available professionals', fr: 'Professionnels disponibles' },
+  { pt: 'Perfis avaliados e aprovados', en: 'Reviewed and approved profiles', fr: 'Profils évalués et approuvés' },
+  { pt: 'Compare experiência, reviews e disponibilidade', en: 'Compare experience, reviews and availability', fr: 'Comparez l’expérience, les avis et les disponibilités' },
   { pt: 'Cuidado profissional para sua casa', en: 'Professional care for your home', fr: 'Des services professionnels pour votre maison' },
   { pt: 'A melhor solução para o seu lar.', en: 'The best solution for your home.', fr: 'La meilleure solution pour votre maison.' },
   { pt: 'Compare profissionais, escolha o melhor horário e acompanhe tudo pela plataforma.', en: 'Compare professionals, choose the best time and manage everything on the platform.', fr: 'Comparez les professionnels, choisissez le meilleur horaire et gérez tout sur la plateforme.' },
@@ -272,11 +272,123 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Montagem segura de móveis residenciais.', en: 'Safe assembly of home furniture.', fr: 'Montage sécurisé de meubles à domicile.' },
   { pt: 'Especialista em limpeza e pequenos reparos', en: 'Cleaning and minor repairs specialist', fr: 'Spécialiste du ménage et des petites réparations' },
   { pt: 'Limpeza residencial com atenção aos detalhes', en: 'Detail-oriented home cleaning', fr: 'Ménage à domicile avec soin du détail' },
+  { pt: 'Rotina, pesada e pós-obra.', en: 'Routine, deep and post-renovation cleaning.', fr: 'Ménage courant, approfondi et après travaux.' },
+  { pt: 'Roupas lavadas e passadas.', en: 'Washed and ironed clothes.', fr: 'Vêtements lavés et repassés.' },
+  { pt: 'Reparos e montagem', en: 'Repairs and assembly', fr: 'Réparations et montage' },
+  { pt: 'Pequenos consertos e instalações.', en: 'Minor repairs and installations.', fr: 'Petites réparations et installations.' },
+  { pt: 'Renove ambientes internos e externos.', en: 'Refresh indoor and outdoor spaces.', fr: 'Rénovez les espaces intérieurs et extérieurs.' },
+  { pt: 'Jardim', en: 'Garden', fr: 'Jardin' },
+  { pt: 'Mudanças', en: 'Moving', fr: 'Déménagement' },
+  { pt: 'Cuidados', en: 'Care', fr: 'Aide à la personne' },
+  { pt: 'Tecnologia', en: 'Technology', fr: 'Technologie' },
+  { pt: 'Poda, manutenção e paisagismo.', en: 'Pruning, maintenance and landscaping.', fr: 'Taille, entretien et aménagement paysager.' },
+  { pt: 'Carregamento, montagem e transporte.', en: 'Loading, assembly and transport.', fr: 'Chargement, montage et transport.' },
+  { pt: 'Apoio para crianças, idosos e pets.', en: 'Support for children, older adults and pets.', fr: 'Aide pour les enfants, les seniors et les animaux.' },
+  { pt: 'Instalação e suporte em casa.', en: 'Home installation and support.', fr: 'Installation et assistance à domicile.' },
+  { pt: 'Limpeza completa adaptada ao tamanho da sua casa.', en: 'Complete cleaning tailored to your home’s size.', fr: 'Ménage complet adapté à la taille de votre logement.' },
+  { pt: 'Limpeza pesada', en: 'Deep cleaning', fr: 'Nettoyage en profondeur' },
+  { pt: 'Cuidado detalhado para ambientes que precisam de atenção extra.', en: 'Detailed care for spaces that need extra attention.', fr: 'Un soin détaillé pour les espaces qui demandent une attention particulière.' },
+  { pt: 'Limpeza pós-obra', en: 'Post-renovation cleaning', fr: 'Nettoyage après travaux' },
+  { pt: 'Remoção de poeira e resíduos após reforma.', en: 'Removal of dust and residue after renovations.', fr: 'Élimination de la poussière et des résidus après travaux.' },
+  { pt: 'Lavar e passar', en: 'Wash and iron', fr: 'Laver et repasser' },
+  { pt: 'Cuidado completo com suas roupas do dia a dia.', en: 'Complete care for your everyday clothes.', fr: 'Un soin complet pour vos vêtements du quotidien.' },
+  { pt: 'Montagem segura de móveis de diferentes marcas.', en: 'Safe furniture assembly for different brands.', fr: 'Montage sûr de meubles de différentes marques.' },
+  { pt: 'Reparos elétricos', en: 'Electrical repairs', fr: 'Réparations électriques' },
+  { pt: 'Trocas, instalações e pequenos diagnósticos.', en: 'Replacements, installations and minor diagnostics.', fr: 'Remplacements, installations et petits diagnostics.' },
+  { pt: 'Pintura de ambiente', en: 'Room painting', fr: 'Peinture d’une pièce' },
+  { pt: 'Pintura cuidadosa com proteção dos seus móveis.', en: 'Careful painting with protection for your furniture.', fr: 'Peinture soignée avec protection de vos meubles.' },
+  { pt: 'Corte, poda e limpeza para manter tudo em ordem.', en: 'Mowing, pruning and cleaning to keep everything in order.', fr: 'Tonte, taille et nettoyage pour tout garder en ordre.' },
+  { pt: 'Ajuda na mudança', en: 'Moving help', fr: 'Aide au déménagement' },
+  { pt: 'Apoio para organizar, carregar e montar.', en: 'Help with organizing, loading and assembly.', fr: 'Aide pour organiser, charger et monter.' },
+  { pt: 'Cuidador de pets', en: 'Pet sitter', fr: 'Garde d’animaux' },
+  { pt: 'Companhia e cuidados na sua casa ou em passeios.', en: 'Companionship and care at home or on walks.', fr: 'Compagnie et soins à domicile ou en promenade.' },
+  { pt: 'Companhia para idosos', en: 'Companionship for older adults', fr: 'Compagnie pour les seniors' },
+  { pt: 'Acompanhamento atencioso para a rotina.', en: 'Attentive support for everyday routines.', fr: 'Un accompagnement attentif au quotidien.' },
+  { pt: 'Configuração de Wi-Fi', en: 'Wi-Fi setup', fr: 'Configuration Wi-Fi' },
+  { pt: 'Rede estável, segura e funcionando em toda a casa.', en: 'A stable, secure network throughout your home.', fr: 'Un réseau stable et sécurisé dans toute votre maison.' },
+  { pt: 'Limpeza interna da geladeira', en: 'Inside-the-fridge cleaning', fr: 'Nettoyage intérieur du réfrigérateur' },
+  { pt: 'Higienização das prateleiras e gavetas.', en: 'Sanitizing shelves and drawers.', fr: 'Désinfection des étagères et des tiroirs.' },
+  { pt: 'Especialista em limpeza residencial', en: 'Home cleaning specialist', fr: 'Spécialiste du ménage à domicile' },
+  { pt: 'Montador e faz-tudo', en: 'Assembler and handyman', fr: 'Monteur et homme à tout faire' },
+  { pt: 'Cuidados com a casa e pets', en: 'Home and pet care', fr: 'Aide à domicile et garde d’animaux' },
+  { pt: 'Jardineiro e pintor residencial', en: 'Home gardener and painter', fr: 'Jardinier et peintre à domicile' },
+  { pt: 'Acompanhante domiciliar', en: 'In-home companion', fr: 'Accompagnant à domicile' },
+  { pt: 'Hoje, 14:00', en: 'Today, 2 PM', fr: 'Aujourd’hui, 14 h' },
+  { pt: 'Amanhã, 09:00', en: 'Tomorrow, 9 AM', fr: 'Demain, 9 h' },
+  { pt: 'Hoje, 16:30', en: 'Today, 4:30 PM', fr: 'Aujourd’hui, 16 h 30' },
+  { pt: 'Qui, 08:00', en: 'Thu, 8 AM', fr: 'Jeu., 8 h' },
+  { pt: 'Sex, 10:00', en: 'Fri, 10 AM', fr: 'Ven., 10 h' },
+  { pt: 'Responde em até 10 min', en: 'Replies within 10 min', fr: 'Répond sous 10 min' },
+  { pt: 'Responde em até 15 min', en: 'Replies within 15 min', fr: 'Répond sous 15 min' },
+  { pt: 'Responde em até 20 min', en: 'Replies within 20 min', fr: 'Répond sous 20 min' },
+  { pt: 'Responde em até 30 min', en: 'Replies within 30 min', fr: 'Répond sous 30 min' },
+  { pt: 'Responde em até 1 h', en: 'Replies within 1 hr', fr: 'Répond sous 1 h' },
+  { pt: 'Pontual', en: 'Punctual', fr: 'Ponctuelle' },
+  { pt: 'Cuidadosa', en: 'Careful', fr: 'Soigneuse' },
+  { pt: 'Muito elogiada', en: 'Highly praised', fr: 'Très appréciée' },
+  { pt: 'Ferramentas próprias', en: 'Own tools', fr: 'Outils personnels' },
+  { pt: 'Organizado', en: 'Organized', fr: 'Organisé' },
+  { pt: 'Bom diagnóstico', en: 'Strong diagnostics', fr: 'Bon diagnostic' },
+  { pt: 'Carinhosa', en: 'Caring', fr: 'Attentionnée' },
+  { pt: 'Envia atualizações', en: 'Sends updates', fr: 'Envoie des nouvelles' },
+  { pt: 'Flexível', en: 'Flexible', fr: 'Flexible' },
+  { pt: 'Trabalho limpo', en: 'Clean work', fr: 'Travail soigné' },
+  { pt: 'Planejado', en: 'Well planned', fr: 'Bien planifié' },
+  { pt: 'Confiável', en: 'Reliable', fr: 'Fiable' },
+  { pt: 'Paciente', en: 'Patient', fr: 'Patient' },
+  { pt: 'Atenta', en: 'Attentive', fr: 'Attentive' },
+  { pt: 'Compare profissionais aprovados e solicite um horário.', en: 'Compare approved professionals and request a time.', fr: 'Comparez les professionnels approuvés et demandez un créneau.' },
+  { pt: 'Compare opções e solicite um horário com profissionais aprovados.', en: 'Compare options and request a time with approved professionals.', fr: 'Comparez les options et demandez un créneau auprès de professionnels approuvés.' },
+  { pt: 'Encontre serviços para casa, compare opções e solicite um horário com profissionais aprovados.', en: 'Find home services, compare options and request a time with approved professionals.', fr: 'Trouvez des services à domicile, comparez les options et demandez un créneau auprès de professionnels approuvés.' },
+  { pt: 'Reservas concluídas', en: 'Completed bookings', fr: 'Réservations terminées' },
+  { pt: 'Conversar antes de agendar', en: 'Message before booking', fr: 'Échanger avant de réserver' },
+  { pt: 'Conversa, valor de referência e detalhes ficam protegidos pela plataforma.', en: 'Messages, reference price and details are protected by the platform.', fr: 'Les échanges, le prix de référence et les détails sont protégés par la plateforme.' },
+  { pt: 'Experiência com montagem, instalações e pequenos reparos. Explico o serviço e deixo o ambiente organizado.', en: 'Experienced in assembly, installations and minor repairs. I explain the work and leave the space organized.', fr: 'Expérimenté en montage, installations et petites réparations. J’explique le service et je laisse les lieux rangés.' },
+  { pt: 'Montagem rápida e tudo ficou muito firme.', en: 'Fast assembly and everything feels very sturdy.', fr: 'Montage rapide et tout est très solide.' },
+  { pt: 'Explicou cada etapa e deixou tudo limpo depois da instalação.', en: 'He explained every step and left everything clean after the installation.', fr: 'Il a expliqué chaque étape et a tout laissé propre après l’installation.' },
+  { pt: 'Foi pontual e resolveu o reparo da tomada com bastante cuidado.', en: 'He was punctual and fixed the outlet carefully.', fr: 'Il a été ponctuel et a réparé la prise avec beaucoup de soin.' },
+  { pt: 'Foi educado ao explicar o que precisava ser feito.', en: 'He was polite when explaining what needed to be done.', fr: 'Il a été courtois en expliquant ce qui devait être fait.' },
+  { pt: 'Chegou no horário combinado e manteve o ambiente organizado.', en: 'He arrived at the agreed time and kept the space organized.', fr: 'Il est arrivé à l’heure convenue et a maintenu les lieux en ordre.' },
+  { pt: 'Atendimento pela plataforma', en: 'In-platform support', fr: 'Assistance sur la plateforme' },
+  { pt: 'Responde pela plataforma', en: 'Replies through the platform', fr: 'Répond via la plateforme' },
+  { pt: 'Fluxo E2E concluído com sucesso.', en: 'End-to-end flow completed successfully.', fr: 'Parcours de bout en bout terminé avec succès.' },
+  { pt: 'Excelente atendimento: pontual, cuidadoso e muito caprichoso.', en: 'Excellent service: punctual, careful and thorough.', fr: 'Excellent service : ponctuel, soigneux et très consciencieux.' },
+  { pt: 'Trabalho com atenção aos detalhes e respeito à rotina de cada família. Levo meus materiais básicos e confirmo todas as preferências antes de começar.', en: 'I work with attention to detail and respect for each family’s routine. I bring my basic materials and confirm every preference before starting.', fr: 'Je travaille avec le souci du détail et le respect du rythme de chaque famille. J’apporte mon matériel de base et je confirme toutes les préférences avant de commencer.' },
+  { pt: 'Atuação autônoma', en: 'Independent professional', fr: 'Professionnelle indépendante' },
+  { pt: 'Atendimento residencial com organização e cuidado nos detalhes.', en: 'In-home service with organization and attention to detail.', fr: 'Service à domicile organisé et attentif aux détails.' },
+  { pt: 'Higienização e limpeza profissional', en: 'Professional sanitation and cleaning', fr: 'Hygiène et ménage professionnel' },
+  { pt: 'Instituto Casa', en: 'Home Institute', fr: 'Institut Maison' },
+  { pt: 'Serviço impecável e comunicação excelente do início ao fim.', en: 'Impeccable service and excellent communication from start to finish.', fr: 'Service impeccable et excellente communication du début à la fin.' },
+  { pt: 'Muito pontual, organizada e cuidadosa com o apartamento.', en: 'Very punctual, organized and careful with the apartment.', fr: 'Très ponctuelle, organisée et soigneuse avec l’appartement.' },
+  { pt: 'Gosto de criar uma rotina tranquila para os pets e manter os responsáveis sempre informados.', en: 'I like creating a calm routine for pets and keeping their owners informed.', fr: 'J’aime créer une routine sereine pour les animaux et tenir leurs propriétaires informés.' },
+  { pt: 'Meus gatos ficaram super tranquilos com a Juliana.', en: 'My cats were very calm with Juliana.', fr: 'Mes chats étaient très calmes avec Juliana.' },
+  { pt: 'Atendimento caprichado para áreas verdes e renovação de ambientes.', en: 'Careful service for green spaces and refreshed rooms.', fr: 'Service soigné pour les espaces verts et la rénovation des pièces.' },
+  { pt: 'Acompanhamento com escuta, paciência e respeito à autonomia de cada pessoa.', en: 'Companionship with listening, patience and respect for each person’s independence.', fr: 'Accompagnement fondé sur l’écoute, la patience et le respect de l’autonomie de chacun.' },
+  { pt: 'Limpeza de pisos, superfícies, banheiros, cozinha e quartos.', en: 'Cleaning floors, surfaces, bathrooms, kitchens and bedrooms.', fr: 'Nettoyage des sols, surfaces, salles de bain, cuisines et chambres.' },
+  { pt: 'Inclui remoção de sujeira acumulada e detalhamento dos ambientes.', en: 'Includes removal of built-up dirt and detailed room cleaning.', fr: 'Comprend l’élimination des saletés incrustées et le nettoyage détaillé des pièces.' },
+  { pt: 'Serviço por hora com orientação do cliente sobre tecidos especiais.', en: 'Hourly service with guidance on special fabrics.', fr: 'Service à l’heure avec conseils sur les tissus particuliers.' },
+  { pt: 'Passadoria de peças do dia a dia, roupas sociais e enxoval.', en: 'Ironing for everyday items, formal wear and linens.', fr: 'Repassage des vêtements du quotidien, tenues habillées et linge de maison.' },
+  { pt: 'Troca de tomadas, luminárias, disjuntores e diagnóstico inicial.', en: 'Replacement of outlets, light fixtures and breakers, with an initial diagnosis.', fr: 'Remplacement de prises, luminaires et disjoncteurs, avec diagnostic initial.' },
+  { pt: 'Reparos em torneiras, sifões, descargas e tubulações aparentes.', en: 'Repairs to taps, traps, flush systems and exposed pipes.', fr: 'Réparation des robinets, siphons, chasses d’eau et canalisations apparentes.' },
+  { pt: 'Preço calculado por metro quadrado; materiais não incluídos.', en: 'Price calculated per square meter; materials not included.', fr: 'Prix calculé au mètre carré ; matériaux non compris.' },
+  { pt: 'Armários, mesas, camas, estantes e móveis modulados.', en: 'Cabinets, tables, beds, shelving and modular furniture.', fr: 'Armoires, tables, lits, étagères et meubles modulaires.' },
+  { pt: 'Manutenção por hora para jardins residenciais.', en: 'Hourly maintenance for residential gardens.', fr: 'Entretien à l’heure pour jardins résidentiels.' },
+  { pt: 'Triagem e organização funcional com participação do cliente.', en: 'Sorting and practical organization with the customer’s input.', fr: 'Tri et organisation fonctionnelle avec la participation du client.' },
+  { pt: 'Profissional cuidadoso, pontual e experiente em serviços residenciais. Atendimento em São Paulo e região.', en: 'Careful, punctual and experienced in-home service professional serving São Paulo and nearby areas.', fr: 'Professionnel soigneux, ponctuel et expérimenté pour les services à domicile à São Paulo et ses environs.' },
+  { pt: 'Profissional verificada, especializada em limpeza, lavanderia e organização doméstica.', en: 'Verified professional specializing in cleaning, laundry and home organization.', fr: 'Professionnelle vérifiée, spécialiste du ménage, du linge et de l’organisation du domicile.' },
+  { pt: 'Especialista em organização e lavanderia', en: 'Organization and laundry specialist', fr: 'Spécialiste de l’organisation et du linge' },
+  { pt: 'Atendimento residencial cuidadoso para organização de ambientes e tratamento de roupas.', en: 'Thoughtful in-home service for organizing spaces and caring for clothes.', fr: 'Service à domicile soigné pour organiser les espaces et entretenir le linge.' },
+  { pt: 'Reparos e pintura residencial', en: 'Home repairs and painting', fr: 'Réparations et peinture à domicile' },
+  { pt: 'Profissional para pequenos reparos, montagem e pintura de interiores.', en: 'Professional for minor repairs, assembly and interior painting.', fr: 'Professionnel pour petites réparations, montage et peinture intérieure.' },
   { pt: 'Suporte pela plataforma', en: 'In-platform support', fr: 'Assistance sur la plateforme' },
   { pt: 'Diferenciais', en: 'Highlights', fr: 'Points forts' },
   { pt: 'Próximo horário:', en: 'Next availability:', fr: 'Prochaine disponibilité :' },
   { pt: 'Consulte a agenda', en: 'Check the schedule', fr: "Consulter l’agenda" },
   { pt: 'Ver perfil', en: 'View profile', fr: 'Voir le profil' },
+  { pt: 'Ver detalhes de', en: 'View details for', fr: 'Voir les détails de' },
+  { pt: 'Deslize horizontalmente para ver mais categorias.', en: 'Swipe horizontally to see more categories.', fr: 'Faites défiler horizontalement pour voir plus de catégories.' },
+  { pt: 'Deslize horizontalmente para ver mais serviços.', en: 'Swipe horizontally to see more services.', fr: 'Faites défiler horizontalement pour voir plus de services.' },
+  { pt: 'Deslize horizontalmente para ver mais profissionais.', en: 'Swipe horizontally to see more professionals.', fr: 'Faites défiler horizontalement pour voir plus de professionnels.' },
   { pt: 'Preço na proposta', en: 'Price in proposal', fr: 'Prix dans la proposition' },
   { pt: 'Mais pedido', en: 'Most requested', fr: 'Le plus demandé' },
   { pt: 'Só um instante enquanto organizamos tudo.', en: 'Just a moment while we get everything ready.', fr: 'Un instant, nous préparons tout.' },
@@ -292,6 +404,7 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'E-mail', en: 'Email', fr: 'E-mail' },
   { pt: 'Informe um e-mail válido.', en: 'Enter a valid email address.', fr: 'Saisissez une adresse e-mail valide.' },
   { pt: 'Senha', en: 'Password', fr: 'Mot de passe' },
+  { pt: 'Mostrar senha', en: 'Show password', fr: 'Afficher le mot de passe' },
   { pt: 'Esqueci minha senha', en: 'Forgot my password', fr: 'Mot de passe oublié' },
   { pt: 'A senha é obrigatória.', en: 'Password is required.', fr: 'Le mot de passe est obligatoire.' },
   { pt: 'Manter acesso neste dispositivo', en: 'Keep me signed in on this device', fr: 'Rester connecté sur cet appareil' },
@@ -691,6 +804,8 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Suspender', en: 'Suspend', fr: 'Suspendre' },
   { pt: 'Anterior', en: 'Previous', fr: 'Précédent' },
   { pt: 'Próxima', en: 'Next', fr: 'Suivant' },
+  { pt: 'Paginação de profissionais', en: 'Professional pagination', fr: 'Pagination des professionnels' },
+  { pt: 'Paginação de serviços', en: 'Service pagination', fr: 'Pagination des services' },
   { pt: 'Carregando', en: 'Loading', fr: 'Chargement' }
 ];
 
@@ -703,14 +818,14 @@ export class LocalizationService {
   private readonly document = inject(DOCUMENT);
   readonly language = signal<AppLanguage>(this.readLanguage());
   readonly currency = signal<AppCurrency>(this.readCurrency());
-  readonly locale = computed(() => this.language() === 'fr' ? 'fr-FR' : this.language() === 'en' ? 'en-US' : 'pt-BR');
+  readonly locale = computed(() => this.language() === 'fr' ? 'fr-FR' : 'en-US');
 
   constructor() {
     this.applyDocumentLanguage(this.language());
   }
 
   setLanguage(language: string): void {
-    if (language !== 'pt' && language !== 'en' && language !== 'fr') return;
+    if (language !== 'en' && language !== 'fr') return;
     this.language.set(language);
     this.safeStore(LANGUAGE_KEY, language);
     this.applyDocumentLanguage(language);
@@ -725,10 +840,6 @@ export class LocalizationService {
   translate(source: string): string {
     if (!source || !source.trim()) return source;
     const language = this.language();
-    // O conteúdo-fonte é português. Não aplique padrões de inglês quando a
-    // preferência também é português; isso transformava títulos dinâmicos em
-    // textos híbridos, como "Professionals for sua casa".
-    if (language === 'pt') return source;
     const leading = source.match(/^\s*/)?.[0] ?? '';
     const trailing = source.match(/\s*$/)?.[0] ?? '';
     const value = source.trim();
@@ -770,6 +881,10 @@ export class LocalizationService {
 
   private translatePatterns(value: string, language: AppLanguage): string {
     const replacements: Array<[RegExp, string]> = language === 'fr' ? [
+      [/(\d+) serviços concluídos/g, '$1 services terminés'],
+      [/(\d+) anos de experiência/g, '$1 ans d’expérience'],
+      [/Mostrando (\d+)–(\d+) de (\d+) profissionais/g, 'Affichage de $1 à $2 sur $3 professionnels'],
+      [/Mostrando (\d+)–(\d+) de (\d+) serviços/g, 'Affichage de $1 à $2 sur $3 services'],
       [/Mostrando (\d+) de (\d+) registros · página (\d+) de (\d+)/g, 'Affichage de $1 sur $2 résultats · page $3 sur $4'],
       [/(\d+) serviços disponíveis/g, '$1 services disponibles'],
       [/(\d+) serviços/g, '$1 services'],
@@ -780,6 +895,10 @@ export class LocalizationService {
       [/Profissionais para (.+)/g, 'Professionnels pour $1'],
       [/A partir de (.+)/g, 'À partir de $1']
     ] : [
+      [/(\d+) serviços concluídos/g, '$1 completed services'],
+      [/(\d+) anos de experiência/g, '$1 years of experience'],
+      [/Mostrando (\d+)–(\d+) de (\d+) profissionais/g, 'Showing $1–$2 of $3 professionals'],
+      [/Mostrando (\d+)–(\d+) de (\d+) serviços/g, 'Showing $1–$2 of $3 services'],
       [/Mostrando (\d+) de (\d+) registros · página (\d+) de (\d+)/g, 'Showing $1 of $2 results · page $3 of $4'],
       [/(\d+) serviços disponíveis/g, '$1 services available'],
       [/(\d+) serviços/g, '$1 services'],
@@ -794,7 +913,7 @@ export class LocalizationService {
   }
 
   private readLanguage(): AppLanguage {
-    try { const stored = localStorage.getItem(LANGUAGE_KEY); return stored === 'en' || stored === 'fr' || stored === 'pt' ? stored : 'pt'; } catch { return 'pt'; }
+    try { const stored = localStorage.getItem(LANGUAGE_KEY); return stored === 'en' || stored === 'fr' ? stored : 'en'; } catch { return 'en'; }
   }
 
   private readCurrency(): AppCurrency {
@@ -809,6 +928,6 @@ export class LocalizationService {
   }
 
   private applyDocumentLanguage(language: AppLanguage): void {
-    this.document.documentElement.lang = language === 'pt' ? 'pt-BR' : language === 'fr' ? 'fr-FR' : 'en-US';
+    this.document.documentElement.lang = language === 'fr' ? 'fr-FR' : 'en-US';
   }
 }

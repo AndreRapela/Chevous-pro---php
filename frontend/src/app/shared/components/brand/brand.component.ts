@@ -6,9 +6,8 @@ import { RouterLink } from '@angular/router';
   standalone: true,
   imports: [RouterLink],
   template: `
-    <a class="brand" routerLink="/" aria-label="ChezVoust Pro, página inicial">
-      <span class="brand-mark" aria-hidden="true"><span></span></span>
-      <span>ChezVoust <strong>Pro</strong></span>
+    <a class="brand" routerLink="/" aria-label="Pro, home">
+      <img class="brand-logo" src="/pro-logo.svg" alt="Pro">
     </a>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush

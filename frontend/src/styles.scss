@@ -1,37 +1,37 @@
 :root {
-  --brand-900: #004332;
-  --brand-800: #00583f;
-  --brand-700: #006b4d;
-  --brand-600: #00865e;
-  --brand-500: #00a874;
-  --brand-200: #a9ead2;
-  --brand-100: #dff7ed;
-  --brand-50: #e8f6ef;
-  --coral-600: #d83963;
-  --coral-500: #f05278;
-  --coral-100: #ffe3eb;
-  --amber-700: #9c6500;
-  --amber-500: #f5b82e;
-  --amber-100: #fff1c9;
-  --ink-950: #101816;
-  --ink-900: #18221f;
-  --ink-700: #3e504a;
-  --ink-600: #5b6c66;
-  --ink-500: #52635d;
-  --ink-300: #b7c3bf;
-  --ink-200: #d9e2df;
-  --ink-100: #edf1f0;
+  --brand-900: #2b1513;
+  --brand-800: #57231e;
+  --brand-700: #8f3b33;
+  --brand-600: #a94a40;
+  --brand-500: #c36256;
+  --brand-200: #edc4bd;
+  --brand-100: #f7e1dc;
+  --brand-50: #fcf1ee;
+  --coral-600: #8f3b33;
+  --coral-500: #c36256;
+  --coral-100: #f8dfda;
+  --amber-700: #774435;
+  --amber-500: #d89b78;
+  --amber-100: #f6e5dc;
+  --ink-950: #211513;
+  --ink-900: #30201d;
+  --ink-700: #54413d;
+  --ink-600: #6f5953;
+  --ink-500: #806a64;
+  --ink-300: #cbb7b1;
+  --ink-200: #ddcbc5;
+  --ink-100: #f0e6e2;
   --surface: #ffffff;
-  --surface-soft: #eaf1ed;
-  --danger: #b42318;
-  --danger-soft: #fee4e2;
-  --success: #067647;
-  --success-soft: #dcfae6;
-  --warning: #b54708;
-  --warning-soft: #fef0c7;
-  --shadow-xs: 0 1px 2px rgba(15, 35, 28, .06);
-  --shadow-sm: 0 6px 20px rgba(15, 54, 40, .08);
-  --shadow-md: 0 18px 48px rgba(15, 54, 40, .12);
+  --surface-soft: #f4ebe8;
+  --danger: #9b3029;
+  --danger-soft: #f9dfdb;
+  --success: #8f3b33;
+  --success-soft: #f7e1dc;
+  --warning: #8a5140;
+  --warning-soft: #f8e6dd;
+  --shadow-xs: 0 1px 2px rgba(48, 32, 29, .08);
+  --shadow-sm: 0 6px 20px rgba(71, 37, 33, .1);
+  --shadow-md: 0 18px 48px rgba(71, 37, 33, .14);
   --radius-sm: .65rem;
   --radius-md: 1rem;
   --radius-lg: 1.5rem;
@@ -132,6 +132,7 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .check-row input { flex: 0 0 auto; margin-top: .15rem; }
 
 .brand { display: inline-flex; align-items: center; gap: .55rem; color: var(--brand-900); font-size: 1.05rem; font-weight: 850; letter-spacing: -.03em; white-space: nowrap; }
+.brand-logo { width: 7.7rem; height: auto; max-height: 2.25rem; }
 .brand strong { color: var(--brand-600); }
 .brand-mark { position: relative; width: 2rem; height: 2rem; display: grid; place-items: center; border: 2px solid var(--brand-600); border-radius: .55rem; transform: rotate(45deg); }
 .brand-mark::before { content: ""; width: .65rem; height: .65rem; border-left: 2px solid var(--brand-600); border-bottom: 2px solid var(--brand-600); transform: rotate(-45deg); }
@@ -2731,4 +2732,122 @@ cvp-provider-card { display: block; height: 100%; }
   .home-popular .service-card .service-symbol { width: 2.25rem; height: 2.25rem; border-radius: .65rem; }
   .catalog-results .service-card .service-icon,
   .home-popular .service-card .service-icon { width: 1.03rem; height: 1.03rem; }
+}
+
+/*
+ * Piso de legibilidade
+ *
+ * A auditoria revelou textos de leitura entre 9 e 15px, sobretudo em cards,
+ * painéis e no hero. A interface usa agora três níveis estáveis: 16px para
+ * leitura, 14px para controles e 13px para metadados. Assim uma página não
+ * parece estar em outra escala só porque utiliza um componente diferente.
+ */
+:root {
+  --type-meta: .82rem;
+  --type-ui: .9rem;
+  --type-body: 1rem;
+  --type-card: .95rem;
+}
+
+/* Texto corrido nunca fica abaixo do tamanho de leitura. */
+body p {
+  font-size: 1rem !important;
+  line-height: 1.55;
+}
+
+/* Títulos e dados dentro de cards continuam compactos, mas não minúsculos. */
+body :is(.category-card strong, .service-card h3, .provider-card h3,
+  .compact-service-list strong, .steps-grid h3, .timeline-list h3,
+  .notification-list button strong, .toggle-row strong) {
+  font-size: 1rem !important;
+}
+
+body :is(.rating, .availability, .card-footer, .review-head,
+  .compact-service-list small, .profile-facts span, .footer-grid a:not(.brand),
+  .footer-grid p, .footer-bottom, .bottom-nav a, .desktop-booking-preview dl > div,
+  .hero-trust, .result-pagination, .pagination-summary, .booking-progress p,
+  .selected-service small, .saved-address-option > span:last-child,
+  .timeline-list time, .transaction-list, .notification-list button span,
+  .chat-safety-note, .chat-live-status, .chat-day, .bubble time) {
+  font-size: .9rem !important;
+}
+
+/* Controles mantêm leitura confortável sem fazer os cartões crescerem demais. */
+body :is(button, input, textarea, select, label, .btn, .text-link, .text-button,
+  .chip, .mobile-menu a, .desktop-nav a, .locale-trigger-value,
+  .locale-option, .quick-replies button, .page-button) {
+  font-size: .9rem !important;
+}
+
+/* Metadados ainda são secundários, porém permanecem legíveis. */
+body :is(.eyebrow, .kicker, .optional, .field-hint, .field-error,
+  .field-success, time, .review-head time, .metric-card small,
+  .locale-popover-header span, .locale-setting-label, .locale-code,
+  .showcase-tag, .showcase-service, .hero-banner-label, .hero-banner-proof,
+  .notification-list button time, .composer-actions small) {
+  font-size: .82rem !important;
+}
+
+@media (min-width: 64rem) {
+  /* A frase principal do hero, apontada na revisão, ganha uma leitura normal. */
+  body .hero-copy p,
+  body .desktop-hero-copy p { font-size: 1.05rem !important; }
+
+  body :is(.page-hero p, .catalog-hero p, .professionals-hero p,
+    .info-page-hero p, .profile-intro p, .service-detail-grid p,
+    .portal-page-heading p, .content-card p, .provider-cta p,
+    .benefits-grid p, .info-grid p, .review-list p, .bubble) {
+    font-size: 1rem !important;
+  }
+}
+
+/* Identidade Pro: contraste suficiente entre superfícies, campos e cartões. */
+.section-mint,
+.home-providers { background: #f1e5e1; }
+.site-header { background: rgba(255, 253, 252, .94); border-color: #ddcbc5; }
+.section-dark { background: var(--brand-900); }
+.desktop-hero-visual::before { background: linear-gradient(145deg, #c36256, var(--brand-700)); }
+.desktop-hero-orb.orb-mint { background: #b75047; }
+.desktop-hero-orb.orb-coral { background: #d89b78; }
+.desktop-promo-card { background: linear-gradient(120deg, var(--brand-900), var(--brand-700)); }
+
+input,
+textarea,
+select {
+  border-color: #bd8c84;
+  background: #fffdfc;
+  box-shadow: inset 0 1px 1px rgba(71, 37, 33, .04);
+}
+input:hover,
+textarea:hover,
+select:hover { border-color: #9f5d54; }
+input:focus,
+textarea:focus,
+select:focus { border-color: var(--brand-700); outline-color: rgba(143, 59, 51, .18); }
+.hero-search,
+.filters-card,
+.content-card,
+.portal-card,
+.service-card,
+.provider-card { border-color: #d8beb8; }
+
+/* A seção de como funciona cresce uma vez, sem criar uma segunda escala. */
+.info-page-content .info-grid { gap: 1rem; }
+.info-page-content .content-card { min-height: 7.5rem; padding: 1.25rem; }
+.info-page-content .info-symbol { width: 2.55rem; height: 2.55rem; }
+.info-page-content .content-card h2 { font-size: 1.08rem !important; }
+
+@media (min-width: 64rem) {
+  /* Três perfis visíveis na home; cada card conserva a mesma leitura. */
+  .home-providers .provider-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    max-width: none;
+    gap: 1rem;
+  }
+
+  /* Mais espaço entre filtros e resultados, porém três cards por linha. */
+  .professionals-results > .container { width: min(100% - 2.5rem, 78rem); }
+  .professionals-results .search-layout { grid-template-columns: 12.5rem minmax(0, 1fr); gap: 1.75rem; }
+  .professionals-results .provider-list { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; }
+  .professionals-results .provider-card { padding: .95rem; }
 }

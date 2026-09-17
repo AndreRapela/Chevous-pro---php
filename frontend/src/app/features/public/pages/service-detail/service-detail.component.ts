@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
@@ -7,6 +7,7 @@ import { ProviderProfile, Service } from '../../../../core/models';
 import { ProviderCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { SeoService } from '../../../../core/seo/seo.service';
+import { LocalizationService } from '../../../../core/localization/localization.service';
 
 @Component({
   selector: 'cvp-service-detail',
@@ -17,8 +18,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
     @else if (error()) { <div class="container section"><cvp-state-panel kind="error" title="Serviço indisponível" [message]="error()" (retry)="load()" /></div> }
     @else if (service(); as item) {
       <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Agendar agora</a><span>A partir de <strong>{{ item.priceFromCents / 100 | appMoney:'BRL':0 }}</strong></span></div></div><div class="service-visual" aria-hidden="true"><span><cvp-service-icon [category]="item.categoryId" [serviceSlug]="item.slug" /></span><i></i><i></i></div></div></section>
-      <section class="section"><div class="container benefits-grid"><article><span>✓</span><h2>Perfis aprovados</h2><p>Informações e avaliações para ajudar você a escolher, sem alegação de certificação de identidade.</p></article><article><span>◇</span><h2>Preço transparente</h2><p>Veja a composição do valor antes de confirmar.</p></article><article><span>○</span><h2>Suporte durante o serviço</h2><p>Converse e acompanhe tudo pelo seu painel.</p></article></div></section>
-      <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>Profissionais para {{ item.name.toLocaleLowerCase('pt-BR') }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
+      <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>{{ localization.translate('Profissionais para') }} {{ localization.translate(item.name).toLocaleLowerCase(localization.locale()) }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
     }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -28,11 +28,19 @@ export class ServiceDetailComponent implements OnInit {
   private readonly marketplace = inject(MarketplaceService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly seo = inject(SeoService);
+  protected readonly localization = inject(LocalizationService);
   private readonly reload = new BehaviorSubject(0);
   readonly service = signal<Service | null>(null);
   readonly providers = signal<ProviderProfile[]>([]);
   readonly loading = signal(true);
   readonly error = signal('');
+  constructor() {
+    effect(() => {
+      this.localization.language();
+      const item = this.service();
+      if (item) this.updateSeo(item);
+    });
+  }
   ngOnInit(): void {
     combineLatest([
       this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')),
@@ -62,8 +70,10 @@ export class ServiceDetailComponent implements OnInit {
 
   private updateSeo(service: Service): void {
     const canonicalPath = `/servicos/${service.slug}`;
-    const title = `${service.name} para casa | ChezVoust Pro`;
-    const description = `${service.description} Compare profissionais aprovados e solicite um horário.`;
+    const translatedName = this.localization.translate(service.name);
+    const translatedDescription = this.localization.translate(service.description);
+    const title = `${translatedName} | Pro`;
+    const description = `${translatedDescription} ${this.localization.translate('Compare profissionais aprovados e solicite um horário.')}`;
     this.seo.update({
       title,
       description,
@@ -73,18 +83,18 @@ export class ServiceDetailComponent implements OnInit {
         {
           '@context': 'https://schema.org',
           '@type': 'Service',
-          name: service.name,
-          description: service.description,
+          name: translatedName,
+          description: translatedDescription,
           url: canonicalPath,
-          provider: { '@type': 'Organization', name: 'ChezVoust Pro' }
+          provider: { '@type': 'Organization', name: 'Pro' }
         },
         {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: 'Início', item: '/' },
-            { '@type': 'ListItem', position: 2, name: 'Serviços', item: '/servicos' },
-            { '@type': 'ListItem', position: 3, name: service.name, item: canonicalPath }
+            { '@type': 'ListItem', position: 1, name: this.localization.translate('Início'), item: '/' },
+            { '@type': 'ListItem', position: 2, name: this.localization.translate('Serviços'), item: '/servicos' },
+            { '@type': 'ListItem', position: 3, name: translatedName, item: canonicalPath }
           ]
         }
       ]

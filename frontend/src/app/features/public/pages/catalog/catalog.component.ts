@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, combineLatest, debounceTime, distinctUntilChanged } from 'rxjs';
@@ -6,6 +6,7 @@ import { MarketplaceService } from '../../../../core/data-access/marketplace.ser
 import { Service, ServiceCategory } from '../../../../core/models';
 import { ServiceCardComponent, StatePanelComponent } from '../../../../shared/components';
 import { SeoService } from '../../../../core/seo/seo.service';
+import { LocalizationService } from '../../../../core/localization/localization.service';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
 
 @Component({
@@ -48,6 +49,7 @@ export class CatalogComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
   private readonly seo = inject(SeoService);
+  private readonly localization = inject(LocalizationService);
   private readonly searchChanges = new Subject<string>();
   readonly services = signal<Service[]>([]);
   readonly categories = signal<ServiceCategory[]>([]);
@@ -65,6 +67,12 @@ export class CatalogComponent implements OnInit {
     const start = Math.max(1, Math.min(this.page() - 2, Math.max(1, last - 4)));
     return Array.from({ length: Math.min(5, last - start + 1) }, (_, index) => start + index);
   });
+  constructor() {
+    effect(() => {
+      this.localization.language();
+      this.updateSeo();
+    });
+  }
 
   ngOnInit(): void {
     this.searchChanges.pipe(debounceTime(250), distinctUntilChanged(), takeUntilDestroyed(this.destroyRef)).subscribe((value) => this.syncUrl(value, 1));
@@ -121,10 +129,10 @@ export class CatalogComponent implements OnInit {
   private updateSeo(): void {
     const selected = this.categories().find((item) => item.slug === this.categorySlug());
     const canonicalPath = selected ? `/servicos/categoria/${selected.slug}` : '/servicos';
-    const title = selected ? `${selected.name} para casa | ChezVoust Pro` : 'Serviços para casa | ChezVoust Pro';
+    const title = selected ? `${this.localization.translate(selected.name)} | Pro` : 'Home services | Pro';
     const description = selected
-      ? `${selected.description} Compare opções e solicite um horário com profissionais aprovados.`
-      : 'Encontre serviços para casa, compare opções e solicite um horário com profissionais aprovados.';
+      ? `${this.localization.translate(selected.description)} ${this.localization.translate('Compare opções e solicite um horário com profissionais aprovados.')}`
+      : this.localization.translate('Encontre serviços para casa, compare opções e solicite um horário com profissionais aprovados.');
     this.seo.update({
       title,
       description,
@@ -133,7 +141,7 @@ export class CatalogComponent implements OnInit {
       structuredData: {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
-        name: title.replace(' | ChezVoust Pro', ''),
+        name: title.replace(' | Pro', ''),
         description,
         url: canonicalPath
       }

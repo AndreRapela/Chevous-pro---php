@@ -176,12 +176,12 @@ export class MarketplaceService {
     const servicePrices = rawServices.map((service) => this.number(this.record(service)['priceCents'])).filter((price) => price > 0);
     const rawReviews = Array.isArray(item['reviews']) ? item['reviews'] : [];
     return {
-      id: this.string(item['id']), name, initials: this.string(item['initials'], this.initials(name)), headline: this.string(item['headline'], 'Profissional de serviços domésticos'),
-      bio: this.string(item['bio'], 'Perfil profissional aprovado na plataforma ChezVoust Pro.'), city: this.string(item['city'] ?? item['baseCity'], 'Cidade não informada'), neighborhood: this.string(item['neighborhood'] ?? item['state'] ?? item['baseState']),
+      id: this.string(item['id']), name, initials: this.string(item['initials'], this.initials(name)), headline: this.string(item['headline'], 'Home services professional'),
+      bio: this.string(item['bio'], 'Platform-approved professional profile.'), city: this.string(item['city'] ?? item['baseCity'], 'City not specified'), neighborhood: this.string(item['neighborhood'] ?? item['state'] ?? item['baseState']),
       verified: Boolean(item['verified']) || this.string(item['verificationStatus']) === 'approved', verificationStatus: (this.string(item['verificationStatus'], 'pending') as ProviderProfile['verificationStatus']), topProvider: Boolean(item['topProvider'] ?? item['featured']), rating: this.number(item['rating'], 0),
-      reviewCount: this.number(item['reviewCount'] ?? item['reviewsCount']), completedJobs: this.number(item['completedJobs']), responseTime: this.string(item['responseTime'], 'Responde pela plataforma'),
+      reviewCount: this.number(item['reviewCount'] ?? item['reviewsCount']), completedJobs: this.number(item['completedJobs']), responseTime: this.string(item['responseTime'], 'Replies through the platform'),
       priceFromCents: this.number(item['priceFromCents'], servicePrices.length ? Math.min(...servicePrices) : 0), serviceIds: [...new Set([...serviceIds, ...hintedServices])],
-      qualities: Array.isArray(item['qualities']) ? item['qualities'].map(String) : ['Perfil aprovado', 'Atendimento pela plataforma'], nextAvailability: this.string(item['nextAvailability'], 'Consulte a agenda'),
+      qualities: Array.isArray(item['qualities']) ? item['qualities'].map(String) : ['Approved profile', 'In-platform support'], nextAvailability: this.string(item['nextAvailability'], 'Check the schedule'),
       reviews: rawReviews.map((review) => this.reviewModel(review)), avatarUrl: this.string(item['avatarUrl']) || null,
       state: this.string(item['state'] ?? item['baseState']) || undefined, yearsExperience: this.number(item['yearsExperience']), memberSince: this.string(item['memberSince']) || undefined,
       experiences: Array.isArray(item['experiences']) ? item['experiences'].map((experience) => this.experienceModel(experience)) : [],
