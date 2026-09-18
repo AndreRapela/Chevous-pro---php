@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute } from '@angular/router';
 import { EMPTY, Subject, finalize, map, switchMap } from 'rxjs';
 import { AuthService } from '../../../../core/auth/auth.service';
+import { LocalizationService } from '../../../../core/localization/localization.service';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ChatMessage, Conversation } from '../../../../core/models';
 import { AvatarComponent, PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
@@ -30,20 +31,20 @@ import { mergeUniqueById, pageFromMeta, totalFromMeta } from '../../../../shared
             <div class="conversation-list-items">@for (conversation of conversations(); track conversation.id) {
               <button type="button" [class.active]="selected()?.id === conversation.id" (click)="select(conversation)" [attr.aria-current]="selected()?.id === conversation.id ? 'true' : null">
                 <cvp-avatar data-cvp-no-localize [initials]="initials(contactName(conversation))" [imageUrl]="conversation.contactAvatarUrl" [label]="contactName(conversation)" />
-                <span data-cvp-no-localize><strong>{{ contactName(conversation) }}</strong><small>{{ conversation.serviceName }} · {{ conversation.lastMessage }}</small></span>
+                <span data-cvp-no-localize><strong>{{ contactName(conversation) }}</strong><small>{{ localization.translate(conversation.serviceName) }} · {{ conversation.lastMessage }}</small></span>
                 <span class="message-meta"><time>{{ conversation.updatedAt | appDate:'MMM d, HH:mm' }}</time>@if (conversation.unreadCount) { <b [attr.aria-label]="conversation.unreadCount + ' mensagens não lidas'">{{ conversation.unreadCount }}</b> }</span>
               </button>
             }</div>@if (conversationPage() < conversationLastPage()) { <div class="conversation-list-more"><button class="btn btn-secondary btn-small" type="button" [disabled]="loadingMoreConversations()" (click)="loadMoreConversations()">{{ loadingMoreConversations() ? 'Carregando…' : 'Ver conversas anteriores' }}</button></div> }
           </aside>
           <section class="chat-panel" aria-label="Conversa selecionada">
             @if (selected(); as conversation) {
-              <header class="chat-header"><button class="chat-back-to-list" type="button" (click)="backToConversations()">Conversas</button><cvp-avatar data-cvp-no-localize [initials]="initials(contactName(conversation))" [imageUrl]="conversation.contactAvatarUrl" [label]="contactName(conversation)" /><div data-cvp-no-localize><strong>{{ contactName(conversation) }}</strong><small>{{ conversation.serviceName }}</small></div><span class="chat-live-status" [attr.data-state]="connectionState()"><span aria-hidden="true">●</span> {{ connectionStatusLabel() }}</span><span class="booking-chat-status" [attr.data-status]="conversation.bookingStatus">{{ bookingStatusLabel(conversation.bookingStatus) }}</span></header>
+              <header class="chat-header"><button class="chat-back-to-list" type="button" (click)="backToConversations()">Conversas</button><cvp-avatar data-cvp-no-localize [initials]="initials(contactName(conversation))" [imageUrl]="conversation.contactAvatarUrl" [label]="contactName(conversation)" /><div data-cvp-no-localize><strong>{{ contactName(conversation) }}</strong><small>{{ localization.translate(conversation.serviceName) }}</small></div><span class="chat-live-status" [attr.data-state]="connectionState()"><span aria-hidden="true">●</span> {{ connectionStatusLabel() }}</span><span class="booking-chat-status" [attr.data-status]="conversation.bookingStatus">{{ bookingStatusLabel(conversation.bookingStatus) }}</span></header>
               <p class="sr-only" aria-live="polite">{{ liveAnnouncement() }}</p>
               <div #chatBody class="chat-body" (scroll)="onChatScroll()">
                 @if (hasOlderMessages()) { <button class="chat-load-older" type="button" [disabled]="loadingOlder()" (click)="loadOlderMessages()">{{ loadingOlder() ? 'Carregando histórico…' : 'Carregar mensagens anteriores' }}</button> }
                 @if (loadingMessages()) { <p class="chat-empty-state">Carregando conversa…</p> }
                 @else if (!chatMessages().length) { <div class="chat-empty-state"><strong>Conversa iniciada</strong><span>Use este espaço para alinhar acesso, detalhes e expectativas do serviço.</span></div> }
-                @else { @for (group of messageGroups(); track group.key) { <p class="chat-day">{{ group.date | appDate:'EEEE, d MMM' }}</p>@for (message of group.messages; track message.id) { <div class="bubble" [class.sent]="message.senderId === auth.user()?.id" [class.received]="message.senderId !== auth.user()?.id"><strong data-cvp-no-localize>{{ message.senderId === auth.user()?.id ? 'Você' : message.senderName }}</strong><span data-cvp-no-localize>{{ message.body }}</span><time>{{ message.createdAt | appDate:'HH:mm' }}</time></div> } } }
+                @else { @for (group of messageGroups(); track group.key) { <p class="chat-day">{{ group.date | appDate:'EEEE, d MMM' }}</p>@for (message of group.messages; track message.id) { <div class="bubble" [class.sent]="message.senderId === auth.user()?.id" [class.received]="message.senderId !== auth.user()?.id"><strong data-cvp-no-localize>{{ message.senderId === auth.user()?.id ? localization.translate('Você') : message.senderName }}</strong><span data-cvp-no-localize>{{ message.body }}</span><time>{{ message.createdAt | appDate:'HH:mm' }}</time></div> } } }
               </div>
               <div class="chat-safety-note"><span aria-hidden="true">⌁</span> Use o chat para alinhar detalhes do serviço e proteja suas informações pessoais.</div>
               <form class="chat-composer enhanced-chat-composer" (submit)="send($event)">
@@ -77,6 +78,7 @@ export class MessagesComponent implements OnInit {
   private pendingMessageKey: string | null = null;
 
   readonly auth = inject(AuthService);
+  readonly localization = inject(LocalizationService);
   readonly conversations = signal<Conversation[]>([]);
   readonly conversationPage = signal(1);
   readonly conversationLastPage = signal(1);
@@ -139,7 +141,7 @@ export class MessagesComponent implements OnInit {
   send(event: Event): void { event.preventDefault(); this.sendMessage(this.draft(), true); }
   onComposerKeydown(event: Event): void { const keyboardEvent = event as KeyboardEvent; if (shouldSendComposerMessage(keyboardEvent)) { keyboardEvent.preventDefault(); this.send(keyboardEvent); } }
   updateDraft(value: string): void { this.pendingMessageKey = null; this.draft.set(value); }
-  sendQuickReply(reply: string): void { this.pendingMessageKey = null; this.sendMessage(reply, false); }
+  sendQuickReply(reply: string): void { this.pendingMessageKey = null; this.sendMessage(this.localization.translate(reply), false); }
   onChatScroll(): void { const body = this.chatBody?.nativeElement; if (body) this.shouldStickToBottom = isNearChatBottom(body.scrollTop, body.clientHeight, body.scrollHeight); }
   loadOlderMessages(): void {
     const conversation = this.selected();
@@ -161,7 +163,7 @@ export class MessagesComponent implements OnInit {
     });
   }
   initials(value: string): string { return value.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0] ?? '').join('').toUpperCase(); }
-  contactName(conversation: Conversation): string { return conversation.contactName || conversation.serviceName || 'Contato da reserva'; }
+  contactName(conversation: Conversation): string { return conversation.contactName || this.localization.translate(conversation.serviceName || 'Contato da reserva'); }
   canSendMessage(conversation: Conversation): boolean { return ['inquiry', 'confirmed', 'provider_on_the_way', 'in_progress', 'completed', 'disputed'].includes(conversation.bookingStatus); }
   connectionStatusLabel(): string { return ({ connecting: 'Conectando…', live: 'Sincronizado', reconnecting: 'Reconectando…' } as const)[this.connectionState()]; }
   bookingStatusLabel(status: string): string { return ({ inquiry: 'Contato antes da reserva', confirmed: 'Reserva confirmada', provider_on_the_way: 'A caminho', in_progress: 'Em andamento', completed: 'Serviço concluído', disputed: 'Em análise', cancelled: 'Reserva cancelada', awaiting_confirmation: 'Aguardando confirmação', open: 'Aguardando profissional' } as Record<string, string>)[status] ?? 'Reserva em andamento'; }

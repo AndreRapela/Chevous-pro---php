@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal } from '@angular/core';
-import { AppCurrency, AppLanguage, LocalizationService } from '../../core/localization/localization.service';
+import { DisplayCurrency, AppLanguage, LocalizationService } from '../../core/localization/localization.service';
 
 @Component({
   selector: 'cvp-locale-controls',
@@ -35,7 +35,6 @@ import { AppCurrency, AppLanguage, LocalizationService } from '../../core/locali
           <div class="locale-setting" role="group" aria-label="Moeda">
             <span class="locale-setting-label">Moeda</span>
             <div class="locale-option-grid">
-              <button type="button" class="locale-option" [class.active]="localization.currency() === 'BRL'" [attr.aria-pressed]="localization.currency() === 'BRL'" (click)="chooseCurrency('BRL')"><span class="locale-code">R$</span><span>Real brasileiro</span></button>
               <button type="button" class="locale-option" [class.active]="localization.currency() === 'EUR'" [attr.aria-pressed]="localization.currency() === 'EUR'" (click)="chooseCurrency('EUR')"><span class="locale-code">€</span><span>Euro</span></button>
               <button type="button" class="locale-option" [class.active]="localization.currency() === 'USD'" [attr.aria-pressed]="localization.currency() === 'USD'" (click)="chooseCurrency('USD')"><span class="locale-code">$</span><span>Dólar americano</span></button>
             </div>
@@ -54,7 +53,7 @@ export class LocaleControlsComponent {
   toggle(): void { this.open.update((value) => !value); }
   close(): void { this.open.set(false); }
   chooseLanguage(language: AppLanguage): void { this.localization.setLanguage(language); }
-  chooseCurrency(currency: AppCurrency): void { this.localization.setCurrency(currency); }
+  chooseCurrency(currency: DisplayCurrency): void { this.localization.setCurrency(currency); }
 
   @HostListener('document:click', ['$event'])
   closeOnOutsideClick(event: MouseEvent): void {

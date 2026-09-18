@@ -7,6 +7,6 @@ export const environment = {
     provider: ['profissional@chezvoust.test', 'Profissional@123'],
     admin: ['admin@chezvoust.test', 'Admin@123']
   } as { customer: readonly [string, string]; provider: readonly [string, string]; admin: readonly [string, string] },
-  locale: 'pt-BR',
-  currency: 'BRL'
+  locale: 'en-US',
+  currency: 'EUR'
 } as const;

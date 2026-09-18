@@ -73,7 +73,7 @@ export class ProfessionalsComponent implements OnInit {
       startWith(undefined),
       debounceTime(250),
       tap(() => { this.loading.set(true); this.error.set(''); }),
-      switchMap(() => this.marketplace.providersPage(this.query(1)).pipe(catchError((failure: Error) => of({ data: [] as ProviderProfile[], meta: {}, failure })))),
+      switchMap(() => this.marketplace.providersPage(this.query(this.page())).pipe(catchError((failure: Error) => of({ data: [] as ProviderProfile[], meta: {}, failure })))),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe((response) => {
       const failure = 'failure' in response ? response.failure : undefined;

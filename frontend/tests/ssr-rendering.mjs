@@ -53,7 +53,7 @@ try {
   const catalog = await request('/servicos');
   const catalogHtml = await catalog.text();
   assert.equal(catalog.status, 200, 'Catálogo SSR deve responder 200.');
-  assert.ok(catalogHtml.includes('<title>Serviços para casa | ChezVoust Pro</title>'));
+  assert.ok(catalogHtml.includes('<title>Home services | Pro</title>'));
   assert.ok(catalogHtml.includes('<link rel="canonical" href="https://chezvoust.test/servicos">'));
 
   const privatePage = await request('/entrar');

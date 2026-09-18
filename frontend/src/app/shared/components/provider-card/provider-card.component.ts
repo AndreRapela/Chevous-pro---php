@@ -16,7 +16,7 @@ import { providerPublicPath } from '../../utils/public-url.util';
         <cvp-avatar [initials]="provider.initials" [imageUrl]="provider.avatarUrl" [label]="provider.name" size="lg" />
         <div>
           <div class="provider-name-line">
-            <h3>{{ provider.name }}</h3>
+            <h3 data-cvp-no-localize>{{ provider.name }}</h3>
             @if (provider.verified) { <span class="verified" title="Perfil aprovado"><span aria-hidden="true">✓</span><span class="sr-only">Perfil aprovado</span></span> }
           </div>
           <p>{{ provider.headline }}</p>
