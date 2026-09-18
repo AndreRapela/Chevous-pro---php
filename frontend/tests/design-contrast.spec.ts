@@ -89,4 +89,14 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.ok(!source.includes('desktop-promo-card'));
     assert.ok(!source.includes('desktop-hero-lower'));
   });
+  it('uses reading-size professional benefits and a larger invitation button without a fixed card height', () => {
+    assert.equal(declaration('.provider-cta-actions', 'font-size'), '1rem');
+    assert.equal(declaration('body .provider-cta-actions .btn', 'font-size'), '1rem !important');
+    assert.equal(declaration('.provider-cta-actions .btn', 'min-height'), '3rem');
+    assert.equal(declaration('.provider-cta-actions', 'gap'), '.75rem');
+    assert.equal(declaration('.provider-cta', 'min-height'), '12rem');
+    assert.equal(declaration('.provider-cta', 'grid-template-columns'), 'minmax(0, 1.6fr) minmax(18rem, .8fr)');
+    assert.ok(!rules.some(rule => rule.selectors.includes('.provider-cta') && /(?:^|;)\s*height\s*:/.test(rule.declarations)));
+    assert.ok(!rules.some(rule => rule.selectors.includes('.provider-cta') && /overflow:\s*hidden/.test(rule.declarations)));
+  });
 });
