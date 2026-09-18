@@ -74,9 +74,19 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.ok(parseFloat(variables.get('--type-body')!) * 16 >= 16);
   });
   it('uses a light keyboard focus indicator on dark hero and authentication surfaces', () => {
-    for (const selector of ['.section-dark :focus-visible', '.hero-banner :focus-visible', '.desktop-promo-card:focus-visible', '.login-brand-panel :focus-visible', '.register-brand-panel :focus-visible']) {
+    for (const selector of ['.section-dark :focus-visible', '.hero-banner :focus-visible', '.login-brand-panel :focus-visible', '.register-brand-panel :focus-visible']) {
       assert.equal(declaration(selector, 'outline-color'), 'var(--control-focus-on-dark)');
       for (const surface of ['--brand-900', '--brand-800', '--brand-700']) assert.ok(contrast('var(--control-focus-on-dark)', `var(${surface})`) >= 3);
     }
+  });
+  it('keeps the home shortcut card compact with four balanced, readable service links', () => {
+    assert.equal(declaration('.desktop-service-strip', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
+    assert.equal(declaration('.desktop-service-strip', 'padding'), '.75rem .9rem');
+    assert.equal(declaration('.desktop-service-strip a', 'font-size'), '1rem');
+    assert.equal(declaration('.desktop-service-strip a', 'min-height'), '3rem');
+    assert.equal(declaration('.desktop-service-strip a', 'font-weight'), '750');
+    assert.ok(!source.includes('desktop-booking-preview'));
+    assert.ok(!source.includes('desktop-promo-card'));
+    assert.ok(!source.includes('desktop-hero-lower'));
   });
 });

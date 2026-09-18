@@ -306,3 +306,31 @@ Build e atualização da prévia local são independentes do deploy público.
 - Apenas `web` e `ssr` foram recriados. API `59b02e09ca73`, banco
   `b81e16ed1b76` e worker `7509bfe83e48` continuam com os mesmos IDs.
   Nenhum dado, reserva, mensagem ou volume foi alterado/removido pelos testes.
+
+## Correção solicitada: card do herói apenas com serviços
+
+- A faixa inferior da home desktop misturava promoção, atalhos e uma reserva
+  fictícia de Ana Clara. Removidos os dois painéis e o título visual adicional:
+  agora há um único card com Cleaning, Laundry, Repairs e Painting.
+- Os quatro atalhos mantêm seus ícones e destinos de busca, em colunas iguais,
+  com nomes de 16px em negrito, espaçamento interno curto e hover discreto.
+  A navegação tem nome acessível traduzido e os ícones são decorativos.
+- Removidas também as regras CSS antigas que reservavam largura/altura para
+  os painéis; não foram alterados a foto, a busca nem o herói móvel.
+- Inspeção real pelo navegador disponível nesta etapa: a faixa antiga tinha
+  226,55px de altura em viewport de 1280px; o novo card tem 77,97px. Os quatro
+  links têm a mesma posição vertical e aproximadamente 271px de largura.
+- Conferido francês em 1024px: Ménage, Linge, Réparations e Peinture cabem
+  sem corte, overflow horizontal ou sobreposição. O card mantém 77,97px de
+  altura e fica aproximadamente 32px abaixo da busca. Em 390px, a busca
+  móvel permanece visível e o card desktop fica oculto, sem overflow horizontal.
+- Foco de teclado conferido no navegador: Tab alcança o atalho Laundry com
+  contorno vinho sólido de 3px. Idioma original EN e viewport padrão restaurados.
+- `npm run check` aprovado: lint, build, bundle, 59 testes unitários, cobertura
+  EN/FR de 1.069 fragmentos dos 53 templates, estrutura e SSR. A redução dos
+  fragmentos corresponde aos textos dos painéis removidos.
+- Os testes SSR e do proxy real em 4200 agora verificam os quatro links, nomes,
+  destinos, SVGs e ausência dos painéis removidos. O teste estrutural antigo
+  que exigia espaço para a reserva fictícia foi substituído pelo novo contrato.
+- Build local atualizado: `main-DRZGSHDF.js` e `styles-ZBI3WVJV.css`.
+  Deploy público permanece cancelado; banco, API e worker não foram recriados.

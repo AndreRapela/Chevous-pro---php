@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, request as httpRequest } from 'node:http';
+import { assertHomeServiceCard } from './home-service-card.mjs';
 
 // A local read-only fixture exercises dynamic page SEO without accessing the user's API.
 const api = createServer((request, response) => {
@@ -52,6 +53,7 @@ try {
   const home = await request('/');
   const homeHtml = await home.text();
   assert.equal(home.status, 200, 'Home SSR deve responder 200.');
+  assertHomeServiceCard(homeHtml);
   for (const fragment of [
     'ng-server-context="ssr"',
     'id="chezvoust-structured-data"',

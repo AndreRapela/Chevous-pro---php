@@ -55,7 +55,12 @@ const productionOptimization = angularArchitect.build.configurations.production.
 assert.equal(productionOptimization.styles.inlineCritical, false, 'CSS crítico inline conflita com a CSP e não deve ser ativado.');
 
 const globalStyles = await text('frontend/src/styles.scss');
-assert.match(globalStyles, /\.desktop-hero-lower\s*\{[^}]*min-height:\s*8\.5rem/s, 'O herói desktop deve reservar espaço para a prévia sem cobrir a busca.');
+assert.match(globalStyles, /\.desktop-service-strip\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir quatro atalhos em colunas iguais.');
+assert.doesNotMatch(globalStyles, /desktop-hero-lower|desktop-booking-preview|desktop-promo-card/, 'O card simplificado não deve reservar espaço para os painéis removidos.');
+const homeHero = await text('frontend/src/app/features/public/components/home-hero/home-hero.component.ts');
+const serviceCard = homeHero.match(/<nav class="desktop-service-strip"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? '';
+assert.equal((serviceCard.match(/<a /g) ?? []).length, 4, 'O card deve conter apenas os quatro atalhos de serviço.');
+assert.doesNotMatch(homeHero, /desktop-booking-preview|desktop-promo-card/, 'A prévia fictícia e o painel promocional não devem ser renderizados.');
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
 assert.match(globalStyles, /\.portal-header \.icon-button\s*\{[^}]*min-width:\s*2\.75rem/s, 'Ações do cabeçalho devem manter alvo de toque de 44px.');
