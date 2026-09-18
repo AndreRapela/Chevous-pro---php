@@ -60,6 +60,6 @@ export class AppComponent {
       title: this.localization.translate(seoData.title ?? routeTitle),
       description: this.localization.translate(seoData.description ?? DEFAULT_SEO.description)
     };
-    this.seo.update(this.staticSeo);
+    this.seo.updateRoute(this.staticSeo);
   }
 }

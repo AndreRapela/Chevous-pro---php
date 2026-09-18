@@ -1,7 +1,20 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { request as httpRequest } from 'node:http';
+import { createServer, request as httpRequest } from 'node:http';
+
+// A local read-only fixture exercises dynamic page SEO without accessing the user's API.
+const api = createServer((request, response) => {
+  const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+  assert.equal(request.method, 'GET', 'SSR fixtures must never receive a write.');
+  const categories = [{ id: 'category-test', slug: 'cleaning', name: 'Cleaning', description: 'Home cleaning.', serviceCount: 0 }];
+  const data = path === '/api/v1/categories' ? categories : [];
+  response.writeHead(200, { 'content-type': 'application/json' });
+  response.end(JSON.stringify({ data, meta: { page: 1, perPage: 3, total: 0, lastPage: 1 } }));
+});
+api.listen(0, '127.0.0.1');
+await once(api, 'listening');
+const apiPort = api.address().port;
 
 const port = 4311;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -10,7 +23,7 @@ const server = spawn(process.execPath, ['dist/chezvoust-pro/server/server.mjs'],
     ...process.env,
     PORT: String(port),
     SITE_URL: 'https://chezvoust.test',
-    SSR_API_URL: 'http://127.0.0.1:9/api/v1',
+    SSR_API_URL: `http://127.0.0.1:${apiPort}/api/v1`,
     // A conexão de teste usa loopback, mas o proxy encaminha o domínio público.
     NG_ALLOWED_HOSTS: '127.0.0.1,chezvoust.test',
     NG_TRUST_PROXY_HEADERS: 'x-forwarded-host,x-forwarded-proto'
@@ -56,12 +69,27 @@ try {
   }
   assert.ok(homeHtml.includes('The best solution for your home.'), 'SSR must render interface text in English, not wait for client localization.');
   assert.ok(!homeHtml.includes('A melhor solução para o seu lar.'));
+  const homeData = JSON.parse(homeHtml.match(/<script[^>]+id="chezvoust-structured-data"[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? 'null');
+  assert.equal(homeData.find(item => item['@type'] === 'WebSite').name, 'ChezVoust Pro');
+  assert.equal(homeData.find(item => item['@type'] === 'Organization').name, 'ChezVoust Pro');
 
   const catalog = await request('/servicos');
   const catalogHtml = await catalog.text();
   assert.equal(catalog.status, 200, 'Catálogo SSR deve responder 200.');
   assert.ok(catalogHtml.includes('<title>Home services | Pro</title>'));
   assert.ok(catalogHtml.includes('<link rel="canonical" href="https://chezvoust.test/servicos">'));
+
+  const category = await request('/servicos/categoria/cleaning');
+  const categoryHtml = await category.text();
+  assert.equal(category.status, 200);
+  assert.ok(categoryHtml.includes('<title>Cleaning | Pro</title>'), 'Loaded category metadata must survive the route-default update.');
+  assert.ok(categoryHtml.includes('<link rel="canonical" href="https://chezvoust.test/servicos/categoria/cleaning">'));
+  assert.ok(categoryHtml.includes('"@type":"CollectionPage"'));
+
+  const search = await request('/servicos?q=cleaning');
+  const searchHtml = await search.text();
+  assert.equal(search.status, 200);
+  assert.ok(searchHtml.includes('name="robots" content="noindex, nofollow"'), 'Route defaults must not erase filtered catalog noindex.');
 
   const privatePage = await request('/entrar');
   assert.equal(privatePage.headers.get('x-robots-tag'), 'noindex, nofollow', 'Autenticação não pode ser indexada.');
@@ -79,8 +107,9 @@ try {
   });
   assert.equal(poisonedHost, 421, 'SSR deve rejeitar hosts que não pertencem à aplicação.');
 
-  console.log('PASS SSR: renderização, metadados, noindex e 404.');
+  console.log('PASS SSR: English rendering, dynamic category/search metadata, current brand, noindex and 404.');
 } finally {
   server.kill();
   await once(server, 'exit');
+  await new Promise((resolve, reject) => api.close(error => error ? reject(error) : resolve()));
 }

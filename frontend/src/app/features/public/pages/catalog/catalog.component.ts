@@ -129,7 +129,7 @@ export class CatalogComponent implements OnInit {
   private updateSeo(): void {
     const selected = this.categories().find((item) => item.slug === this.categorySlug());
     const canonicalPath = selected ? `/servicos/categoria/${selected.slug}` : '/servicos';
-    const title = selected ? `${this.localization.translate(selected.name)} | Pro` : 'Home services | Pro';
+    const title = selected ? `${this.localization.translate(selected.name)} | Pro` : this.localization.translate('Home services | Pro');
     const description = selected
       ? `${this.localization.translate(selected.description)} ${this.localization.translate('Compare opções e solicite um horário com profissionais aprovados.')}`
       : this.localization.translate('Encontre serviços para casa, compare opções e solicite um horário com profissionais aprovados.');
@@ -138,6 +138,7 @@ export class CatalogComponent implements OnInit {
       description,
       canonicalPath,
       noindex: Boolean(this.query().trim()),
+      translateContent: false,
       structuredData: {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',

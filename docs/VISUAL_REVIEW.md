@@ -256,3 +256,53 @@ Build e atualização da prévia local são independentes do deploy público.
   O teste do proxy passou nas requisições normal e com cabeçalhos falsificados,
   incluindo metadados da paleta atual e JPEG acessível. Health da API HTTP 200.
   Apenas `web` e `ssr` foram recriados; API, banco e worker mantêm seus IDs.
+
+## Continuação: contraste dos campos e prioridade dos metadados
+
+- Revisitado o pedido de bordas visíveis sobre o fundo neutro. A borda anterior
+  `#c3a49a` tinha contraste de 2,02:1 contra o azul `#eaf1f6`; agora usa
+  `#9b776e`, com 3,50:1. Campos de busca têm uma borda externa única, sem
+  uma segunda caixa de fundo dentro do input.
+- O texto secundário `--ink-500` passou de `#8a7168` para `#755a51`:
+  o contraste sobre o azul aumentou de 3,97:1 para 5,52:1. Placeholders usam
+  essa cor com opacidade 1. Não houve aumento de cards ou alteração de margens.
+- O indicador de foco usa vinho opaco nas superfícies claras, em vez do
+  contorno âmbar pouco contrastante, e branco nos blocos escuros do hero/autenticação.
+  Campos de busca sem borda própria têm foco no contêiner.
+  As cores foram verificadas contra os critérios de
+  [contraste de componentes](https://www.w3.org/WAI/WCAG22/understanding/non-text-contrast.html)
+  e [contraste de texto](https://www.w3.org/TR/WCAG22/#contrast-minimum).
+  Esses cálculos não constituem uma certificação WCAG da aplicação inteira.
+- Identificado um conflito entre a atualização geral das rotas e o SEO das
+  páginas carregadas. `updateRoute` agora preserva o título, URL canônica,
+  JSON-LD e `noindex` específicos da página atual. Ao navegar para outra
+  rota ou consulta, o estado antigo é descartado.
+- Metadados já compostos podem desativar a retradução de seu conteúdo.
+  Categorias/serviços continuam localizando os textos da plataforma;
+  nomes, biografias, títulos pessoais e avaliações dos profissionais são
+  preservados nos metadados, assim como no conteúdo protegido da interface.
+- Corrigidos os nomes de WebSite/Organization no JSON-LD para `ChezVoust Pro`.
+  O título genérico do catálogo é localizado antes de ser marcado como composto.
+- Novos testes de contraste da paleta/seletores e dos métodos reais de SEO.
+  A suíte unitária final passou com 58 testes; a cobertura de idioma continua com
+  1.080 textos/fragmentos dos 53 templates em EN/FR.
+- A inspeção visual pelo Computer Use foi tentada novamente, mas o canal
+  nativo retornou `os error 2`. Não foi realizada uma nova medição visual
+  no navegador. Os resultados de contraste são cálculos das cores declaradas.
+- Deploy público continua cancelado.
+
+### Validação final desta continuação
+
+- `npm run check` final aprovado: lint, build, bundle sem senhas de demo,
+  58 testes unitários, cobertura EN/FR, estrutura e SSR. O teste SSR usa uma
+  API HTTP local de teste, exclusivamente de leitura, e confirmou categoria
+  carregada, URL canônica específica, nome da marca e `noindex` da busca.
+- Build final atualizado em 4200: `main-V7JPKZUB.js` e `styles-WLBZE3H2.css`.
+  Os 37 arquivos JS/CSS servidos têm SHA-256 idêntico ao build validado;
+  o HTML aponta para as entradas atuais e a API respondeu HTTP 200 no health.
+- O teste do proxy real passou para home normal/com cabeçalhos falsificados,
+  nomes de WebSite/Organization, foto atual e busca filtrada com `noindex`.
+  `nginx -t` aprovado.
+- Apenas `web` e `ssr` foram recriados. API `59b02e09ca73`, banco
+  `b81e16ed1b76` e worker `7509bfe83e48` continuam com os mesmos IDs.
+  Nenhum dado, reserva, mensagem ou volume foi alterado/removido pelos testes.

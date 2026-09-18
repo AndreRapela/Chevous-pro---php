@@ -70,7 +70,8 @@ for (const [phrase, english, french] of [
   ['  Valor da proposta  ', '  Proposal price  ', '  Prix de la proposition  '],
   ['Confirmar conclusão', 'Confirm completion', 'Confirmer la fin du service'],
   ['Note', 'Note', 'Observation'],
-  ['Rating', 'Rating', 'Note']
+  ['Rating', 'Rating', 'Note'],
+  ['Veja experiência, serviços e avaliações de reservas.', 'View experience, services and booking reviews.', 'Consultez l’expérience, les services et les avis des réservations.']
 ]) {
   assert.equal(translators.en.translate(phrase), english);
   assert.equal(translators.fr.translate(phrase), french);
