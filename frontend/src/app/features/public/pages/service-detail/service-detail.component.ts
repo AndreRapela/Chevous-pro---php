@@ -79,6 +79,7 @@ export class ServiceDetailComponent implements OnInit {
       description,
       canonicalPath,
       type: 'article',
+      translateContent: false,
       structuredData: [
         {
           '@context': 'https://schema.org',
@@ -86,7 +87,7 @@ export class ServiceDetailComponent implements OnInit {
           name: translatedName,
           description: translatedDescription,
           url: canonicalPath,
-          provider: { '@type': 'Organization', name: 'Pro' }
+          provider: { '@type': 'Organization', name: 'ChezVoust Pro' }
         },
         {
           '@context': 'https://schema.org',

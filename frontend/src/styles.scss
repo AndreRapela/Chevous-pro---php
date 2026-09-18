@@ -18,13 +18,17 @@
   --ink-900: #382622;
   --ink-700: #5a423b;
   --ink-600: #735b53;
-  --ink-500: #8a7168;
+  --ink-500: #755a51;
   --ink-300: #aabcc9;
   --ink-200: #cbd6de;
   --ink-100: #e5edf2;
   --surface: #ffffff;
   --surface-soft: #f5f8fa;
   --page-background: #eaf1f6;
+  --control-border: #9b776e;
+  --control-background: #fffdfc;
+  --control-focus: var(--brand-700);
+  --control-focus-on-dark: #ffffff;
   --danger: #a84138;
   --danger-soft: #fae2de;
   --success: #934037;
@@ -72,7 +76,12 @@ h2 { font-size: clamp(1.55rem, 3.5vw, 2.35rem); margin-bottom: .75rem; }
 h3 { font-size: 1.05rem; margin-bottom: .5rem; }
 p { color: var(--ink-600); }
 ::selection { background: var(--brand-200); color: var(--brand-900); }
-:focus-visible { outline: 3px solid var(--amber-500); outline-offset: 3px; }
+:focus-visible { outline: 3px solid var(--control-focus); outline-offset: 3px; }
+.section-dark :focus-visible,
+.hero-banner :focus-visible,
+.desktop-promo-card:focus-visible,
+.login-brand-panel :focus-visible,
+.register-brand-panel :focus-visible { outline-color: var(--control-focus-on-dark); }
 
 .container { width: min(100% - 2rem, var(--container)); margin-inline: auto; }
 .container.narrow { width: min(100% - 2rem, 50rem); }
@@ -2815,8 +2824,8 @@ body :is(.eyebrow, .kicker, .optional, .field-hint, .field-error,
 input,
 textarea,
 select {
-  border-color: #c3a49a;
-  background: #fffdfc;
+  border-color: var(--control-border);
+  background: var(--control-background);
   box-shadow: inset 0 1px 1px rgba(53, 23, 20, .04);
 }
 input:hover,
@@ -2824,8 +2833,18 @@ textarea:hover,
 select:hover { border-color: #c96a52; }
 input:focus,
 textarea:focus,
-select:focus { border-color: var(--brand-700); outline-color: rgba(147, 64, 55, .18); }
+select:focus { border-color: var(--control-focus); outline: 2px solid var(--control-focus); outline-offset: 2px; }
+
+/* Search controls use one visible boundary instead of a second inner input box. */
 .hero-search,
+.search-field { border-color: var(--control-border); }
+.hero-search:focus-within,
+.search-field:focus-within { border-color: var(--control-focus); outline: 2px solid var(--control-focus); outline-offset: 2px; }
+.hero-search input,
+.search-field input { background: transparent; box-shadow: none; outline: none; }
+input::placeholder,
+textarea::placeholder { color: var(--ink-500); opacity: 1; }
+
 .filters-card,
 .content-card,
 .portal-card,

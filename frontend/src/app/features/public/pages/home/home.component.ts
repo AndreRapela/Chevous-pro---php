@@ -94,11 +94,11 @@ export class HomeComponent implements OnInit {
         {
           '@context': 'https://schema.org',
           '@type': 'WebSite',
-          name: 'Pro',
+          name: 'ChezVoust Pro',
           url: '/',
           potentialAction: { '@type': 'SearchAction', target: '/servicos?q={search_term_string}', 'query-input': 'required name=search_term_string' }
         },
-        { '@context': 'https://schema.org', '@type': 'Organization', name: 'Pro', url: '/' }
+        { '@context': 'https://schema.org', '@type': 'Organization', name: 'ChezVoust Pro', url: '/' }
       ]
     });
     this.load();

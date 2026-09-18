@@ -1,6 +1,7 @@
 import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { SEO_SITE_ORIGIN } from './seo-site-origin.token';
 import { LocalizationService } from '../localization/localization.service';
 
@@ -11,6 +12,8 @@ export interface SeoPage {
   noindex?: boolean;
   type?: 'website' | 'article' | 'profile';
   imagePath?: string;
+  /** Dynamic pages already compose localized labels and untouched personal content. */
+  translateContent?: boolean;
   structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
@@ -23,10 +26,27 @@ export class SeoService {
   private readonly title = inject(Title);
   private readonly siteOrigin = inject(SEO_SITE_ORIGIN);
   private readonly localization = inject(LocalizationService);
+  private readonly router = inject(Router);
+  private dynamicPage: { url: string; page: SeoPage } | null = null;
 
   update(page: SeoPage): void {
-    const title = this.clean(this.localization.translate(page.title), 60);
-    const description = this.clean(this.localization.translate(page.description), 160);
+    this.dynamicPage = { url: this.router.url, page };
+    this.render(page);
+  }
+
+  /** Route defaults must not erase a loaded page's canonical URL or structured data. */
+  updateRoute(page: SeoPage): void {
+    if (this.dynamicPage?.url === this.router.url) {
+      this.render(this.dynamicPage.page);
+      return;
+    }
+    this.dynamicPage = null;
+    this.render(page);
+  }
+
+  private render(page: SeoPage): void {
+    const title = this.clean(page.translateContent === false ? page.title : this.localization.translate(page.title), 60);
+    const description = this.clean(page.translateContent === false ? page.description : this.localization.translate(page.description), 160);
     const canonical = this.absoluteUrl(page.canonicalPath ?? this.document.location?.pathname ?? '/');
     const robots = page.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
     const type = page.type ?? 'website';

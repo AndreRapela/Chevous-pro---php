@@ -333,6 +333,7 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Selecione um serviço. Preço mínimo:', en: 'Select a service. Minimum price:', fr: 'Sélectionnez un service. Prix minimum :' },
   { pt: 'Complete serviços e agenda enquanto aguarda a análise.', en: 'Complete your services and schedule while awaiting review.', fr: 'Complétez vos services et votre agenda en attendant l’examen.' },
   { pt: 'Entre em contato com o suporte para revisar a situação.', en: 'Contact support to review the situation.', fr: 'Contactez l’assistance pour examiner la situation.' },
+  { pt: 'Veja experiência, serviços e avaliações de reservas.', en: 'View experience, services and booking reviews.', fr: 'Consultez l’expérience, les services et les avis des réservations.' },
   { pt: 'Informe um valor de proposta válido.', en: 'Enter a valid offer amount.', fr: 'Saisissez un montant d’offre valide.' },
   { pt: 'Revise os horários: início deve ser anterior ao fim e as faixas do mesmo dia não podem se sobrepor.', en: 'Check your hours: the start must precede the end and ranges on the same day must not overlap.', fr: 'Vérifiez vos horaires : le début doit précéder la fin et les plages d’un même jour ne doivent pas se chevaucher.' },
   { pt: 'Histórico de serviços | ChezVoust Pro', en: 'Service history | ChezVoust Pro', fr: 'Historique des services | ChezVoust Pro' },

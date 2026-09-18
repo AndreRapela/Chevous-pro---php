@@ -118,15 +118,15 @@ export class ProviderDetailComponent implements OnInit {
 
   private updateSeo(provider: ProviderProfile, reviews: Review[]): void {
     const canonicalPath = providerPublicPath(provider).join('/');
-    const translatedHeadline = this.localization.translate(provider.headline);
-    const description = this.localization.translate(provider.bio || `${provider.name} atende em ${provider.city}. Veja experiência, serviços e avaliações de reservas.`);
-    const title = `${provider.name} | ${translatedHeadline} | Pro`;
+    const headline = provider.headline;
+    const description = provider.bio || `${provider.name} · ${provider.city}. ${this.localization.translate('Veja experiência, serviços e avaliações de reservas.')}`;
+    const title = `${provider.name} | ${headline} | Pro`;
     const person: Record<string, unknown> = {
       '@context': 'https://schema.org',
       '@type': 'Person',
       name: provider.name,
       description,
-      jobTitle: translatedHeadline,
+      jobTitle: headline,
       url: canonicalPath,
       address: {
         '@type': 'PostalAddress',
@@ -148,7 +148,7 @@ export class ProviderDetailComponent implements OnInit {
         '@type': 'Review',
         author: { '@type': 'Person', name: review.author },
         reviewRating: { '@type': 'Rating', ratingValue: review.rating, bestRating: 5, worstRating: 1 },
-        reviewBody: this.localization.translate(review.comment),
+        reviewBody: review.comment,
         datePublished: review.createdAt
       }));
     }
@@ -157,6 +157,7 @@ export class ProviderDetailComponent implements OnInit {
       description,
       canonicalPath,
       type: 'profile',
+      translateContent: false,
       imagePath: provider.avatarUrl ?? undefined,
       structuredData: [
         person,
