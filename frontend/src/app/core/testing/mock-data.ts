@@ -96,7 +96,7 @@ if (!cleaningService || !repairService || !ana || !lucas) {
 export const MOCK_BOOKINGS: Booking[] = [
   {
     id: 'bk-1001', code: 'CVP-1001', service: cleaningService, provider: ana, customerName: 'Marina Costa', status: 'confirmed',
-    scheduledAt: '2026-08-20T14:00:00-03:00', addressLabel: 'Vila Mariana, São Paulo', notes: 'Priorizar cozinha e banheiros.',
+    scheduledAt: '2026-08-20T14:00:00-03:00', addressLabel: 'Vila Mariana, São Paulo', notes: 'Prioritize the kitchen and bathrooms.',
     price: { subtotalCents: 14400, serviceFeeCents: 0, discountCents: 0, totalCents: 14400, currency: 'BRL' }, canCancel: true, canReview: false, canMessage: true, conversationId: 'conversation-1', allowedActions: ['cancel', 'message']
   },
   {

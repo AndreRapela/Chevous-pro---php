@@ -62,8 +62,10 @@ const NAVIGATION: Record<string, NavItem[]> = {
             <div class="notification-center"><button class="icon-button" type="button" [attr.aria-label]="notificationsOpen() ? 'Fechar notificações' : 'Abrir notificações'" [attr.aria-expanded]="notificationsOpen()" aria-controls="notification-panel" (click)="toggleNotifications()"><span aria-hidden="true">!</span>@if (unreadCount()) { <span class="notification-dot"></span> }</button>@if (notificationsOpen()) { <section id="notification-panel" class="notification-panel" aria-label="Notificações"><div class="card-title-row"><h2>Notificações</h2>@if (unreadCount()) { <button class="text-button" type="button" (click)="readAll()">Marcar todas como lidas</button> }</div>@if (notificationsLoading()) { <p class="muted">Carregando…</p> } @else if (notificationsError()) { <p class="field-error" role="alert">{{ notificationsError() }}</p> } @else if (!notifications().length) { <p class="muted">Nenhuma notificação.</p> } @else { <div class="notification-list">@for (item of notifications(); track item.id) { <button type="button" [class.unread]="!item.readAt" (click)="openNotification(item)"><strong>{{ item.title }}</strong><span>{{ item.message }}</span><time>{{ item.createdAt | appDate:'MMM d, HH:mm' }}</time></button> }</div> }</section> }</div>
             <cvp-locale-controls />
             @if (auth.user(); as user) {
-              <span class="avatar avatar-sm" aria-hidden="true">{{ user.initials }}</span>
-              <span class="portal-user-name">{{ user.name }}</span>
+              <div class="portal-account" data-cvp-no-localize>
+                <span class="avatar avatar-sm" aria-hidden="true">{{ user.initials }}</span>
+                <span class="portal-user-name">{{ user.name }}</span>
+              </div>
             }
             <button class="btn btn-ghost btn-small" type="button" (click)="logout()">Sair</button>
           </div>

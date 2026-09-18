@@ -50,7 +50,7 @@ import { LocalizedDatePipe, LocalizedMoneyPipe } from '../../../../shared/locali
         </div>
         <section class="portal-card">
           <div class="card-title-row"><div><span class="eyebrow">Histórico</span><h2>Atividade recente</h2></div></div>
-          <div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Profissional</th><th>Data</th><th>Status</th><th>Valor</th></tr></thead><tbody>@for (booking of bookings(); track booking.id) { <tr><td><strong>{{ booking.service.name }}</strong><small>{{ booking.code }}</small></td><td>{{ booking.provider.name }}</td><td>{{ booking.scheduledAt | appDate:'MMM d, yyyy, HH:mm' }}</td><td><cvp-status-pill [status]="booking.status" /></td><td>{{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}</td></tr> }</tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Profissional</th><th>Data</th><th>Status</th><th>Valor</th></tr></thead><tbody>@for (booking of bookings(); track booking.id) { <tr><td><strong>{{ booking.service.name }}</strong><small>{{ booking.code }}</small></td><td><strong data-cvp-no-localize>{{ booking.provider.name }}</strong></td><td>{{ booking.scheduledAt | appDate:'MMM d, yyyy, HH:mm' }}</td><td><cvp-status-pill [status]="booking.status" /></td><td><strong>{{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}</strong></td></tr> }</tbody></table></div>
         </section>
       }
     </section>

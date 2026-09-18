@@ -20,12 +20,12 @@ import { LocalizedDatePipe, LocalizedMoneyPipe, LocalizedNumberPipe } from '../.
         @if (actionError()) { <div class="alert alert-error" role="alert">{{ actionError() }}</div> }
         @if (item.status === 'provider_on_the_way') { <div class="arrival-banner" role="status"><span class="arrival-icon">→</span><div><strong>{{ item.provider.name }} está a caminho</strong><p>Acompanhe atualizações por esta página ou fale com o profissional pela conversa.</p></div></div> }
         <div class="dashboard-grid">
-          <section class="portal-card span-two">
+          <section class="portal-card span-two booking-summary">
             <div class="booking-card-top"><div><span class="eyebrow">{{ item.code }}</span><h2>{{ item.service.name }}</h2></div><cvp-status-pill [status]="item.status" /></div>
-            <dl class="booking-info-grid"><div><dt>Data e horário</dt><dd>{{ item.scheduledAt | appDate:'EEEE, MMM d, yyyy · HH:mm' }}</dd></div><div><dt>Profissional</dt><dd>{{ item.provider.name }}</dd></div><div><dt>Endereço</dt><dd>{{ item.addressLabel }}</dd></div><div><dt>Total</dt><dd>{{ item.price.totalCents / 100 | appMoney:item.price.currency }}</dd></div></dl>
-            @if (item.notes) { <h3>Instruções para o atendimento</h3><p>{{ item.notes }}</p> }
+            <dl class="booking-info-grid"><div><dt>Data e horário</dt><dd>{{ item.scheduledAt | appDate:'EEEE, MMM d, yyyy · HH:mm' }}</dd></div><div><dt>Profissional</dt><dd><strong data-cvp-no-localize>{{ item.provider.name }}</strong></dd></div><div><dt>Endereço</dt><dd data-cvp-no-localize>{{ item.addressLabel }}</dd></div><div><dt>Total</dt><dd><strong>{{ item.price.totalCents / 100 | appMoney:item.price.currency }}</strong></dd></div></dl>
+            @if (item.notes) { <h3>Instruções para o atendimento</h3><p data-cvp-no-localize>{{ item.notes }}</p> }
           </section>
-          <aside class="portal-card">
+          <aside class="portal-card booking-actions">
             <h2>Ações</h2><div class="card-actions vertical-actions">
               @if (item.canMessage && item.conversationId) { <a class="btn btn-primary btn-block" routerLink="/conta/mensagens" [queryParams]="{ conversa: item.conversationId }">Falar com o profissional</a> }
               <a class="btn btn-secondary btn-block" [routerLink]="['/agendar', item.service.id]" [queryParams]="item.provider.id ? { profissional: item.provider.id } : {}">Agendar novamente</a>

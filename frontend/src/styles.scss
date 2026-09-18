@@ -2858,6 +2858,112 @@ select:focus { border-color: var(--brand-700); outline-color: rgba(147, 64, 55, 
 .brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -.04em; }
 .brand-logo { width: 3.5rem; height: 1.75rem; max-height: none; }
 
+/* Ênfase nos dados de escolha sem voltar aos cartões excessivamente grandes. */
+body :is(.provider-card h3, .service-card h3,
+  .provider-card .card-footer strong, .service-card .card-footer strong) {
+  font-size: 1.0625rem !important;
+  font-weight: 800;
+}
+.customer-dashboard-page td > strong { font-size: 1rem; font-weight: 750; }
+.site-footer .footer-grid > div:first-child p { font-weight: 700; }
+.info-page-content .help-cta .btn {
+  min-height: 3rem;
+  padding: .75rem 1.4rem;
+}
+
+/* A identidade fica agrupada; os controles do painel têm seu próprio respiro. */
+.portal-header .portal-user { gap: 1rem; }
+.portal-account { display: flex; align-items: center; gap: .65rem; white-space: nowrap; }
+.portal-user-name { font-weight: 750; }
+
+/* Detalhes de uma reserva são conteúdo do painel, não títulos de landing page. */
+.customer-booking-detail-page .portal-page-heading { margin-bottom: 1rem; }
+.portal-page.customer-booking-detail-page .portal-page-heading h1 {
+  font-size: clamp(1.5rem, 2vw, 1.8rem);
+}
+.customer-booking-detail-page .portal-card { padding: 1rem 1.1rem; }
+.customer-booking-detail-page .portal-card h2 { font-size: 1.125rem; margin-bottom: .65rem; }
+.customer-booking-detail-page .portal-card h3 { font-size: 1rem; margin-bottom: .35rem; }
+.customer-booking-detail-page .dashboard-grid { align-items: start; gap: 1rem; }
+.customer-booking-detail-page .booking-info-grid { margin: .6rem 0 .8rem; padding: .75rem 0; gap: .7rem 1rem; }
+.customer-booking-detail-page .booking-info-grid dt { color: var(--ink-500); font-size: .875rem; }
+.customer-booking-detail-page .booking-info-grid dd { margin: .2rem 0 0; font-size: 1rem; }
+body .customer-booking-detail-page .booking-info-grid strong { font-size: 1rem; font-weight: 750; }
+.customer-booking-detail-page .booking-summary > p { margin-bottom: 0; }
+.customer-booking-detail-page .booking-actions .card-actions { padding-top: 0; }
+.customer-booking-detail-page .booking-detail-lower-grid { align-items: start; }
+.customer-booking-detail-page .booking-progress ol { margin-top: .8rem; }
+.customer-booking-detail-page .booking-progress li { min-height: 2.75rem; }
+.customer-booking-detail-page .booking-progress li:not(:last-child) > span::after { height: 2rem; }
+
+/* Conversas compactas: reduzir áreas vazias e padding, preservando a leitura. */
+body .messages-page .bubble { padding: .5rem .7rem; font-size: .9375rem !important; line-height: 1.4; }
+.messages-page .bubble > :is(strong, span) { font-size: .9375rem; }
+body .messages-page .bubble time { font-size: .82rem !important; margin-top: .15rem; }
+.messages-page .chat-body { gap: .6rem; padding: .85rem; }
+body .messages-page .chat-day { margin: .15rem 0 .4rem; font-size: .82rem !important; }
+.messages-page .chat-panel > .chat-header { min-height: 4.25rem; padding: .65rem .85rem; }
+.messages-page .enhanced-chat-composer textarea { min-height: 4rem; }
+
+@media (min-width: 64rem) {
+  .portal-header .portal-user { gap: 1.25rem; }
+  .messages-page .enhanced-chat-layout {
+    height: clamp(30rem, calc(100dvh - 14rem), 38rem);
+    min-height: 0;
+    grid-template-columns: minmax(16rem, .5fr) minmax(0, 1.2fr);
+  }
+}
+
+@media (max-width: 41.99rem) {
+  .portal-header .portal-user { gap: .65rem; }
+  .customer-booking-detail-page .portal-card { padding: .9rem; }
+  .messages-page .enhanced-chat-layout {
+    height: clamp(28rem, calc(100dvh - 15rem), 36rem);
+    min-height: 0;
+  }
+  .messages-page:has(.chat-has-selection) .portal-page-heading p { display: none; }
+  .messages-page .chat-back-to-list {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    align-self: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 26rem) {
+  .portal-header > div:first-child { display: none; }
+  .portal-header .portal-user { width: 100%; justify-content: space-between; }
+  .portal-header .portal-user > .btn { white-space: nowrap; }
+}
+
+/* A marca, a navegação e a conta são três grupos, não uma fila encostada à direita. */
+@media (min-width: 64rem) {
+  .site-header .header-inner { gap: 2rem; }
+  .site-header .header-actions { gap: 1.25rem; flex-shrink: 0; }
+  .site-header .user-shortcut { gap: .65rem; white-space: nowrap; }
+}
+
+@media (min-width: 76rem) {
+  .site-header .header-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 2rem;
+  }
+  .site-header .desktop-nav {
+    justify-self: center;
+    margin-left: 0;
+    gap: 2rem;
+    white-space: nowrap;
+  }
+}
+
+/* Não comprimir os links nem a tradução francesa para manter a navegação aberta. */
+@media (min-width: 64rem) and (max-width: 75.99rem) {
+  .site-header .desktop-nav { display: none; }
+  .site-header .menu-button { display: grid; }
+}
+
 /* A prévia de reserva agora pertence ao fluxo da faixa inferior. Isso impede que
    ela cubra o campo de busca e permite que a faixa cresça quando necessário. */
 @media (min-width: 48rem) {
