@@ -217,3 +217,42 @@ Build e atualização da prévia local são independentes do deploy público.
 - Conferência final do proxy aprovada em 4200, tanto na requisição normal como
   com os dois cabeçalhos falsificados: HTML SSR, hero em inglês e `og:locale=en_US`.
   `nginx -t` também aprovado. A API, o banco e o worker continuam com os mesmos IDs.
+
+## Continuação: consistência dos preços e da imagem de compartilhamento
+
+- A imagem padrão de Open Graph/Twitter ainda apontava para o asset antigo.
+  Agora usa a mesma foto de paleta quente do hero, preservando os arquivos
+  originais. O teste SSR verifica os dois metadados; o teste do proxy também
+  confere a URL e a disponibilidade do JPEG atual.
+- Corrigido o preço personalizado nulo retornado pela API: significa usar o
+  preço do catálogo, mas `Number(null)` o transformava em zero. A normalização
+  agora trata esse fallback antes da conversão numérica, tanto na listagem
+  como na resposta de atualização. Não altera os registros do banco.
+- O formulário do profissional preserva os centavos originais ao salvar um
+  preço arredondado sem editá-lo, inclusive ao apenas desativar o serviço.
+  Preços realmente editados continuam convertidos para a moeda de origem da API.
+- Mínimos e máximos exibidos são calculados por uma função compartilhada com
+  tolerância de ponto flutuante: o mínimo do profissional em EUR é 1,70,
+  não 1,71 por erro de arredondamento. A proposta reutiliza a mesma função.
+- Limites confirmados nos controladores PHP: profissional/proposta,
+  1.000–10.000.000 centavos; criação do catálogo administrativo,
+  100–10.000.000 centavos. Os campos agora têm mínimo/máximo correspondentes
+  em EUR/USD. A criação administrativa também valida os centavos antes de
+  chamar a API. Foram adicionadas as mensagens necessárias em EN/FR.
+- `npm run check` aprovado: lint, build, bundle de produção, 47 testes,
+  cobertura de 1.080 textos/fragmentos nos 53 templates, estrutura e SSR.
+  Os testes compilam os métodos reais dos formulários com APIs gravadoras
+  locais; nenhuma proposta, serviço ou alteração real foi enviada.
+- `npm run test:coverage` aprovado: 100% de linhas, funções e ramificações
+  nos utilitários selecionados, incluindo a normalização de preços e os limites.
+  Não representa cobertura de 100% da aplicação inteira.
+- O canal nativo do Computer Use continua indisponível (`os error 2`).
+  Esta continuação não contém uma nova inspeção visual no navegador;
+  as verificações realizadas são de código, testes e HTTP.
+- Build validado: `main-FF4QWEE4.js`; CSS permanece `styles-NKRN4KL3.css`.
+  O deploy público continua cancelado.
+- Atualização local concluída em 4200: os 37 arquivos JS/CSS servidos têm
+  SHA-256 idêntico ao build validado e o HTML aponta para as entradas atuais.
+  O teste do proxy passou nas requisições normal e com cabeçalhos falsificados,
+  incluindo metadados da paleta atual e JPEG acessível. Health da API HTTP 200.
+  Apenas `web` e `ssr` foram recriados; API, banco e worker mantêm seus IDs.

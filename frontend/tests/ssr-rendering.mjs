@@ -51,6 +51,9 @@ try {
   assert.ok(!homeHtml.includes('ng-event-dispatch-contract'), 'SSR não deve introduzir script inline incompatível com a CSP.');
   assert.ok(homeHtml.includes('property="og:locale" content="en_US"'), 'SSR must advertise the supported English locale, never pt_BR.');
   assert.ok(homeHtml.includes('property="og:site_name" content="ChezVoust Pro"'));
+  for (const name of ['property="og:image"', 'name="twitter:image"']) {
+    assert.ok(homeHtml.includes(`${name} content="https://chezvoust.test/images/profissional-limpeza-hero-warm-887.jpg"`), 'Sharing metadata must use the current warm-palette image.');
+  }
   assert.ok(homeHtml.includes('The best solution for your home.'), 'SSR must render interface text in English, not wait for client localization.');
   assert.ok(!homeHtml.includes('A melhor solução para o seu lar.'));
 

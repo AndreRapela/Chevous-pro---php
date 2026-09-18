@@ -8,6 +8,7 @@ import { AdminTableDataService } from '../../data-access/admin-table-data.servic
 import { ADMIN_PAGES, isAdminPageKey } from '../../data/admin-page.config';
 import { AdminPageKey, AdminRow } from '../../models/admin-page.model';
 import { LocalizationService } from '../../../../core/localization/localization.service';
+import { displayReferenceBound, referenceAmountToCents } from '../../../../core/localization/reference-currency.util';
 
 @Component({
   selector: 'cvp-admin-table',
@@ -18,7 +19,7 @@ import { LocalizationService } from '../../../../core/localization/localization.
       <cvp-page-header [eyebrow]="config.eyebrow" [title]="config.title" [description]="config.description">@if (config.demo) { <span class="chip chip-soft">Demonstração</span> }</cvp-page-header>
       @if (success()) { <div class="alert alert-success" role="status">{{ success() }}</div> }
       @if (actionError()) { <div class="alert alert-error" role="alert">{{ actionError() }}</div> }
-      @if (key === 'catalog') { <details class="portal-card admin-create-panel"><summary>Adicionar serviço ao catálogo</summary><form class="inline-action-form" (submit)="createService($event)"><div class="form-grid"><label>Categoria<select name="categoryId" required><option value="">Selecione</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label><label>Nome<input name="name" required minlength="2" maxlength="120"></label><label>Modelo de preço<select name="pricingType" required><option value="fixed">Valor fixo</option><option value="hourly">Por hora</option><option value="area">Por m²</option></select></label><label>Preço-base ({{ localization.currency() }})<input name="price" type="number" min="1" step="0.01" required></label><label>Duração padrão (min)<input name="duration" type="number" min="30" max="1440" step="30" value="120" required></label><label class="span-two">Descrição curta<input name="description" maxlength="250"></label></div><button class="btn btn-primary btn-small" type="submit" [disabled]="acting()">Criar serviço</button></form></details> }
+      @if (key === 'catalog') { <details class="portal-card admin-create-panel"><summary>Adicionar serviço ao catálogo</summary><form class="inline-action-form" (submit)="createService($event)"><div class="form-grid"><label>Categoria<select name="categoryId" required><option value="">Selecione</option>@for (category of categories(); track category.id) { <option [value]="category.id">{{ category.name }}</option> }</select></label><label>Nome<input name="name" required minlength="2" maxlength="120"></label><label>Modelo de preço<select name="pricingType" required><option value="fixed">Valor fixo</option><option value="hourly">Por hora</option><option value="area">Por m²</option></select></label><label>Preço-base ({{ localization.currency() }})<input name="price" type="number" [min]="minimumDisplayPrice()" [max]="maximumDisplayPrice()" step="0.01" required></label><label>Duração padrão (min)<input name="duration" type="number" min="30" max="1440" step="30" value="120" required></label><label class="span-two">Descrição curta<input name="description" maxlength="250"></label></div><button class="btn btn-primary btn-small" type="submit" [disabled]="acting()">Criar serviço</button></form></details> }
       <section class="portal-card admin-table-card">
         <div class="admin-filters"><label class="search-field"><span aria-hidden="true">⌕</span><span class="sr-only">Buscar</span><input [(ngModel)]="query" placeholder="Buscar nos resultados carregados"></label><select [(ngModel)]="status" aria-label="Filtrar por status"><option value="">Todos os status</option><option value="success">Ativos e concluídos</option><option value="warning">Pendentes</option><option value="danger">Atenção</option></select><button class="btn btn-secondary btn-small" type="button" (click)="load()">Atualizar</button></div>
         @if (loading()) { <cvp-state-panel kind="loading" /> }
@@ -123,9 +124,14 @@ export class AdminTableComponent implements OnInit {
 
   createService(event: Event): void {
     event.preventDefault(); const form = event.currentTarget as HTMLFormElement; if (!form.reportValidity() || this.acting()) return; const data = new FormData(form);
+    const priceCents = this.toBaseCents(data.get('price'));
+    if (!Number.isFinite(priceCents) || priceCents < 100 || priceCents > 10000000) { this.actionError.set('Informe um preço-base válido.'); return; }
     this.acting.set(true); this.actionError.set('');
-    this.marketplace.adminCreateService({ categoryId: String(data.get('categoryId')), name: String(data.get('name')).trim(), pricingType: String(data.get('pricingType')), priceCents: this.toBaseCents(data.get('price')), defaultDurationMinutes: Number(data.get('duration')), shortDescription: String(data.get('description')).trim() || null }).subscribe({ next: () => { this.success.set('Serviço criado no catálogo.'); this.acting.set(false); form.reset(); this.load(); }, error: (failure: Error) => { this.actionError.set(failure.message); this.acting.set(false); } });
+    this.marketplace.adminCreateService({ categoryId: String(data.get('categoryId')), name: String(data.get('name')).trim(), pricingType: String(data.get('pricingType')), priceCents, defaultDurationMinutes: Number(data.get('duration')), shortDescription: String(data.get('description')).trim() || null }).subscribe({ next: () => { this.success.set('Serviço criado no catálogo.'); this.acting.set(false); form.reset(); this.load(); }, error: (failure: Error) => { this.actionError.set(failure.message); this.acting.set(false); } });
   }
+
+  minimumDisplayPrice(): number { return displayReferenceBound(100, 'BRL', this.localization.currency(), 'minimum'); }
+  maximumDisplayPrice(): number { return displayReferenceBound(10000000, 'BRL', this.localization.currency(), 'maximum'); }
 
   private pageKey(): AdminPageKey {
     const value = String(this.route.snapshot.data['page'] ?? 'bookings');
@@ -133,7 +139,7 @@ export class AdminTableComponent implements OnInit {
   }
 
   private toBaseCents(value: FormDataEntryValue | number | null): number {
-    return Math.round(this.localization.convertAmount(Number(value), this.localization.currency(), 'BRL') * 100);
+    return typeof value === 'string' || typeof value === 'number' ? referenceAmountToCents(String(value), this.localization.currency(), 'BRL') : NaN;
   }
 
 }
