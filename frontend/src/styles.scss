@@ -79,7 +79,6 @@ p { color: var(--ink-600); }
 :focus-visible { outline: 3px solid var(--control-focus); outline-offset: 3px; }
 .section-dark :focus-visible,
 .hero-banner :focus-visible,
-.desktop-promo-card:focus-visible,
 .login-brand-panel :focus-visible,
 .register-brand-panel :focus-visible { outline-color: var(--control-focus-on-dark); }
 
@@ -1200,26 +1199,10 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .desktop-hero-search { max-width: 30rem; margin: 0; padding: .22rem; border-radius: .75rem; }
   .desktop-hero-search input { min-height: 2.35rem; font-size: .82rem; }
   .desktop-hero-search .btn { min-height: 2.4rem; padding: .5rem .8rem; font-size: .82rem; }
-  .desktop-hero-lower { position: relative; min-height: 8.5rem; display: grid; grid-template-columns: 15rem minmax(22rem, 1fr); gap: .65rem; padding: .55rem 15.2rem .55rem .55rem; border: 1px solid var(--ink-200); border-radius: 1rem; background: rgba(255,255,255,.9); box-shadow: var(--shadow-sm); }
-  .desktop-promo-card { display: grid; align-content: center; min-height: 4.9rem; padding: .65rem .85rem; border-radius: .72rem; color: #fff; background: linear-gradient(120deg, var(--brand-800), var(--brand-600)); }
-  .desktop-promo-card span { color: var(--brand-200); font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; }
-  .desktop-promo-card strong { font-size: .9rem; }
-  .desktop-promo-card small { color: rgba(255,255,255,.78); font-size: .82rem; }
-  .desktop-service-strip { display: grid; grid-template-columns: repeat(4, minmax(4rem, 1fr)); align-items: center; gap: .4rem; padding-right: .35rem; }
-  .desktop-service-strip > span { grid-column: 1 / -1; align-self: end; color: var(--ink-700); font-size: .82rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
-  .desktop-service-strip a { display: flex; align-items: center; gap: .4rem; color: var(--ink-700); font-size: .82rem; font-weight: 750; }
-  .desktop-service-strip b { width: 1.75rem; height: 1.75rem; display: grid; place-items: center; flex: 0 0 auto; border-radius: .5rem; color: var(--brand-800); background: var(--brand-100); font-size: .82rem; }
-  .desktop-booking-preview { position: absolute; right: .55rem; bottom: .55rem; width: 14rem; display: grid; gap: .42rem; padding: .58rem; border: 1px solid var(--ink-200); border-radius: .85rem; background: #fff; box-shadow: 0 12px 28px rgba(53,23,20,.15); }
-  .desktop-booking-preview > div { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .5rem; }
-  .desktop-booking-preview > div > span:nth-child(2) { display: grid; }
-  .desktop-booking-preview strong { font-size: .82rem; }
-  .desktop-booking-preview small { color: var(--ink-500); font-size: .82rem; }
-  .desktop-booking-preview > div > b { width: 1.25rem; height: 1.25rem; display: grid; place-items: center; border-radius: 50%; color: #fff; background: var(--brand-600); font-size: .82rem; }
-  .desktop-booking-preview dl { display: grid; gap: .35rem; margin: 0; }
-  .desktop-booking-preview dl > div { display: flex; justify-content: space-between; gap: .6rem; padding-top: .35rem; border-top: 1px solid var(--ink-100); font-size: .82rem; }
-  .desktop-booking-preview dt { color: var(--ink-500); }
-  .desktop-booking-preview dd { margin: 0; font-weight: 750; }
-  .desktop-booking-preview .btn { min-height: 2rem; font-size: .82rem; }
+  .desktop-service-strip { min-width: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: center; gap: .75rem; padding: .75rem .9rem; border: 1px solid var(--ink-200); border-radius: 1rem; background: var(--surface); box-shadow: var(--shadow-sm); }
+  .desktop-service-strip a { min-width: 0; min-height: 3rem; display: flex; align-items: center; gap: .75rem; padding: .4rem .65rem; border-radius: .75rem; color: var(--ink-700); font-size: 1rem; font-weight: 750; line-height: 1.35; transition: background .18s, color .18s; }
+  .desktop-service-strip a:hover { color: var(--brand-800); background: var(--brand-50); }
+  .desktop-service-strip b { width: 2.45rem; height: 2.45rem; display: grid; place-items: center; flex: 0 0 auto; border-radius: .72rem; color: var(--brand-800); background: var(--brand-100); }
   .hero-grid { grid-template-columns: minmax(0, 1.2fr) minmax(14rem, .5fr); gap: 2rem; }
   .hero-copy h1 { max-width: 34rem; font-size: clamp(2.35rem, 3.6vw, 2.85rem); }
   .hero-copy p { font-size: .92rem; }
@@ -2058,15 +2041,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .desktop-hero-top,
   .desktop-hero-visual { min-height: 17rem; }
   .hero-copy h1 { font-size: clamp(2.65rem, 4vw, 3.3rem); }
-  .desktop-service-strip { gap: .65rem; }
-  .desktop-service-strip > span { font-size: .82rem; }
-  .desktop-service-strip a { gap: .5rem; font-size: .82rem; }
-  .desktop-service-strip b { width: 2rem; height: 2rem; font-size: .82rem; }
-  .desktop-booking-preview { width: 15.5rem; gap: .55rem; padding: .7rem; }
-  .desktop-booking-preview strong { font-size: .82rem; }
-  .desktop-booking-preview small,
-  .desktop-booking-preview dl > div { font-size: .82rem; }
-  .desktop-booking-preview .btn { min-height: 2.25rem; font-size: .82rem; }
 
   .home-popular,
   .home-providers { padding-block: 2.35rem; }
@@ -2422,15 +2396,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .hero-search { max-width: 39rem; margin-block: 1.45rem 1.1rem; padding: .4rem; }
   .hero-search input { min-height: 2.85rem; font-size: .9rem; }
   .hero-search .btn { min-height: 2.65rem; padding-inline: 1rem; font-size: .84rem; }
-  .desktop-service-strip { min-height: 7.2rem; gap: .85rem; padding: .75rem; }
-  .desktop-service-strip > span { font-size: .82rem; }
-  .desktop-service-strip a { font-size: .84rem; }
-  .desktop-service-strip b { width: 2.25rem; height: 2.25rem; font-size: .82rem; }
-  .desktop-booking-preview { width: 16.25rem; gap: .65rem; padding: .85rem; }
-  .desktop-booking-preview strong { font-size: .86rem; }
-  .desktop-booking-preview small,
-  .desktop-booking-preview dl > div { font-size: .82rem; }
-  .desktop-booking-preview .btn { min-height: 2.35rem; font-size: .82rem; }
 
   .home-categories,
   .home-popular,
@@ -2625,17 +2590,6 @@ cvp-provider-card { display: block; height: 100%; }
   .customer-favorites-page .provider-card .btn { min-height: 2.25rem; padding-inline: .65rem; font-size: .82rem; }
   .customer-favorites-page .provider-grid > div > .text-button { min-height: 2.15rem; font-size: .82rem; }
 
-  /* A faixa final da home deixa de concentrar texto de microinterface. */
-  .desktop-service-strip { min-height: 7.8rem; padding: .9rem; }
-  .desktop-service-strip > span { font-size: .86rem; }
-  .desktop-service-strip a { gap: .6rem; font-size: .94rem; }
-  .desktop-service-strip b { width: 2.45rem; height: 2.45rem; border-radius: .72rem; font-size: .82rem; }
-  .desktop-booking-preview { width: 16.75rem; padding: .95rem; }
-  .desktop-booking-preview strong { font-size: .92rem; }
-  .desktop-booking-preview small,
-  .desktop-booking-preview dl > div { font-size: .82rem; }
-  .desktop-booking-preview .btn { min-height: 2.55rem; font-size: .86rem; }
-
   /* Cabeçalho e ajuda do painel precisam ser reconhecíveis em leitura normal. */
   .portal-header { height: 5.5rem; }
   .portal-header .brand { gap: .7rem; font-size: 1.2rem; }
@@ -2774,7 +2728,7 @@ body :is(.category-card strong, .service-card h3, .provider-card h3,
 
 body :is(.rating, .availability, .card-footer, .review-head,
   .compact-service-list small, .profile-facts span, .footer-grid a:not(.brand),
-  .footer-grid p, .footer-bottom, .bottom-nav a, .desktop-booking-preview dl > div,
+  .footer-grid p, .footer-bottom, .bottom-nav a,
   .hero-trust, .result-pagination, .pagination-summary, .booking-progress p,
   .selected-service small, .saved-address-option > span:last-child,
   .timeline-list time, .transaction-list, .notification-list button span,
@@ -2819,7 +2773,6 @@ body :is(.eyebrow, .kicker, .optional, .field-hint, .field-error,
 .desktop-hero-visual::before { background: linear-gradient(145deg, #c96a52, var(--brand-800)); }
 .desktop-hero-orb.orb-mint { background: var(--coral-500); }
 .desktop-hero-orb.orb-coral { background: var(--amber-500); }
-.desktop-promo-card { background: linear-gradient(120deg, var(--brand-900), var(--brand-700)); }
 
 input,
 textarea,
@@ -2981,36 +2934,6 @@ body .messages-page .chat-day { margin: .15rem 0 .4rem; font-size: .82rem !impor
 @media (min-width: 64rem) and (max-width: 75.99rem) {
   .site-header .desktop-nav { display: none; }
   .site-header .menu-button { display: grid; }
-}
-
-/* A prévia de reserva agora pertence ao fluxo da faixa inferior. Isso impede que
-   ela cubra o campo de busca e permite que a faixa cresça quando necessário. */
-@media (min-width: 48rem) {
-  .desktop-hero-lower {
-    grid-template-columns: minmax(12rem, 15rem) minmax(16rem, 1fr) minmax(12.5rem, 15.5rem);
-    gap: .75rem;
-    padding: .65rem;
-  }
-
-  .desktop-service-strip { min-width: 0; padding-right: 0; }
-
-  .desktop-booking-preview {
-    position: static;
-    right: auto;
-    bottom: auto;
-    width: auto;
-    min-width: 0;
-    align-self: stretch;
-    margin: 0;
-  }
-}
-
-@media (min-width: 64rem) {
-  .desktop-hero-lower {
-    grid-template-columns: minmax(14.5rem, 15rem) minmax(18rem, 1fr) minmax(15rem, 16.75rem);
-    gap: .9rem;
-    padding: .75rem;
-  }
 }
 
 /* Símbolos de categoria mais nítidos, com presença suficiente sem inflar os cards. */
