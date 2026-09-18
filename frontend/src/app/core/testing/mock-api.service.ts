@@ -24,8 +24,8 @@ export class MockApiService {
     { id: 'notification-2', type: 'welcome', title: 'Bem-vindo à ChezVoust', message: 'Seu perfil está pronto para reservar serviços.', data: null, readAt: '2026-08-18T09:00:00-03:00', createdAt: '2026-08-18T08:45:00-03:00' }
   ];
   private openRequestsState: Row[] = [{ id: 'request-1', scheduledStart: '2026-08-21T09:30:00-03:00', durationMinutes: 240, quantity: 1, areaSqm: 82, suggestedSubtotalCents: 14400, serviceName: 'Limpeza residencial', city: 'São Paulo', state: 'SP', createdAt: '2026-08-19T10:00:00-03:00', currency: 'BRL' }];
-  private conversationsState: Conversation[] = [{ id: 'conversation-1', bookingId: 'bk-1001', bookingStatus: 'confirmed', serviceName: 'Limpeza residencial', contactName: 'Ana Clara Souza', contactId: 'ana-clara', contactAvatarUrl: '/images/garconete-cadastro-v1-640.webp', updatedAt: '2026-08-19T10:42:00-03:00', lastMessage: 'Perfeito! Chego alguns minutos antes.', unreadCount: 1 }];
-  private chatState: Record<string, ChatMessage[]> = { 'conversation-1': [{ id: 'chat-1', sequence: 1, senderId: 'provider-1', senderName: 'Ana Clara Souza', body: 'Perfeito! Chego alguns minutos antes.', messageType: 'text', createdAt: '2026-08-19T10:42:00-03:00' }] };
+  private conversationsState: Conversation[] = [{ id: 'conversation-1', bookingId: 'bk-1001', bookingStatus: 'confirmed', serviceName: 'Limpeza residencial', contactName: 'Ana Clara Souza', contactId: 'ana-clara', contactAvatarUrl: '/images/garconete-cadastro-warm-640.jpg', updatedAt: '2026-08-19T10:42:00-03:00', lastMessage: 'Perfect! I will arrive a few minutes early.', unreadCount: 1 }];
+  private chatState: Record<string, ChatMessage[]> = { 'conversation-1': [{ id: 'chat-1', sequence: 1, senderId: 'provider-1', senderName: 'Ana Clara Souza', body: 'Perfect! I will arrive a few minutes early.', messageType: 'text', createdAt: '2026-08-19T10:42:00-03:00' }] };
   private commentsState: Record<string, ProfessionalComment[]> = {
     'ana-clara': [
       { id: 'comment-1', author: 'Paula N.', initials: 'PN', comment: 'Muito atenciosa desde o primeiro contato.', createdAt: '2026-08-15T10:00:00-03:00' },
@@ -89,11 +89,11 @@ export class MockApiService {
     if (method === 'POST' && path === 'auth/password/change') return this.ok({ message: 'Senha atualizada.' });
     if (method === 'POST' && path === 'auth/logout') { this.activeUser = null; return this.ok(undefined); }
     if (method === 'POST' && path === 'auth/logout-all') { this.activeUser = null; return this.ok(undefined); }
-    if (method === 'GET' && path === 'auth/sessions') return this.ok([{ id: 'mock-session-current', ipAddress: '127.0.0.1', userAgent: 'Mock browser', device: 'Navegador de demonstração', current: true, createdAt: new Date().toISOString(), lastUsedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() }]);
+    if (method === 'GET' && path === 'auth/sessions') return this.ok([{ id: 'mock-session-current', ipAddress: '127.0.0.1', userAgent: 'Mock browser', device: 'Demo browser', current: true, createdAt: new Date().toISOString(), lastUsedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() }]);
     if (method === 'DELETE' && /^auth\/sessions\/[^/]+$/.test(path)) return this.ok(undefined);
     if (method === 'GET' && path === 'me') return this.ok(this.currentUser());
     if (method === 'PATCH' && path === 'me') { const value = body as Partial<User>; this.activeUser = { ...this.currentUser(), ...value }; return this.ok(this.activeUser); }
-    if (method === 'POST' && path === 'me/avatar') { this.activeUser = { ...this.currentUser(), avatarUrl: '/images/garconete-cadastro-v1-640.webp' }; return this.ok(this.activeUser); }
+    if (method === 'POST' && path === 'me/avatar') { this.activeUser = { ...this.currentUser(), avatarUrl: '/images/garconete-cadastro-warm-640.jpg' }; return this.ok(this.activeUser); }
     if (method === 'GET' && path === 'me/addresses') return this.ok(this.addresses);
     if (method === 'POST' && path === 'me/addresses') { const address = { ...(body as Row), id: `addr-${Date.now()}` }; this.addresses.push(address); return this.ok(address); }
     const address = path.match(/^me\/addresses\/([^/]+)$/); if (method === 'PUT' && address) { const value = { ...(body as Row), id: address[1] }; this.addresses = this.addresses.map((item) => item['id'] === address[1] ? value : item); return this.ok(value); } if (method === 'DELETE' && address) { this.addresses = this.addresses.filter((item) => item['id'] !== address[1]); return this.ok(undefined); }

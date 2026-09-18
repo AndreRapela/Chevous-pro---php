@@ -1,1 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" rx="14" fill="#8f3b33"/><g fill="#fff"><path d="M32 9a23 23 0 0 1 18 8l-19 2-9-11a23 23 0 0 1 10 1Z"/><path d="m54 22 8 17a23 23 0 0 1-13 16l-7-18 12-15Z"/><path d="m41 44 6 12a23 23 0 0 1-25-2l15-12 4 2Z"/><path d="m31 42-14 11a23 23 0 0 1-7-18l18 4 3 3Z"/><path d="m10 30 1-7a23 23 0 0 1 7-10l10 14-2 5-16-2Z"/><path d="m30 35 5-11 15-2-8 14-12-1Z"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <mask id="shutter" x="-26" y="-26" width="52" height="52" maskUnits="userSpaceOnUse">
+      <rect x="-26" y="-26" width="52" height="52" fill="#fff"/>
+      <path d="M0-10 8.66-5v10L0 10-8.66 5V-5Z" fill="#000"/>
+      <g stroke="#000" stroke-width="2.2">
+        <path id="slit" d="M0-10-24-24"/>
+        <use href="#slit" transform="rotate(60)"/><use href="#slit" transform="rotate(120)"/>
+        <use href="#slit" transform="rotate(180)"/><use href="#slit" transform="rotate(240)"/>
+        <use href="#slit" transform="rotate(300)"/>
+      </g>
+    </mask>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#934037"/>
+  <g fill="#fff" transform="translate(32 32)">
+    <circle r="24" mask="url(#shutter)"/>
+  </g>
+</svg>

@@ -49,7 +49,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
       <div class="container footer-grid">
         <div><cvp-brand /><p>Cuidado profissional para sua casa, do seu jeito.</p></div>
         <details class="footer-group" open>
-          <summary>PRO</summary>
+          <summary data-cvp-no-localize>ChezVoust Pro</summary>
           <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
         </details>
         <details class="footer-group" open>
@@ -61,7 +61,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
           <div class="footer-links"><a routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero prestar serviços</a><a routerLink="/entrar">Acessar painel</a></div>
         </details>
       </div>
-      <div class="container footer-bottom"><span>© 2026 Pro</span><span>Feito para servir bem.</span></div>
+      <div class="container footer-bottom"><span data-cvp-no-localize>© 2026 ChezVoust Pro</span><span>Feito para servir bem.</span></div>
     </footer>
     <nav class="bottom-nav public-bottom-nav" aria-label="Atalhos do aplicativo">
       <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }"><span aria-hidden="true">⌂</span>Início</a>

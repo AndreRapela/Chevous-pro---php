@@ -40,7 +40,7 @@ export const MOCK_PROVIDERS: ProviderProfile[] = [
     city: 'São Paulo', neighborhood: 'Vila Mariana', verified: true, topProvider: true, rating: 4.96, reviewCount: 128, completedJobs: 214,
     responseTime: 'Responde em até 10 min', priceFromCents: 12000, serviceIds: ['clean-home', 'clean-heavy', 'laundry-wash'],
     qualities: ['Pontual', 'Cuidadosa', 'Muito elogiada'], nextAvailability: 'Hoje, 14:00',
-    avatarUrl: '/images/garconete-cadastro-v1-640.webp', state: 'SP', yearsExperience: 6,
+    avatarUrl: '/images/garconete-cadastro-warm-640.jpg', state: 'SP', yearsExperience: 6,
     experiences: [{ id: 'experience-1', role: 'Especialista em limpeza residencial', company: 'Atuação autônoma', description: 'Atendimento residencial com organização e cuidado nos detalhes.', startedAt: '2019-01-01', endedAt: null, current: true }],
     courses: [{ id: 'course-1', title: 'Higienização e limpeza profissional', institution: 'Instituto Casa', completedAt: '2022-10-01', certificateUrl: null }],
     reviews: [
@@ -107,8 +107,8 @@ export const MOCK_BOOKINGS: Booking[] = [
 ];
 
 export const MOCK_MESSAGES: MessagePreview[] = [
-  { id: 'm1', bookingId: 'bk-1001', personName: 'Ana Clara Souza', initials: 'AS', lastMessage: 'Perfeito! Chego alguns minutos antes.', sentAt: '10:42', unread: 1 },
-  { id: 'm2', bookingId: 'bk-0988', personName: 'Lucas Mendes', initials: 'LM', lastMessage: 'Obrigado pela confiança.', sentAt: '08 ago', unread: 0 }
+  { id: 'm1', bookingId: 'bk-1001', personName: 'Ana Clara Souza', initials: 'AS', lastMessage: 'Perfect! I will arrive a few minutes early.', sentAt: '10:42', unread: 1 },
+  { id: 'm2', bookingId: 'bk-0988', personName: 'Lucas Mendes', initials: 'LM', lastMessage: 'Thank you for your trust.', sentAt: '08 ago', unread: 0 }
 ];
 
 export const CUSTOMER_METRICS: DashboardMetric[] = [

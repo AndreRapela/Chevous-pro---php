@@ -7,6 +7,6 @@ export const environment = {
     provider: ['profissional@chezvoust.test', 'demo'],
     admin: ['admin@chezvoust.test', 'demo']
   },
-  locale: 'pt-BR',
-  currency: 'BRL'
+  locale: 'en-US',
+  currency: 'EUR'
 } as const;

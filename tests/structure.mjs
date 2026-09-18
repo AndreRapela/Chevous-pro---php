@@ -205,8 +205,10 @@ assert.match(messagesPage, /shouldSendComposerMessage/, 'O compositor deve prese
 assert.match(messagesPage, /pendingMessageKey/, 'Reenvio depois de falha precisa manter a mesma chave de idempotência.');
 assert.match(marketplaceService, /Idempotency-Key/, 'O cliente deve enviar chave idempotente ao publicar mensagem.');
 const productionEnvironment = await text('frontend/src/environments/environment.prod.ts');
+const mockEnvironment = await text('frontend/src/environments/environment.mock.ts');
 const loginPage = await text('frontend/src/app/features/auth/pages/login/login.component.ts');
-assert.match(productionEnvironment, /demoAccounts:\s*\{/, 'O ambiente de demonstração deve oferecer os perfis de teste solicitados.');
+assert.match(mockEnvironment, /demoAccounts:\s*\{/, 'O ambiente de demonstração deve oferecer os perfis de teste solicitados.');
+assert.match(productionEnvironment, /demoAccounts:\s*null/, 'O build de produção não deve expor credenciais de demonstração.');
 assert.doesNotMatch(loginPage, /Cliente@123|Profissional@123|Admin@123/, 'A tela de login não deve embutir senhas de demonstração.');
 
 const providerDetail = await text('frontend/src/app/features/public/pages/provider-detail/provider-detail.component.ts');
@@ -267,10 +269,16 @@ assert.deepEqual(imageFiles, [
   'frontend/public/favicon.svg',
   'frontend/public/images/eletricista-login-v1-1280.webp',
   'frontend/public/images/eletricista-login-v1-640.webp',
+  'frontend/public/images/eletricista-login-warm-1280.jpg',
+  'frontend/public/images/eletricista-login-warm-640.jpg',
   'frontend/public/images/garconete-cadastro-v1-1086.webp',
   'frontend/public/images/garconete-cadastro-v1-640.webp',
+  'frontend/public/images/garconete-cadastro-warm-1086.jpg',
+  'frontend/public/images/garconete-cadastro-warm-640.jpg',
   'frontend/public/images/profissional-limpeza-hero-480.webp',
   'frontend/public/images/profissional-limpeza-hero-887.webp',
+  'frontend/public/images/profissional-limpeza-hero-warm-480.jpg',
+  'frontend/public/images/profissional-limpeza-hero-warm-887.jpg',
   'frontend/public/pro-logo.svg'
 ], `Somente as imagens autorizadas pelo usuário podem existir: ${imageFiles.join(', ')}`);
 for (const image of imageFiles) {
@@ -286,4 +294,4 @@ for (const path of projectFiles) {
   assert.doesNotMatch(value, /\b(?:TODO|FIXME)\b/, `${path} contém marcador de trabalho pendente.`);
 }
 
-console.log(`PASS estrutura: ${routeCount} rotas REST, ${tableCount} tabelas, 6 variantes WebP autorizadas.`);
+console.log(`PASS estrutura: ${routeCount} rotas REST, ${tableCount} tabelas, ${imageFiles.length} assets visuais autorizados.`);

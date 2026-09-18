@@ -1,5 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" role="img" aria-label="Pro">
-  <path fill="#8f3b33" d="M8 7h29c17 0 27 9 27 24S54 55 37 55H25v2c0 4-3 7-7 7H8V7Zm17 14v20h11c7 0 11-3 11-10s-4-10-11-10H25Z"/>
-  <path fill="#8f3b33" d="M70 21h15v7c4-6 9-9 17-9h3v16h-5c-9 0-14 4-14 14v12H70V21Z"/>
-  <g fill="#8f3b33"><path d="M157 12a25 25 0 0 1 20 9l-21 2-10-12a25 25 0 0 1 11 1Z"/><path d="m182 26 10 19a25 25 0 0 1-15 17l-7-20 12-16Z"/><path d="m169 49 5 14a25 25 0 0 1-27-2l16-13 6 1Z"/><path d="m156 46-15 13a25 25 0 0 1-8-20l20 4 3 3Z"/><path d="m132 33 1-7a25 25 0 0 1 8-10l11 15-2 5-18-3Z"/><path d="m155 38 5-12 16-2-9 15-12-1Z"/></g>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 64" role="img" aria-label="Pro">
+  <defs>
+    <mask id="shutter" x="-26" y="-26" width="52" height="52" maskUnits="userSpaceOnUse">
+      <rect x="-26" y="-26" width="52" height="52" fill="#fff"/>
+      <path d="M0-10 8.66-5v10L0 10-8.66 5V-5Z" fill="#000"/>
+      <g stroke="#000" stroke-width="2.2">
+        <path id="slit" d="M0-10-24-24"/>
+        <use href="#slit" transform="rotate(60)"/><use href="#slit" transform="rotate(120)"/>
+        <use href="#slit" transform="rotate(180)"/><use href="#slit" transform="rotate(240)"/>
+        <use href="#slit" transform="rotate(300)"/>
+      </g>
+    </mask>
+  </defs>
+  <g fill="#934037">
+    <text x="0" y="54" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="800" letter-spacing="-3">Pr</text>
+    <g transform="translate(101 32)">
+      <circle r="25" mask="url(#shutter)"/>
+    </g>
+  </g>
 </svg>

@@ -46,7 +46,8 @@ export class AuthShellComponent {
   @Input({ required: true }) heroDescription = '';
   @Input({ required: true }) imageSrc = '';
   @Input() imageSrcset = '';
-  @Input() imageSizes = '(min-width: 42rem) 50vw, 100vw';
+  // Cover-cropped landscapes need a wider source than the visible half-panel.
+  @Input() imageSizes = '100vw';
   @Input({ required: true }) imageAlt = '';
   @Input() imageWidth = 1536;
   @Input() imageHeight = 1024;

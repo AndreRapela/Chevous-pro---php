@@ -14,8 +14,8 @@ import { AuthShellComponent } from '../../layout/auth-shell.component';
       eyebrow="Acesso protegido"
       heroTitle="Recupere sua conta com tranquilidade."
       heroDescription="Enviaremos as instruções para o e-mail cadastrado, sem expor se a conta existe."
-      imageSrc="/images/eletricista-login-v1-640.webp"
-      imageSrcset="/images/eletricista-login-v1-640.webp 640w, /images/eletricista-login-v1-1280.webp 1280w"
+      imageSrc="/images/eletricista-login-warm-640.jpg"
+      imageSrcset="/images/eletricista-login-warm-640.jpg 640w, /images/eletricista-login-warm-1280.jpg 1280w"
       imageAlt="Eletricista residencial sorrindo com alicate e multímetro"
     >
       <a class="back-link" routerLink="/entrar"><span aria-hidden="true">←</span> Voltar para entrar</a>
