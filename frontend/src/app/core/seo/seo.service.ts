@@ -2,6 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { SEO_SITE_ORIGIN } from './seo-site-origin.token';
+import { LocalizationService } from '../localization/localization.service';
 
 export interface SeoPage {
   title: string;
@@ -21,10 +22,11 @@ export class SeoService {
   private readonly meta = inject(Meta);
   private readonly title = inject(Title);
   private readonly siteOrigin = inject(SEO_SITE_ORIGIN);
+  private readonly localization = inject(LocalizationService);
 
   update(page: SeoPage): void {
-    const title = this.clean(page.title, 60);
-    const description = this.clean(page.description, 160);
+    const title = this.clean(this.localization.translate(page.title), 60);
+    const description = this.clean(this.localization.translate(page.description), 160);
     const canonical = this.absoluteUrl(page.canonicalPath ?? this.document.location?.pathname ?? '/');
     const robots = page.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
     const type = page.type ?? 'website';
@@ -32,8 +34,8 @@ export class SeoService {
     this.title.setTitle(title);
     this.setName('description', description);
     this.setName('robots', robots);
-    this.setProperty('og:locale', 'pt_BR');
-    this.setProperty('og:site_name', 'Pro');
+    this.setProperty('og:locale', this.localization.language() === 'fr' ? 'fr_FR' : 'en_US');
+    this.setProperty('og:site_name', 'ChezVoust Pro');
     this.setProperty('og:type', type);
     this.setProperty('og:title', title);
     this.setProperty('og:description', description);

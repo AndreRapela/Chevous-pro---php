@@ -2,6 +2,7 @@ import { DOCUMENT, registerLocaleData } from '@angular/common';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import localeFr from '@angular/common/locales/fr';
 import { replaceTranslationFragment } from './localized-text.util';
+import { convertReferenceAmount } from './reference-currency.util';
 
 registerLocaleData(localeFr);
 
@@ -18,12 +19,155 @@ interface TranslationEntry {
 
 const LANGUAGE_KEY = 'cvp.language';
 const CURRENCY_KEY = 'cvp.currency';
-// Todos os preços-base do catálogo usam centavos de real. As conversões são
-// somente de exibição e não representam cobrança pela plataforma.
-const USD_PER_BRL = 0.20;
-const EUR_PER_BRL = 0.17;
 
 const TRANSLATIONS: TranslationEntry[] = [
+  { pt: 'Pro | Serviços para casa', en: 'Pro | Home services', fr: 'Pro | Services à domicile' },
+  { pt: 'Encontre profissionais de confiança para sua casa.', en: 'Find trusted professionals for your home.', fr: 'Trouvez des professionnels de confiance pour votre domicile.' },
+  { pt: 'Reservas confirmadas', en: 'Confirmed bookings', fr: 'Réservations confirmées' },
+  { pt: 'Administração | ChezVoust Pro', en: 'Administration | ChezVoust Pro', fr: 'Administration | ChezVoust Pro' },
+  { pt: 'Reservas | Admin', en: 'Bookings | Administrator', fr: 'Réservations | Administrateur' },
+  { pt: 'Clientes | Admin', en: 'Customers | Administrator', fr: 'Clients | Administrateur' },
+  { pt: 'Prestadores | Admin', en: 'Professionals | Administrator', fr: 'Professionnels | Administrateur' },
+  { pt: 'Catálogo | Admin', en: 'Catalog | Administrator', fr: 'Catalogue | Administrateur' },
+  { pt: 'Suporte | Admin', en: 'Support | Administrator', fr: 'Assistance | Administrateur' },
+  { pt: 'Configurações | Admin', en: 'Settings | Administrator', fr: 'Paramètres | Administrateur' },
+  { pt: 'Denunciante', en: 'Reported by', fr: 'Signalé par' },
+  { pt: 'Recebida', en: 'Received', fr: 'Reçu' },
+  { pt: 'Perfil aprovado.', en: 'Profile approved.', fr: 'Profil approuvé.' },
+  { pt: 'Cliente reativado.', en: 'Customer reactivated.', fr: 'Client réactivé.' },
+  { pt: 'Cliente suspenso.', en: 'Customer suspended.', fr: 'Client suspendu.' },
+  { pt: 'Entrar | Pro', en: 'Sign in | Pro', fr: 'Connexion | Pro' },
+  { pt: 'Criar conta | Pro', en: 'Create account | Pro', fr: 'Créer un compte | Pro' },
+  { pt: 'Recuperar senha | Pro', en: 'Recover password | Pro', fr: 'Récupérer le mot de passe | Pro' },
+  { pt: 'Redefinir senha | Pro', en: 'Reset password | Pro', fr: 'Réinitialiser le mot de passe | Pro' },
+  { pt: 'Verificar e-mail | Pro', en: 'Verify email | Pro', fr: 'Vérifier l’adresse e-mail | Pro' },
+  { pt: 'Serviço indisponível.', en: 'Service unavailable.', fr: 'Service indisponible.' },
+  { pt: 'Meu painel | ChezVoust Pro', en: 'My dashboard | ChezVoust Pro', fr: 'Mon tableau de bord | ChezVoust Pro' },
+  { pt: 'Agendamentos | ChezVoust Pro', en: 'Bookings | ChezVoust Pro', fr: 'Réservations | ChezVoust Pro' },
+  { pt: 'Mensagens | ChezVoust Pro', en: 'Messages | ChezVoust Pro', fr: 'Messages | ChezVoust Pro' },
+  { pt: 'Favoritos | ChezVoust Pro', en: 'Favorites | ChezVoust Pro', fr: 'Favoris | ChezVoust Pro' },
+  { pt: 'Perfil e preferências | ChezVoust Pro', en: 'Profile and preferences | ChezVoust Pro', fr: 'Profil et préférences | ChezVoust Pro' },
+  { pt: 'Casa', en: 'Home address', fr: 'Adresse du domicile' },
+  { pt: 'Serviço atualizado.', en: 'Service updated.', fr: 'Service mis à jour.' },
+  { pt: 'Serviço adicionado.', en: 'Service added.', fr: 'Service ajouté.' },
+  { pt: 'Serviço removido.', en: 'Service removed.', fr: 'Service supprimé.' },
+  { pt: 'Serviço iniciado.', en: 'Service started.', fr: 'Service commencé.' },
+  { pt: 'Serviço concluído.', en: 'Service completed.', fr: 'Service terminé.' },
+  { pt: 'Solicitações | ChezVoust Pro', en: 'Requests | ChezVoust Pro', fr: 'Demandes | ChezVoust Pro' },
+  { pt: 'Serviços e perfil | ChezVoust Pro', en: 'Services and profile | ChezVoust Pro', fr: 'Services et profil | ChezVoust Pro' },
+  { pt: 'Encontre profissionais de confiança para sua casa, no dia e horário que você escolher.', en: 'Find trusted professionals for your home, on the day and at the time you choose.', fr: 'Trouvez des professionnels de confiance pour votre domicile, au jour et à l’heure de votre choix.' },
+  { pt: 'Serviços | Pro', en: 'Services | Pro', fr: 'Services | Pro' },
+  { pt: 'Serviços para casa | Pro', en: 'Home services | Pro', fr: 'Services à domicile | Pro' },
+  { pt: 'Serviços por categoria | Pro', en: 'Services by category | Pro', fr: 'Services par catégorie | Pro' },
+  { pt: 'Compare os serviços para casa e escolha a opção que combina com sua rotina.', en: 'Compare home services and choose the option that fits your routine.', fr: 'Comparez les services à domicile et choisissez l’option adaptée à votre quotidien.' },
+  { pt: 'Detalhes do serviço | Pro', en: 'Service details | Pro', fr: 'Détails du service | Pro' },
+  { pt: 'Confira os detalhes do serviço e solicite um horário com confiança.', en: 'Review the service details and request a time with confidence.', fr: 'Consultez les détails du service et demandez un créneau en toute confiance.' },
+  { pt: 'Profissionais | Pro', en: 'Professionals | Pro', fr: 'Professionnels | Pro' },
+  { pt: 'Profissionais para casa | Pro', en: 'Home professionals | Pro', fr: 'Professionnels à domicile | Pro' },
+  { pt: 'Descubra profissionais aprovados, avaliações de reservas e experiências para contratar com confiança.', en: 'Discover approved professionals, booking reviews and experience so you can hire with confidence.', fr: 'Découvrez des professionnels approuvés, leurs expériences et les avis de réservation pour choisir en toute confiance.' },
+  { pt: 'Perfil profissional | Pro', en: 'Professional profile | Pro', fr: 'Profil professionnel | Pro' },
+  { pt: 'Confira a experiência, os serviços e as avaliações verificadas deste profissional.', en: 'Review this professional’s experience, services and verified reviews.', fr: 'Consultez l’expérience, les services et les avis vérifiés de ce professionnel.' },
+  { pt: 'Agendar serviço | ChezVoust Pro', en: 'Book a service | ChezVoust Pro', fr: 'Réserver un service | ChezVoust Pro' },
+  { pt: 'Como funciona | Pro', en: 'How it works | Pro', fr: 'Comment ça marche | Pro' },
+  { pt: 'Saiba como encontrar, agendar e gerenciar serviços para sua casa.', en: 'Learn how to find, book and manage services for your home.', fr: 'Découvrez comment trouver, réserver et gérer les services pour votre domicile.' },
+  { pt: 'Segurança | Pro', en: 'Safety | Pro', fr: 'Sécurité | Pro' },
+  { pt: 'Veja como avaliações, perfis e conversas na plataforma ajudam a contratar com segurança.', en: 'See how reviews, profiles and in-platform communication help you hire safely.', fr: 'Découvrez comment les avis, les profils et les échanges sur la plateforme vous aident à réserver en toute sécurité.' },
+  { pt: 'Central de ajuda | Pro', en: 'Help center | Pro', fr: 'Centre d’aide | Pro' },
+  { pt: 'Encontre orientações para usar o Pro e gerenciar seus serviços.', en: 'Find guidance for using Pro and managing your services.', fr: 'Trouvez des conseils pour utiliser Pro et gérer vos services.' },
+  { pt: 'Termos de uso | Pro', en: 'Terms of use | Pro', fr: 'Conditions d’utilisation | Pro' },
+  { pt: 'Leia as condições para usar a plataforma Pro.', en: 'Read the conditions for using the Pro platform.', fr: 'Consultez les conditions d’utilisation de la plateforme Pro.' },
+  { pt: 'Privacidade | Pro', en: 'Privacy | Pro', fr: 'Confidentialité | Pro' },
+  { pt: 'Saiba mais sobre o aviso de privacidade e os dados usados pela plataforma.', en: 'Learn about the privacy notice and the data used by the platform.', fr: 'Découvrez notre avis de confidentialité et les données utilisées par la plateforme.' },
+  { pt: 'Dados pessoais atualizados.', en: 'Personal details updated.', fr: 'Informations personnelles mises à jour.' },
+  { pt: 'Foto de perfil atualizada.', en: 'Profile photo updated.', fr: 'Photo de profil mise à jour.' },
+  { pt: 'Senha atualizada e outros dispositivos desconectados.', en: 'Password updated and other devices signed out.', fr: 'Mot de passe mis à jour et autres appareils déconnectés.' },
+  { pt: 'Status', en: 'Status', fr: 'Statut' },
+  { pt: 'As reservas recentes aparecerão aqui.', en: 'Recent bookings will appear here.', fr: 'Les réservations récentes apparaîtront ici.' },
+  { pt: 'Nome', en: 'Name', fr: 'Nom' },
+  { pt: 'Duração padrão (min)', en: 'Default duration (min)', fr: 'Durée par défaut (min)' },
+  { pt: 'Manter', en: 'Keep', fr: 'Conserver' },
+  { pt: 'Mostrando', en: 'Showing', fr: 'Affichage de' },
+  { pt: 'registros · página', en: 'results · page', fr: 'résultats · page' },
+  { pt: 'Confirmar', en: 'Confirm', fr: 'Confirmer' },
+  { pt: 'Admin', en: 'Administrator', fr: 'Administrateur' },
+  { pt: 'E-mail verificado', en: 'Email verified', fr: 'Adresse e-mail vérifiée' },
+  { pt: 'Solicitação publicada!', en: 'Request published!', fr: 'Demande publiée !' },
+  { pt: 'Reserva confirmada!', en: 'Booking confirmed!', fr: 'Réservation confirmée !' },
+  { pt: 'Profissionais compatíveis já podem enviar propostas. Compare as ofertas no painel antes de escolher.', en: 'Matching professionals can now send proposals. Compare offers in your dashboard before choosing.', fr: 'Les professionnels disponibles peuvent désormais envoyer des propositions. Comparez les offres dans votre tableau de bord avant de choisir.' },
+  { pt: 'O horário foi reservado e o profissional já pode acompanhar os detalhes pelo chat.', en: 'Your time slot is reserved. The professional can now view the details in chat.', fr: 'Votre créneau est réservé. Le professionnel peut désormais consulter les détails dans le chat.' },
+  { pt: 'Valor de referência', en: 'Reference price', fr: 'Prix indicatif' },
+  { pt: 'Acompanhar propostas', en: 'Track proposals', fr: 'Suivre les propositions' },
+  { pt: 'Acompanhar reserva', en: 'Track booking', fr: 'Suivre la réservation' },
+  { pt: 'Entre', en: 'Between', fr: 'Entre' },
+  { pt: 'm² e', en: 'm² and', fr: 'm² et' },
+  { pt: '1 hora', en: '1 hour', fr: '1 heure' },
+  { pt: '/500 caracteres', en: '/500 characters', fr: '/500 caractères' },
+  { pt: 'Resumo da estimativa', en: 'Estimate summary', fr: 'Récapitulatif de l’estimation' },
+  { pt: 'Resumo do preço', en: 'Price summary', fr: 'Récapitulatif du prix' },
+  { pt: 'Sua solicitação', en: 'Your request', fr: 'Votre demande' },
+  { pt: 'Seu agendamento', en: 'Your booking', fr: 'Votre réservation' },
+  { pt: 'Estimativa inicial', en: 'Initial estimate', fr: 'Estimation initiale' },
+  { pt: 'Calculando valor…', en: 'Calculating price…', fr: 'Calcul du prix…' },
+  { pt: 'Selecione os detalhes para calcular.', en: 'Choose the details to calculate the price.', fr: 'Choisissez les détails pour calculer le prix.' },
+  { pt: 'Compare propostas com tranquilidade', en: 'Compare proposals at your own pace', fr: 'Comparez les propositions à votre rythme' },
+  { pt: 'Horário reservado ao confirmar', en: 'Time slot reserved on confirmation', fr: 'Créneau réservé à la confirmation' },
+  { pt: 'Você ainda pode receber propostas ou voltar para escolher outro horário.', en: 'You can still receive proposals or go back to choose another time.', fr: 'Vous pouvez encore recevoir des propositions ou revenir pour choisir un autre horaire.' },
+  { pt: 'Reserva segura', en: 'Secure booking', fr: 'Réservation sécurisée' },
+  { pt: 'Preparando seu agendamento.', en: 'Preparing your booking.', fr: 'Préparation de votre réservation.' },
+  { pt: 'Consultando agendas…', en: 'Checking availability…', fr: 'Vérification des disponibilités…' },
+  { pt: 'Confirmando...', en: 'Confirming…', fr: 'Confirmation…' },
+  { pt: 'Continuar', en: 'Continue', fr: 'Continuer' },
+  { pt: 'está a caminho', en: 'is on the way', fr: 'est en route' },
+  { pt: 'Flexibilidade', en: 'Flexibility', fr: 'Flexibilité' },
+  { pt: 'Salvando…', en: 'Saving…', fr: 'Enregistrement…' },
+  { pt: 'Marketplace', en: 'Marketplace', fr: 'Place de marché' },
+  { pt: 'Agendar serviço', en: 'Book a service', fr: 'Réserver un service' },
+  { pt: 'Avaliar serviço', en: 'Review service', fr: 'Évaluer le service' },
+  { pt: 'Nota', en: 'Rating', fr: 'Note' },
+  { pt: 'Como foi o serviço?', en: 'How was the service?', fr: 'Comment s’est passé le service ?' },
+  { pt: 'Toque no coração de um perfil para salvá-lo aqui.', en: 'Tap the heart on a profile to save it here.', fr: 'Appuyez sur le cœur d’un profil pour l’enregistrer ici.' },
+  { pt: 'Atualizar endereço', en: 'Update address', fr: 'Mettre à jour l’adresse' },
+  { pt: 'Abra um perfil profissional para iniciar uma conversa antes de agendar.', en: 'Open a professional’s profile to start a conversation before booking.', fr: 'Ouvrez le profil d’un professionnel pour commencer une conversation avant de réserver.' },
+  { pt: 'Iniciar', en: 'Start', fr: 'Commencer' },
+  { pt: 'Concluir', en: 'Complete', fr: 'Terminer' },
+  { pt: 'Histórico recente', en: 'Recent history', fr: 'Historique récent' },
+  { pt: '% completo', en: '% complete', fr: '% complété' },
+  { pt: 'Ex.: Especialista em limpeza residencial', en: 'e.g. Home cleaning specialist', fr: 'Ex. : spécialiste du ménage à domicile' },
+  { pt: 'Raio (km)', en: 'Service radius (km)', fr: 'Rayon d’intervention (km)' },
+  { pt: 'Avisaremos quando surgir uma nova oportunidade.', en: 'We’ll notify you when a new opportunity is available.', fr: 'Nous vous informerons dès qu’une nouvelle opportunité sera disponible.' },
+  { pt: 'Valor da proposta', en: 'Proposal price', fr: 'Prix de la proposition' },
+  { pt: 'Defina sua disponibilidade e acompanhe atendimentos.', en: 'Set your availability and keep track of appointments.', fr: 'Définissez vos disponibilités et suivez vos rendez-vous.' },
+  { pt: 'Horário de início', en: 'Start time', fr: 'Heure de début' },
+  { pt: 'Horário de término', en: 'End time', fr: 'Heure de fin' },
+  { pt: 'Dia do horário', en: 'Schedule day', fr: 'Jour du créneau' },
+  { pt: 'Domingo', en: 'Sunday', fr: 'Dimanche' },
+  { pt: 'Segunda', en: 'Monday', fr: 'Lundi' },
+  { pt: 'Quarta', en: 'Wednesday', fr: 'Mercredi' },
+  { pt: 'Quinta', en: 'Thursday', fr: 'Jeudi' },
+  { pt: 'Sexta', en: 'Friday', fr: 'Vendredi' },
+  { pt: 'Dia todo se vazio', en: 'Leave blank for the whole day', fr: 'Laissez vide pour la journée entière' },
+  { pt: 'Dia inteiro', en: 'Whole day', fr: 'Journée entière' },
+  { pt: 'Indisponível', en: 'Unavailable', fr: 'Indisponible' },
+  { pt: 'Confirmar conclusão', en: 'Confirm completion', fr: 'Confirmer la fin du service' },
+  { pt: 'Confirmar início', en: 'Confirm start', fr: 'Confirmer le début du service' },
+  { pt: 'serviços disponíveis', en: 'services available', fr: 'services disponibles' },
+  { pt: 'serviços', en: 'services', fr: 'services' },
+  { pt: 'Do que sua casa precisa? Deslize horizontalmente para ver mais categorias.', en: 'What does your home need? Swipe horizontally to see more categories.', fr: 'De quoi votre maison a-t-elle besoin ? Faites défiler horizontalement pour voir d’autres catégories.' },
+  { pt: 'opção', en: 'option', fr: 'option' },
+  { pt: 'opções', en: 'options', fr: 'options' },
+  { pt: 'Serviços mais procurados. Deslize horizontalmente para ver mais serviços.', en: 'Most requested services. Swipe horizontally to see more services.', fr: 'Services les plus demandés. Faites défiler horizontalement pour voir d’autres services.' },
+  { pt: 'Profissionais bem avaliados. Deslize horizontalmente para ver mais profissionais.', en: 'Highly rated professionals. Swipe horizontally to see more professionals.', fr: 'Professionnels bien notés. Faites défiler horizontalement pour voir d’autres professionnels.' },
+  { pt: 'profissionais', en: 'professionals', fr: 'professionnels' },
+  { pt: 'Ver mais avaliações', en: 'See more reviews', fr: 'Voir d’autres avis' },
+  { pt: 'Enviar denúncia', en: 'Submit report', fr: 'Envoyer le signalement' },
+  { pt: 'Denunciar comentário', en: 'Report comment', fr: 'Signaler le commentaire' },
+  { pt: 'Ver mais comentários', en: 'See more comments', fr: 'Voir d’autres commentaires' },
+  { pt: 'Conversar', en: 'Message', fr: 'Envoyer un message' },
+  { pt: 'Trocar foto', en: 'Change photo', fr: 'Changer la photo' },
+  { pt: '· atividade em', en: '· last active on', fr: '· dernière activité le' },
+  { pt: 'IP não informado', en: 'IP unavailable', fr: 'Adresse IP indisponible' },
+  { pt: 'comentário', en: 'comment', fr: 'commentaire' },
+  { pt: 'comentários', en: 'comments', fr: 'commentaires' },
   { pt: 'Alterar foto', en: 'Change photo', fr: 'Changer la photo' },
   { pt: 'Salvar dados pessoais', en: 'Save personal details', fr: 'Enregistrer les informations personnelles' },
   { pt: 'Salvar vitrine', en: 'Save showcase', fr: 'Enregistrer la présentation' },
@@ -1119,7 +1263,11 @@ export class LocalizationService {
     const leading = source.match(/^\s*/)?.[0] ?? '';
     const trailing = source.match(/\s*$/)?.[0] ?? '';
     const value = source.trim();
-    const exact = TRANSLATIONS.find((entry) => entry.pt === value || entry.en === value || entry.fr === value);
+    // Templates originate in PT, SSR emits EN. Prefer those source keys before
+    // FR targets: otherwise English "Note" can be mistaken for the rating label.
+    const exact = TRANSLATIONS.find((entry) => entry.pt === value)
+      ?? TRANSLATIONS.find((entry) => entry.en === value)
+      ?? TRANSLATIONS.find((entry) => entry.fr === value);
     if (exact) return `${leading}${exact[language]}${trailing}`;
 
     const sourceLanguage: 'pt' | 'en' = ORDERED_TRANSLATIONS.some((entry) => value.includes(entry.pt) && replaceTranslationFragment(value, entry.pt, '') !== value) ? 'pt' : 'en';
@@ -1145,18 +1293,14 @@ export class LocalizationService {
   }
 
   convertAmount(amount: number, sourceCurrency: AppCurrency, targetCurrency: AppCurrency = this.currency()): number {
-    if (!Number.isFinite(amount) || sourceCurrency === targetCurrency) return amount;
-    const toBrl = (value: number, currency: AppCurrency): number => currency === 'USD'
-      ? value / USD_PER_BRL
-      : currency === 'EUR' ? value / EUR_PER_BRL : value;
-    const fromBrl = (value: number, currency: AppCurrency): number => currency === 'USD'
-      ? value * USD_PER_BRL
-      : currency === 'EUR' ? value * EUR_PER_BRL : value;
-    return fromBrl(toBrl(amount, sourceCurrency), targetCurrency);
+    return convertReferenceAmount(amount, sourceCurrency, targetCurrency);
   }
 
   private translatePatterns(value: string, language: AppLanguage): string {
     const replacements: Array<[RegExp, string]> = language === 'fr' ? [
+      [/Showing (\d+)–(\d+) of (\d+) professionals/g, 'Affichage de $1 à $2 sur $3 professionnels'],
+      [/Showing (\d+)–(\d+) of (\d+) services/g, 'Affichage de $1 à $2 sur $3 services'],
+      [/Showing (\d+) of (\d+) results · page (\d+) of (\d+)/g, 'Affichage de $1 sur $2 résultats · page $3 sur $4'],
       [/(\d+) serviços concluídos/g, '$1 services terminés'],
       [/(\d+) anos de experiência/g, '$1 ans d’expérience'],
       [/Mostrando (\d+)–(\d+) de (\d+) profissionais/g, 'Affichage de $1 à $2 sur $3 professionnels'],
@@ -1171,6 +1315,9 @@ export class LocalizationService {
       [/Profissionais para (.+)/g, 'Professionnels pour $1'],
       [/A partir de (.+)/g, 'À partir de $1']
     ] : [
+      [/Showing (\d+)–(\d+) of (\d+) professionals/g, 'Showing $1–$2 of $3 professionals'],
+      [/Showing (\d+)–(\d+) of (\d+) services/g, 'Showing $1–$2 of $3 services'],
+      [/Showing (\d+) of (\d+) results · page (\d+) of (\d+)/g, 'Showing $1 of $2 results · page $3 of $4'],
       [/(\d+) serviços concluídos/g, '$1 completed services'],
       [/(\d+) anos de experiência/g, '$1 years of experience'],
       [/Mostrando (\d+)–(\d+) de (\d+) profissionais/g, 'Showing $1–$2 of $3 professionals'],

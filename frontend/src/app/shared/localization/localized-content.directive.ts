@@ -2,7 +2,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { AfterViewInit, DestroyRef, Directive, ElementRef, PLATFORM_ID, effect, inject } from '@angular/core';
 import { LocalizationService } from '../../core/localization/localization.service';
 
-const LOCALIZED_ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt'] as const;
+const LOCALIZED_ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt', 'data-label'] as const;
 
 @Directive({ selector: '[cvpLocalizedContent]', standalone: true })
 export class LocalizedContentDirective implements AfterViewInit {

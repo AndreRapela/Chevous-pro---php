@@ -11,7 +11,7 @@ import { BookingForm } from '../../models/booking-form.model';
     <section class="wizard-step" [formGroup]="form.controls.address" aria-labelledby="step-address-title">
       <span class="eyebrow">Local do atendimento</span><h1 id="step-address-title" tabindex="-1">Onde o serviço será realizado?</h1><p>O endereço completo só será compartilhado depois da confirmação.</p>
       @if (addresses.length) {
-        <fieldset class="saved-addresses"><legend>Endereços salvos</legend><div class="saved-address-list">@for (address of addresses; track address.id) { <button type="button" class="saved-address-option" [class.active]="selected(address)" [attr.aria-pressed]="selected(address)" (click)="useAddress(address)"><span><strong>{{ address.label || 'Endereço' }}</strong>@if (address.isDefault) { <small>Principal</small> }</span><span>{{ address.street }}, {{ address.number }} · {{ address.neighborhood }}</span></button> }</div></fieldset>
+        <fieldset class="saved-addresses"><legend>Endereços salvos</legend><div class="saved-address-list">@for (address of addresses; track address.id) { <button type="button" class="saved-address-option" [class.active]="selected(address)" [attr.aria-pressed]="selected(address)" (click)="useAddress(address)"><span><strong>@if (address.label) { <span data-cvp-no-localize>{{ address.label }}</span> } @else { Endereço }</strong>@if (address.isDefault) { <small>Principal</small> }</span><span data-cvp-no-localize>{{ address.street }}, {{ address.number }} · {{ address.neighborhood }}</span></button> }</div></fieldset>
         <div class="form-divider"><span>ou informe outro endereço</span></div>
       }
       <div class="form-grid">
