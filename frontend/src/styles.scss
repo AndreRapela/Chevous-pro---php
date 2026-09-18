@@ -324,11 +324,14 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .steps-grid h3 { margin: 0; color: var(--ink-900); font-size: .95rem; }
 .steps-grid p { margin: 0; color: var(--ink-600); font-size: .82rem; }
 .home-provider-cta { padding-block: 2.25rem; }
-.provider-cta { display: grid; gap: 1.25rem; padding: 1.5rem; border: 1px solid var(--brand-100); border-radius: 1.3rem; background: linear-gradient(135deg, var(--brand-50), #fff); overflow: hidden; }
-.provider-cta h2 { margin-bottom: .45rem; }
-.provider-cta p { max-width: 38rem; margin: 0; font-size: .85rem; }
-.provider-cta-actions { display: grid; gap: .55rem; align-content: center; color: var(--brand-800); font-size: .82rem; font-weight: 700; }
-.provider-cta-actions .btn { margin-top: .25rem; }
+.provider-cta { display: grid; gap: 1.5rem; padding: 1.5rem; border: 1px solid var(--ink-200); border-radius: 1.3rem; background: linear-gradient(135deg, var(--brand-50), #fff); }
+.provider-cta-copy { min-width: 0; }
+.provider-cta h2 { margin-bottom: .65rem; line-height: 1.15; }
+.provider-cta p { max-width: 38rem; margin: 0; font-size: 1rem; }
+.provider-cta-actions { min-width: 0; display: grid; gap: .75rem; align-content: center; color: var(--brand-800); font-size: 1rem; font-weight: 700; line-height: 1.5; }
+.provider-cta-actions > span { display: flex; align-items: baseline; gap: .55rem; }
+.provider-cta-actions b { flex: 0 0 auto; color: var(--brand-700); }
+.provider-cta-actions .btn { min-height: 3rem; width: 100%; margin-top: .25rem; padding: .75rem 1.25rem; }
 
 .state-panel { min-height: 15rem; display: grid; place-content: center; justify-items: center; text-align: center; padding: 2rem; }
 .state-panel h2 { font-size: 1.25rem; margin: .7rem 0 .35rem; }
@@ -901,8 +904,7 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .steps-grid { gap: .6rem; }
   .steps-grid li { padding: .8rem; }
   .home-provider-cta { padding-block: 1.75rem; }
-  .provider-cta { gap: .9rem; padding: 1.15rem; }
-  .provider-cta-actions { gap: .4rem; }
+  .provider-cta { gap: 1.25rem; padding: 1.25rem; }
   .site-footer { padding-top: 1.5rem; }
   .footer-grid { gap: 1rem .8rem; }
   .footer-grid p { display: none; }
@@ -1040,7 +1042,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .steps-grid, .benefits-grid { grid-template-columns: repeat(3, 1fr); }
   .footer-grid { grid-template-columns: 1.5fr repeat(3, 1fr); }
   .footer-grid > div:first-child { grid-column: auto; }
-  .provider-cta { grid-template-columns: minmax(0, 1.4fr) minmax(15rem, .6fr); align-items: center; padding: 1.75rem; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
   .form-grid .span-two { grid-column: span 2; }
   .provider-profile-fields { grid-template-columns: minmax(0, 1fr) 5rem 6rem; }
@@ -2436,9 +2437,7 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .home-steps .steps-grid { gap: 1rem; }
   .home-steps .steps-grid li { padding: 1.1rem; }
   .home-steps .steps-grid h3 { font-size: 1rem; }
-  .home-steps .steps-grid p,
-  .provider-cta p { font-size: .875rem; }
-  .provider-cta { gap: 1.35rem; padding: 1.5rem; }
+  .home-steps .steps-grid p { font-size: .875rem; }
 
   /* Catálogo, listagem, conteúdo e perfil usam a mesma cadência de leitura. */
   .page-hero,
@@ -2759,10 +2758,19 @@ body :is(.eyebrow, .kicker, .optional, .field-hint, .field-error,
 
   body :is(.page-hero p, .catalog-hero p, .professionals-hero p,
     .info-page-hero p, .profile-intro p, .service-detail-grid p,
-    .portal-page-heading p, .content-card p, .provider-cta p,
+    .portal-page-heading p, .content-card p,
     .benefits-grid p, .info-grid p, .review-list p, .bubble) {
     font-size: 1rem !important;
   }
+}
+
+/* Professional invitation follows the site's reading scale, not metadata size. */
+body .provider-cta-actions .btn { font-size: 1rem !important; }
+
+@media (min-width: 64rem) {
+  .provider-cta { grid-template-columns: minmax(0, 1.6fr) minmax(18rem, .8fr); align-items: center; min-height: 12rem; gap: 2rem; padding: 2rem; }
+  .provider-cta h2 { font-size: clamp(2rem, 2.8vw, 2.25rem); }
+  body .provider-cta p { font-size: 1.0625rem !important; }
 }
 
 /* Warm brand accents over one neutral blue page background. */

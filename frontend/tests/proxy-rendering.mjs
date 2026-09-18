@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { assertHomeServiceCard } from './home-service-card.mjs';
+import { assertHomeProviderCta } from './home-provider-cta.mjs';
 
 const baseUrl = process.env['PREVIEW_URL'] ?? 'http://127.0.0.1:4200';
 for (const extraHeaders of [{}, { 'x-forwarded-for': '203.0.113.10', 'x-forwarded-uri': '/spoofed-route' }]) {
@@ -7,6 +8,7 @@ for (const extraHeaders of [{}, { 'x-forwarded-for': '203.0.113.10', 'x-forwarde
   const html = await response.text();
   assert.equal(response.status, 200);
   assertHomeServiceCard(html);
+  assertHomeProviderCta(html);
   assert.ok(html.includes('ng-server-context="ssr"'), 'The proxy must serve rendered HTML, not the empty CSR shell');
   assert.ok(html.includes('The best solution for your home.'));
   assert.ok(!html.includes('A melhor solução para o seu lar.'));

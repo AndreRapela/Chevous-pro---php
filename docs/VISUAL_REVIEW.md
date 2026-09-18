@@ -334,3 +334,32 @@ Build e atualização da prévia local são independentes do deploy público.
   que exigia espaço para a reserva fictícia foi substituído pelo novo contrato.
 - Build local atualizado: `main-DRZGSHDF.js` e `styles-ZBI3WVJV.css`.
   Deploy público permanece cancelado; banco, API e worker não foram recriados.
+
+## Ajuste solicitado: convite para profissionais na escala do site
+
+- Medição inicial real em 1280px: card com 153,88px de altura, benefícios de
+  13,12px e botão com fonte de 14,4px/altura de 41,59px. O título já estava
+  próximo dos demais títulos da home; o desnível principal era nos benefícios.
+- Benefícios e botão agora usam 16px, com espaçamento de 12px entre as ações.
+  O botão tem altura mínima de 48px, sem alterar seu destino de cadastro.
+  No desktop, a descrição passa a 17px, o título cresce discretamente para
+  35,84px em 1280px e o card tem 32px de espaço interno/altura mínima de 192px.
+- A borda neutra segue os demais cards. Mantidos o acento vinho, o fundo azul
+  da página e o fundo discreto do próprio convite. Nenhum elemento de outras
+  seções foi ampliado. Removidas as regras antigas que comprimiam este bloco.
+- Duas colunas somente a partir de 1024px; abaixo disso, conteúdo e ações
+  ficam em uma coluna. Não há altura fixa nem recorte por `overflow: hidden`.
+  A seção ganhou nome acessível pelo título e os checks são decorativos.
+- Conferência no navegador: EN em 1280px, FR em 1024px, 768px e 390px.
+  Sem corte de texto ou overflow horizontal nos tamanhos conferidos. Em FR,
+  o card cresce naturalmente para 204,67px/301,09px/331,36px, respectivamente.
+  O botão mantém fonte de 16px e altura de 48px no celular. Idioma EN e viewport
+  padrão de 1280px foram restaurados ao final.
+- `npm run check` aprovado: lint, build, bundle, 60 testes unitários, cobertura
+  EN/FR completa, estrutura e SSR. Adicionadas regressões da escala e do card
+  flexível; SSR e proxy verificam título acessível, benefícios, checks e link.
+- Novo build em 4200: `main-SGBNDPN2.js` e `styles-B4TVTLPB.css`; os 37 arquivos
+  JS/CSS servidos têm SHA-256 idêntico ao build validado. Proxy e `nginx -t`
+  passaram; health da API respondeu HTTP 200.
+- Atualizados apenas web/SSR. IDs da API, banco e worker permaneceram os
+  mesmos, sem mutações de dados ou volumes. Deploy público continua cancelado.

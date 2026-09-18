@@ -69,7 +69,16 @@ import { SeoService } from '../../../../core/seo/seo.service';
       </div>
     </section>
 
-    <section class="section home-section home-provider-cta"><div class="container provider-cta"><div><span class="eyebrow">Para profissionais</span><h2>Ofereça seus serviços com autonomia.</h2><p>Organize sua agenda e receba oportunidades pela plataforma.</p></div><div class="provider-cta-actions"><span>✓ Defina sua disponibilidade</span><span>✓ Escolha as oportunidades</span><a class="btn btn-primary" routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero ser profissional</a></div></div></section>
+    <section class="section home-section home-provider-cta" aria-labelledby="provider-cta-title">
+      <div class="container provider-cta">
+        <div class="provider-cta-copy"><span class="eyebrow">Para profissionais</span><h2 id="provider-cta-title">Ofereça seus serviços com autonomia.</h2><p>Organize sua agenda e receba oportunidades pela plataforma.</p></div>
+        <div class="provider-cta-actions">
+          <span><b aria-hidden="true">✓</b>Defina sua disponibilidade</span>
+          <span><b aria-hidden="true">✓</b>Escolha as oportunidades</span>
+          <a class="btn btn-primary" routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero ser profissional</a>
+        </div>
+      </div>
+    </section>
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
