@@ -3,6 +3,7 @@ import { EMPTY, Observable, catchError, expand, map, of, reduce, switchMap } fro
 import { environment } from '../../../environments/environment';
 import { ApiQuery, ApiService } from '../http/api.service';
 import { AppCurrency, LocalizationService } from '../localization/localization.service';
+import { normalizeProviderServicePrices } from '../../shared/utils/provider-service.util';
 import {
   Address, AppNotification, AvailabilityException, AvailabilityRule, Booking, BookingDraft, BookingOffer, BookingQuote, BookingStatus, ChatMessage,
   BookingConfirmation, Conversation, DashboardMetric, ProviderDashboard, ProviderJob,
@@ -127,8 +128,8 @@ export class MarketplaceService {
   createProviderCourse(payload: Omit<ProfessionalCourse, 'id'>) { return this.api.post<unknown>('provider/profile/courses', payload).pipe(map((item) => this.courseModel(item))); }
   updateProviderCourse(id: string, payload: Omit<ProfessionalCourse, 'id'>) { return this.api.put<unknown>(`provider/profile/courses/${encodeURIComponent(id)}`, payload).pipe(map((item) => this.courseModel(item))); }
   removeProviderCourse(id: string) { return this.api.delete<void>(`provider/profile/courses/${encodeURIComponent(id)}`); }
-  providerServices() { return this.api.get<ProviderService[]>('provider/services').pipe(map((items) => items.map((item) => ({ ...item, catalogPriceCents: this.number(item.catalogPriceCents), customPriceCents: this.number(item.customPriceCents, this.number(item.catalogPriceCents)) })))); }
-  updateProviderService(id: string, payload: { priceCents: number; active: boolean }) { return this.api.put<ProviderService>(`provider/services/${id}`, payload); }
+  providerServices() { return this.api.get<ProviderService[]>('provider/services').pipe(map((items) => items.map((item) => normalizeProviderServicePrices(item)))); }
+  updateProviderService(id: string, payload: { priceCents: number; active: boolean }) { return this.api.put<ProviderService>(`provider/services/${id}`, payload).pipe(map((item) => normalizeProviderServicePrices(item))); }
   removeProviderService(id: string) { return this.api.delete<void>(`provider/services/${id}`); }
   providerAvailability() { return this.api.get<AvailabilityRule[]>('provider/availability'); }
   saveProviderAvailability(rules: AvailabilityRule[]) { return this.api.put<AvailabilityRule[]>('provider/availability', { rules: rules.map(({ weekday, startTime, endTime }) => ({ weekday, startTime, endTime })) }); }

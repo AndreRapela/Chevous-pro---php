@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProviderRequest } from '../../../../core/models';
 import { LocalizationService } from '../../../../core/localization/localization.service';
-import { displayReferenceAmount, referenceAmountToCents } from '../../../../core/localization/reference-currency.util';
+import { displayReferenceAmount, displayReferenceBound, referenceAmountToCents } from '../../../../core/localization/reference-currency.util';
 import { PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
 import { LocalizedDatePipe, LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 
@@ -78,12 +78,10 @@ export class ProviderRequestsComponent implements OnInit {
   }
 
   minimumAmount(request: ProviderRequest): number {
-    const cents = this.localization.convertAmount(10, request.currency) * 100;
-    return Math.ceil(cents - Math.abs(cents) * Number.EPSILON * 4) / 100;
+    return displayReferenceBound(1000, request.currency, this.localization.currency(), 'minimum');
   }
 
   maximumAmount(request: ProviderRequest): number {
-    const cents = this.localization.convertAmount(100000, request.currency) * 100;
-    return Math.floor(cents + Math.abs(cents) * Number.EPSILON * 4) / 100;
+    return displayReferenceBound(10000000, request.currency, this.localization.currency(), 'maximum');
   }
 }

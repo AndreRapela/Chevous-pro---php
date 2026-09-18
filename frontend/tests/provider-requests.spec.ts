@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import ts from 'typescript';
-import { convertReferenceAmount, displayReferenceAmount, referenceAmountToCents } from '../src/app/core/localization/reference-currency.util.ts';
+import { convertReferenceAmount, displayReferenceAmount, displayReferenceBound, referenceAmountToCents } from '../src/app/core/localization/reference-currency.util.ts';
 import type { ReferenceCurrency } from '../src/app/core/localization/reference-currency.util.ts';
 
 type RequestReference = { id: string; suggestedSubtotalCents: number; currency: ReferenceCurrency };
@@ -28,7 +28,7 @@ function inspect(node: ts.Node): void {
 inspect(component);
 assert.equal(methods.length, 4);
 const output = ts.transpileModule(`class RequestFormHarness { ${methods.join('\n')} }`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-const Harness = new Function('displayReferenceAmount', 'referenceAmountToCents', `${output}; return RequestFormHarness;`)(displayReferenceAmount, referenceAmountToCents) as new () => RequestHarness;
+const Harness = new Function('displayReferenceAmount', 'displayReferenceBound', 'referenceAmountToCents', `${output}; return RequestFormHarness;`)(displayReferenceAmount, displayReferenceBound, referenceAmountToCents) as new () => RequestHarness;
 
 function fixture(currency: 'EUR' | 'USD') {
   const harness = new Harness();

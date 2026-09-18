@@ -328,6 +328,8 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Contato antes da reserva', en: 'Pre-booking inquiry', fr: 'Échange avant la réservation' },
   { pt: 'Histórico de serviços', en: 'Service history', fr: 'Historique des services' },
   { pt: 'Preço mínimo:', en: 'Minimum price:', fr: 'Prix minimum :' },
+  { pt: 'Preço máximo:', en: 'Maximum price:', fr: 'Prix maximum :' },
+  { pt: 'Informe um preço-base válido.', en: 'Enter a valid base price.', fr: 'Saisissez un prix de base valide.' },
   { pt: 'Selecione um serviço. Preço mínimo:', en: 'Select a service. Minimum price:', fr: 'Sélectionnez un service. Prix minimum :' },
   { pt: 'Complete serviços e agenda enquanto aguarda a análise.', en: 'Complete your services and schedule while awaiting review.', fr: 'Complétez vos services et votre agenda en attendant l’examen.' },
   { pt: 'Entre em contato com o suporte para revisar a situação.', en: 'Contact support to review the situation.', fr: 'Contactez l’assistance pour examiner la situation.' },

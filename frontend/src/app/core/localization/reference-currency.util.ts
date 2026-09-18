@@ -12,6 +12,13 @@ export function displayReferenceAmount(cents: number, source: ReferenceCurrency,
   return Math.round(convertReferenceAmount(cents / 100, source, target) * 100) / 100;
 }
 
+/** Inward rounding keeps an editable cent value within the source API's bounds. */
+export function displayReferenceBound(cents: number, source: ReferenceCurrency, target: ReferenceCurrency, bound: 'minimum' | 'maximum'): number {
+  const convertedCents = convertReferenceAmount(cents / 100, source, target) * 100;
+  const tolerance = Math.abs(convertedCents) * Number.EPSILON * 4;
+  return (bound === 'minimum' ? Math.ceil(convertedCents - tolerance) : Math.floor(convertedCents + tolerance)) / 100;
+}
+
 export function referenceAmountToCents(value: string, display: ReferenceCurrency, source: ReferenceCurrency): number {
   if (!value.trim()) return NaN;
   return Math.round(convertReferenceAmount(Number(value), display, source) * 100);
