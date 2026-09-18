@@ -49,6 +49,10 @@ try {
     assert.ok(homeHtml.includes(fragment), `Home SSR não contém ${fragment}.`);
   }
   assert.ok(!homeHtml.includes('ng-event-dispatch-contract'), 'SSR não deve introduzir script inline incompatível com a CSP.');
+  assert.ok(homeHtml.includes('property="og:locale" content="en_US"'), 'SSR must advertise the supported English locale, never pt_BR.');
+  assert.ok(homeHtml.includes('property="og:site_name" content="ChezVoust Pro"'));
+  assert.ok(homeHtml.includes('The best solution for your home.'), 'SSR must render interface text in English, not wait for client localization.');
+  assert.ok(!homeHtml.includes('A melhor solução para o seu lar.'));
 
   const catalog = await request('/servicos');
   const catalogHtml = await catalog.text();

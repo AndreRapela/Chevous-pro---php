@@ -151,3 +151,69 @@ Build e atualização da prévia local são independentes do deploy público.
   aos arquivos validados pelo check. Seletor em EN/EUR; cards reais com largura
   e `scrollWidth` iguais a 321 px, nomes e preços em negrito, sem transbordamento.
   Apenas `web` e `ssr` atualizados; deploy público permanece cancelado.
+
+## Continuação: cobertura de idioma e propostas
+
+- Corrigido o formulário de propostas: o rótulo e o valor editável agora usam
+  a preferência EUR/USD, assim como a referência exibida no card. O envio
+  converte o valor para a moeda original da solicitação; os dados históricos
+  em BRL não foram reescritos. Conversões continuam sendo referências fixas,
+  não taxas de liquidação nem cobranças pela plataforma.
+- Valores sugeridos mantêm os centavos originais quando não foram editados,
+  mesmo que a exibição tenha arredondamento. Valores inválidos são rejeitados
+  e o formulário bloqueia um segundo envio enquanto o primeiro está em andamento.
+- Limites do formulário alinhados ao `ProviderController::createOffer`: mínimo
+  de 1.000 e máximo de 10.000.000 centavos na moeda da solicitação, convertidos
+  para os limites do input EUR/USD. A tela antes aceitava 100 centavos, que a API
+  recusaria. Os testes cobrem esses limites sem criar propostas no banco.
+- Agenda: “Início” foi substituído por um rótulo contextual de horário, evitando
+  a tradução incorreta como “Home”. Dias da semana, confirmações e bloqueios
+  receberam traduções completas. `data-label`, usado nos cabeçalhos móveis
+  das células, passou a fazer parte dos atributos localizados.
+- Completadas traduções de confirmações de reserva, estados de carregamento,
+  avaliações, campos de perfil, ações administrativas e metadados das rotas.
+  O plural dos comentários usa palavras completas, sem acrescentar um “s” a
+  uma palavra já traduzida. O identificador Open Graph agora é EN/FR, não pt_BR.
+- Nomes próprios, endereços, comentários, instituições e motivos informados
+  pelos usuários são preservados nos trechos alterados; não há reescrita
+  desse conteúdo no banco. O endereço novo tem uma identificação inicial
+  no idioma selecionado, em vez de “Casa” em português.
+- No painel administrativo, a troca de idioma também atualiza datas e valores
+  carregados. O fallback de profissional ainda não definido é localizado antes
+  de preservar o restante da célula de nomes, evitando português nesse estado.
+- Novo `npm run test:localization`: análise dos 53 templates Angular e de
+  configurações, feedbacks e rotas, cobrindo 1.079 textos/fragmentos de interface.
+  Valida EN/FR, frases com números e preferências antigas PT/BRL, inclusive
+  quando o armazenamento está indisponível. A checagem é parte de `npm run check`.
+- `npm run check` aprovado: lint, build, bundle sem credenciais de demonstração,
+  36 testes unitários, cobertura de idioma, estrutura e renderização SSR.
+  Os testes de propostas usam um cliente gravador local, sem enviar ofertas reais.
+- `npm run test:coverage`: 30 testes aprovados e 100% de linhas, funções e
+  ramificações nos utilitários selecionados, incluindo as conversões de referência.
+- O HTML SSR também passa pela localização ao terminar a renderização, antes
+  da serialização. Textos e atributos da interface saem em inglês, sem depender
+  do JavaScript do navegador. A árvore de nós, comentários de hidratação,
+  conteúdo pessoal, scripts e valores dos campos são preservados. Frases de
+  paginação já renderizadas em inglês também podem mudar para francês.
+- Limite desta continuação: o canal nativo do controle visual estava indisponível.
+  Não foi realizada uma nova conferência visual no navegador; os resultados acima
+  vêm da análise de código e dos testes automatizados. As medições visuais das
+  seções anteriores pertencem às revisões anteriores, não a esta continuação.
+- Deploy público permanece cancelado; somente a atualização local foi autorizada.
+- Build local final: `main-PNFBCBO3.js` e `styles-NKRN4KL3.css`. Os 37 arquivos
+  JavaScript/CSS servidos em 4200 tiveram SHA-256 idêntico ao build validado.
+  Home e health da API retornaram HTTP 200. O serviço SSR local também confirmou
+  o texto do hero em inglês, sem o texto original em português.
+  Apenas `web` e `ssr` foram recriados; IDs da API, banco e worker permaneceram
+  os mesmos. Nenhum dado ou volume foi removido.
+- Detectada e corrigida uma falha do proxy local: `X-Forwarded-For` e
+  `X-Forwarded-Uri` eram encaminhados ao SSR, mas não faziam parte dos
+  cabeçalhos confiáveis do Angular. Isso devolvia um HTML CSR vazio, embora
+  o serviço SSR isolado funcionasse. Esses dois cabeçalhos são agora removidos
+  no encaminhamento; host/protocolo continuam sobrescritos pelo Nginx e o IP
+  do cliente mantém seu canal separado `X-Client-IP`. Não foi ampliada a lista
+  de cabeçalhos confiáveis. O teste HTTP `frontend/tests/proxy-rendering.mjs`
+  confere a página renderizada e os metadados, também com cabeçalhos falsificados.
+- Conferência final do proxy aprovada em 4200, tanto na requisição normal como
+  com os dois cabeçalhos falsificados: HTML SSR, hero em inglês e `og:locale=en_US`.
+  `nginx -t` também aprovado. A API, o banco e o worker continuam com os mesmos IDs.
