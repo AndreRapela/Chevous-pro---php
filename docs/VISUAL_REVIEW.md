@@ -111,3 +111,43 @@ Build e atualização da prévia local são independentes do deploy público.
   servidos correspondem ao novo build; home e health da API retornam HTTP 200.
   Apenas `web` e `ssr` foram recriados; API, worker, banco e volumes preservados.
   A prévia mock de testes continua em 4300.
+
+## Ajustes adicionais de espaçamento e escala
+
+- Cabeçalho público: navegação centralizada, com 32 px entre links; conta e
+  seletor separados por 20 px, em vez dos 7,2 px anteriores. Em larguras menores
+  que 1216 px, o menu recolhe sem apertar os links; todos os destinos principais
+  também estão disponíveis nesse menu.
+- Cabeçalho do painel: notificações, idioma, identidade e saída separados por
+  20 px no desktop. Avatar e nome permanecem agrupados. No celular estreito,
+  os controles usam a largura disponível, sem comprimir o rótulo francês de saída.
+- Nomes e preços dos cards: 17 px e peso 800. No histórico do cliente, nome
+  do profissional e preço passam a 16 px e negrito; código e data mantêm
+  hierarquia secundária.
+- Reserva: título principal entre 24 e 28,8 px; títulos internos de 18 px.
+  O bloco de ações deixa de esticar até a altura do resumo. Nome e total em
+  negrito; as definições não carregam mais o recuo padrão do navegador.
+- Traduções completas adicionadas para reservar novamente, horário confirmado
+  e validade das propostas. Respostas rápidas e estados de sincronização do
+  chat usam a tradução ativa diretamente no componente.
+- Chat: texto de 15 px, horário de 13,12 px e padding vertical de 8 px nos
+  balões. A seção desktop passa de 736 px fixos para uma altura responsiva de
+  480 a 608 px; na janela de teste ficou em 496 px.
+- Botão de acesso à conta com altura mínima de 48 px e padding maior; frase
+  de apresentação no rodapé em negrito.
+- Mensagens, endereços, nomes próprios e instruções escritos pelos usuários
+  são preservados. A tradução da interface não reescreve conteúdo pessoal.
+  A instrução fictícia do perfil de demonstração foi atualizada para inglês.
+- `npm run check` aprovado novamente: lint, build, bundle sem credenciais de
+  demonstração, 24 testes unitários, estrutura e renderização SSR.
+- Verificação adicional em 320, 1024, 1216 e 1280 px. Cabeçalho francês sem
+  login manteve 63 px entre navegação e ações em 1216 px, sem transbordamento.
+  No chat móvel selecionado, os comandos terminam em aproximadamente 707 px,
+  acima da navegação inferior que começa em 761 px.
+- A prévia mock foi reiniciada com `--hmr=false`: ela ainda apresentava o
+  template anterior do botão de conversas apesar de servir o chunk atualizado.
+  Após o reinício, a nova seta e o rótulo acessível foram conferidos no DOM.
+- Build final local em 4200: `styles-NKRN4KL3.css` e `main-TQLFBYJM.js`, iguais
+  aos arquivos validados pelo check. Seletor em EN/EUR; cards reais com largura
+  e `scrollWidth` iguais a 321 px, nomes e preços em negrito, sem transbordamento.
+  Apenas `web` e `ssr` atualizados; deploy público permanece cancelado.

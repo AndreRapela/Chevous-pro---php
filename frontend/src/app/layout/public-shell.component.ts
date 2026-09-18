@@ -36,8 +36,11 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         </div>
       </div>
       @if (menuOpen()) {
-        <nav id="mobile-menu" class="mobile-menu" aria-label="Mais opções">
-          <a routerLink="/como-funciona" (click)="closeMenu()">Como funciona</a>
+        <nav id="mobile-menu" class="mobile-menu" aria-label="Navegação principal">
+          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMenu()">Início</a>
+          <a routerLink="/servicos" routerLinkActive="active" (click)="closeMenu()">Serviços</a>
+          <a routerLink="/profissionais" routerLinkActive="active" (click)="closeMenu()">Profissionais</a>
+          <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
           <a routerLink="/seguranca" (click)="closeMenu()">Segurança</a>
           <a routerLink="/ajuda" (click)="closeMenu()">Ajuda</a>
           @if (!auth.user()) { <a routerLink="/entrar" (click)="closeMenu()">Entrar</a><a routerLink="/cadastro" (click)="closeMenu()">Criar conta</a> }
