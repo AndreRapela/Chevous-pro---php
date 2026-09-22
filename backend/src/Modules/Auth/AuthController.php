@@ -139,13 +139,16 @@ final class AuthController extends Controller
 
     public function login(Request $request, array $params, ?array $auth): Response
     {
-        $this->rateLimiter->check('login:' . $request->ip, 10, 900);
+        // O teto por IP contém abuso volumétrico sem bloquear uma rede inteira
+        // após poucas tentativas. O balde mais estrito é isolado por conta e IP.
+        $this->rateLimiter->check('login-ip:' . $request->ip, 100, 900);
         $data = Validator::validate($request->body, [
             'email' => ['required', 'email', 'max:190'],
             'password' => ['required', 'string', 'max:128'],
             'remember' => ['sometimes', 'boolean'],
         ]);
         $email = mb_strtolower(trim((string) $data['email']));
+        $this->rateLimiter->check('login-account-ip:' . $email . ':' . $request->ip, 10, 900);
 
         $statement = $this->db->prepare(
             'SELECT id, public_id, role, name, email, phone, avatar_path, avatar_updated_at, password_hash, status, email_verified_at
@@ -356,6 +359,12 @@ final class AuthController extends Controller
                 'UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP()
                  WHERE user_id = :user_id AND public_id <> :current_session AND revoked_at IS NULL'
             )->execute(['user_id' => $auth['id'], 'current_session' => $auth['sessionId']]);
+            $this->notify(
+                (int) $auth['id'],
+                'security.password_changed',
+                'Senha atualizada',
+                'Sua senha foi alterada e os outros dispositivos foram desconectados.'
+            );
             $this->db->commit();
         } catch (\Throwable $exception) {
             if ($this->db->inTransaction()) {
@@ -465,6 +474,12 @@ final class AuthController extends Controller
                 ]);
             $this->db->prepare('UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $token['id']]);
             $this->db->prepare('UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP() WHERE user_id = :id AND revoked_at IS NULL')->execute(['id' => $token['user_id']]);
+            $this->notify(
+                (int) $token['user_id'],
+                'security.password_reset',
+                'Senha redefinida',
+                'Sua senha foi redefinida com sucesso. Entre novamente para continuar.'
+            );
             $this->db->commit();
         } catch (\Throwable $exception) {
             if ($this->db->inTransaction()) {
@@ -494,6 +509,12 @@ final class AuthController extends Controller
                 ->execute(['id' => $token['user_id']]);
             $this->db->prepare('UPDATE email_verification_tokens SET used_at = UTC_TIMESTAMP() WHERE id = :id')
                 ->execute(['id' => $token['id']]);
+            $this->notify(
+                (int) $token['user_id'],
+                'account.email_verified',
+                'E-mail confirmado',
+                'Seu endereço de e-mail foi confirmado e todos os recursos da conta estão disponíveis.'
+            );
             $this->db->commit();
         } catch (\Throwable $exception) {
             if ($this->db->inTransaction()) {

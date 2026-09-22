@@ -1,5 +1,5 @@
 $ErrorActionPreference = 'Stop'
-$baseUrl = 'http://localhost:8080/api/v1'
+$baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }

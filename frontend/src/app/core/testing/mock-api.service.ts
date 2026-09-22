@@ -92,6 +92,12 @@ export class MockApiService {
     if (method === 'GET' && path === 'auth/sessions') return this.ok([{ id: 'mock-session-current', ipAddress: '127.0.0.1', userAgent: 'Mock browser', device: 'Demo browser', current: true, createdAt: new Date().toISOString(), lastUsedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() }]);
     if (method === 'DELETE' && /^auth\/sessions\/[^/]+$/.test(path)) return this.ok(undefined);
     if (method === 'GET' && path === 'me') return this.ok(this.currentUser());
+    if (method === 'GET' && /^postal-codes\/\d{8}$/.test(path)) {
+      const cep = path.slice(-8);
+      if (cep === '01001000') return this.ok({ postalCode: '01001-000', street: 'Praça da Sé', neighborhood: 'Sé', city: 'São Paulo', state: 'SP' });
+      if (cep === '51170300') return this.ok({ postalCode: '51170-300', street: 'Avenida Engenheiro Alves de Souza', neighborhood: 'Imbiribeira', city: 'Recife', state: 'PE' });
+      return this.notFound('CEP não encontrado. Confira os números ou preencha o endereço manualmente.');
+    }
     if (method === 'PATCH' && path === 'me') { const value = body as Partial<User>; this.activeUser = { ...this.currentUser(), ...value }; return this.ok(this.activeUser); }
     if (method === 'POST' && path === 'me/avatar') { this.activeUser = { ...this.currentUser(), avatarUrl: '/images/garconete-cadastro-warm-640.jpg' }; return this.ok(this.activeUser); }
     if (method === 'GET' && path === 'me/addresses') return this.ok(this.addresses);

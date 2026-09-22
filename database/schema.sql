@@ -596,7 +596,9 @@ CREATE TABLE IF NOT EXISTS outbox_events (
     attempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
     available_at DATETIME NOT NULL,
     processed_at DATETIME NULL,
+    failed_at DATETIME NULL,
+    last_error VARCHAR(500) NULL,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (id),
-    KEY idx_outbox_pending (processed_at, available_at, id)
+    KEY idx_outbox_pending (processed_at, failed_at, available_at, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

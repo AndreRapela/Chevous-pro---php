@@ -2,10 +2,15 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$baseUrl = 'http://localhost:8080/api/v1'
+$baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }
+}
+
+function New-SafeMessageToken {
+    # Evita sequências numéricas que a moderação deve interpretar como telefone.
+    return ([guid]::NewGuid().ToString('N') -replace '[0-9]', 'x')
 }
 
 function Login([string]$email, [string]$password) {
@@ -56,13 +61,13 @@ try {
     Assert-True ($providerConversations.id -contains $conversationId) 'Cliente e profissional não compartilham a conversa seed.'
 
     $providerCursor = Latest-Sequence $conversationId $providerHeaders
-    $customerBody = "e2e-cliente-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $customerBody = "e2e-cliente-$(New-SafeMessageToken)"
     $customerMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ body = $customerBody } | ConvertTo-Json)).data
     $providerDelta = @((Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=$providerCursor&limit=100" -Headers $providerHeaders).data)
     Assert-True ($providerDelta.Count -eq 1) "O profissional deveria receber uma mensagem incremental; recebeu $($providerDelta.Count)."
     Assert-True ($providerDelta[0].body -eq $customerBody -and $providerDelta[0].senderId -eq $customer.user.id) 'Conteúdo ou autoria cliente para profissional incorretos.'
 
-    $providerBody = "e2e-profissional-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $providerBody = "e2e-profissional-$(New-SafeMessageToken)"
     $providerMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $providerHeaders -ContentType 'application/json' -Body (@{ body = $providerBody } | ConvertTo-Json)).data
     $customerDelta = @((Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=$($customerMessage.sequence)&limit=100" -Headers $customerHeaders).data)
     Assert-True ($customerDelta.Count -eq 1) "O cliente deveria receber uma mensagem incremental; recebeu $($customerDelta.Count)."
@@ -75,8 +80,8 @@ try {
     $liveCursor = Latest-Sequence $conversationId $providerHeaders
     $emptySync = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
     Assert-True (@($emptySync.data).Count -eq 0) 'A sincronização incremental devolveu mensagens já processadas.'
-    Assert-True ([int]$emptySync.meta.pollAfterSeconds -eq 5) 'A API não informou a cadência esperada para a próxima sincronização.'
-    $liveBody = "e2e-live-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    Assert-True ([int]$emptySync.meta.pollAfterSeconds -eq 10) 'A API não informou a cadência esperada para a próxima sincronização.'
+    $liveBody = "e2e-live-$(New-SafeMessageToken)"
     $liveMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ body = $liveBody } | ConvertTo-Json)).data
     $liveResponse = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
     $liveDelta = @($liveResponse.data)
@@ -84,7 +89,7 @@ try {
 
     $idempotencyKey = [guid]::NewGuid().ToString()
     $idempotencyHeaders = @{ Authorization = "Bearer $($customer.accessToken)"; 'Idempotency-Key' = $idempotencyKey }
-    $idempotentBody = "e2e-idempotente-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"
+    $idempotentBody = "e2e-idempotente-$(New-SafeMessageToken)"
     $firstIdempotent = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $idempotencyHeaders -ContentType 'application/json' -Body (@{ body = $idempotentBody } | ConvertTo-Json)).data
     $secondIdempotent = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $idempotencyHeaders -ContentType 'application/json' -Body (@{ body = $idempotentBody } | ConvertTo-Json)).data
     Assert-True ($firstIdempotent.id -eq $secondIdempotent.id -and $firstIdempotent.sequence -eq $secondIdempotent.sequence) 'Repetir o envio com a mesma chave criou uma mensagem duplicada.'

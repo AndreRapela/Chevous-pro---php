@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+$webUrl = if ($env:CVP_WEB_URL) { $env:CVP_WEB_URL.TrimEnd('/') } else { 'http://localhost:4200' }
 Push-Location $projectRoot
 
 try {
@@ -29,7 +30,7 @@ try {
         throw 'Não foi possível preparar os contadores locais de rate limit.'
     }
 
-    $health = Invoke-RestMethod -Method Get -Uri 'http://localhost:4200/api/v1/health'
+    $health = Invoke-RestMethod -Method Get -Uri "$webUrl/api/v1/health"
     if ($null -eq $health.data) {
         throw 'O endpoint de saúde não retornou o envelope esperado.'
     }
@@ -42,7 +43,7 @@ try {
 
     foreach ($account in $accounts) {
         $body = @{ email = $account.email; password = $account.password } | ConvertTo-Json
-        $response = Invoke-RestMethod -Method Post -Uri 'http://localhost:4200/api/v1/auth/login' -ContentType 'application/json' -Body $body
+        $response = Invoke-RestMethod -Method Post -Uri "$webUrl/api/v1/auth/login" -ContentType 'application/json' -Body $body
         if ($response.data.user.role -ne $account.role) {
             throw "Papel incorreto para $($account.email)."
         }

@@ -363,3 +363,140 @@ Build e atualização da prévia local são independentes do deploy público.
   passaram; health da API respondeu HTTP 200.
 - Atualizados apenas web/SSR. IDs da API, banco e worker permaneceram os
   mesmos, sem mutações de dados ou volumes. Deploy público continua cancelado.
+
+## Ajuste solicitado: perfil do profissional mais compacto
+
+- Alterações restritas a `cvp-provider-detail`: avatar de 52px, nome entre
+  26 e 30px, margens menores entre descrição, avaliação e selos, e cards com
+  16px de espaço interno. O texto de leitura permanece em 16px; não foram
+  reduzidas as fontes de outras páginas nem o convite da home.
+- Medição real em EN/1280px: cabeçalho de 203,05px para 154,94px; início dos
+  cards de 319,05px para 254,94px; card de apresentação de 212,30px para
+  182,95px. Mais serviços aparecem na primeira tela sem retirar informações.
+- Corrigido o esticamento do agendamento pelo grid: o painel estava com
+  2.123,86px de altura devido à coluna de avaliações. Com `align-self: start`,
+  tem altura natural de 280,53px e mantém os dois botões. Após rolar 468px,
+  fica em 108px do topo, abaixo do cabeçalho, sem aumentar de altura.
+- No celular, ativado o grid de duas colunas já previsto para os selos,
+  que antes permanecia flex e produzia quatro linhas de largura inteira.
+  Mantidos o agendamento móvel, os destinos e todos os dados do profissional.
+- Conferência real em EN/1280px e FR/1024px e 768px: sem overflow horizontal.
+  Em 768px, o conteúdo passa para uma coluna e o painel desktop fica oculto,
+  preservando as ações móveis existentes.
+- FR/390px: selos em duas colunas de 167,91px e duas linhas, com altura
+  total de 91,09px em vez de 162,31px; cabeçalho de 258,53px em vez de
+  329,75px. Em 320px, nome e selos quebram linhas sem overflow ou invasão
+  da ação de favoritos. Idioma EN e viewport padrão de 1280px restaurados.
+- `npm run check` final aprovado: lint, build, bundle, 61 testes unitários,
+  cobertura EN/FR completa, estrutura e SSR. O contrato CSS passa a ignorar
+  comentários de linha do Sass, além de comentários de bloco.
+- Build em 4200: `main-SGBNDPN2.js` e `styles-TSDGR52M.css`; proxy e
+  `nginx -t` aprovados. A primeira checagem do proxy ocorreu durante a
+  inicialização do SSR e retornou 502; após carregar, a repetição passou.
+- Apenas web/SSR atualizados; API, banco e worker mantidos, sem alterações
+  de registros ou volumes. Deploy público permanece cancelado.
+
+## Ajuste solicitado: harmonia de cores ao redor da foto da home
+
+- Mantida a foto autorizada e a cor azul neutra da página. Alteradas somente
+  as formas decorativas do herói desktop, sem mexer em dimensões ou posições.
+- A base passa do gradiente laranja/marrom para `--brand-600`/`--brand-700`,
+  aproximando-se do vinho da foto e dos botões. O círculo pequeno repete
+  `--brand-700`; os círculos maiores usam `--brand-200` e `--brand-400`,
+  em tons suaves da mesma escala. Bordas também usam `--brand-200`.
+- Não houve edição dos pixels da pessoa, de sua roupa ou dos produtos,
+  nem alteração das fotos de login/cadastro ou do banner móvel.
+- `npm run check` aprovado: lint, build, bundle, 62 testes unitários,
+  cobertura EN/FR completa, estrutura e SSR. Adicionada regressão das cores
+  decorativas e da permanência do azul neutro.
+- Inspeção real em 1280px: base renderizada de `rgb(173, 81, 68)` para
+  `rgb(147, 64, 55)`; círculos em `rgb(147, 64, 55)`, `rgb(220, 154, 130)`
+  e `rgb(233, 201, 184)`. Sem alteração de posição, altura ou overflow.
+- Build em 4200: `main-SGBNDPN2.js` e `styles-FRH4ZWT3.css`; 37 arquivos
+  JS/CSS idênticos ao build validado. Proxy, `nginx -t` e health HTTP 200
+  aprovados. Apenas web/SSR atualizados; deploy público continua cancelado.
+
+## Ajuste solicitado: variação discreta no fundo superior
+
+- Apenas o `hero-section` recebe `--hero-background: #dce9f1`, um azul
+  levemente mais fechado que o fundo geral `#eaf1f6`. Não foi introduzido
+  roxo e as demais seções continuam no azul neutro anterior.
+- A diferença de luminância é intencionalmente pequena: razão inferior a
+  1,1:1 entre os dois fundos. Limites de inputs, foco e texto continuam
+  dentro dos contratos de contraste existentes também sobre a nova cor.
+- Conferência real em 1280px: topo `rgb(220, 233, 241)` e seção seguinte
+  `rgb(234, 241, 246)`, encontrando-se exatamente em 506,64px. Não há
+  overflow horizontal; o card branco de atalhos preserva sua separação.
+- `npm run check` aprovado com 62 testes unitários, EN/FR completo, estrutura
+  e SSR. Build em 4200: `main-SGBNDPN2.js` e `styles-VZRKHDTZ.css`; proxy,
+  `nginx -t`, health HTTP 200 e os 37 arquivos JS/CSS aprovados. Somente
+  web/SSR atualizados; banco, API e worker mantidos. Deploy segue cancelado.
+
+## Segunda redução solicitada: identidade do profissional
+
+- O topo da página pública agora funciona como uma identificação compacta,
+  não como um segundo herói: avatar de 40px, nome de 20–22px, descrição e
+  avaliação agrupadas, com favoritos preservado como alvo de toque de 42px.
+- Em EN/1280px, o cabeçalho passou de 154,94px para 66,38px de altura e o
+  primeiro card começa em 162,38px. Os quatro selos ficam em uma única faixa
+  lateral, sem sobrepor o perfil ou aumentar a largura do documento.
+- Entre 672px e 895px, o nome permanece inteiro e os selos ocupam uma faixa
+  fina logo abaixo da identidade. Em 768px, o cabeçalho mede 128,75px e todos
+  os quatro selos ficam visíveis, sem overflow horizontal na página.
+- No celular, os selos continuam em uma única linha rolável dentro do próprio
+  componente. Em 390px, a página mantém 375px de largura de conteúdo, sem
+  rolagem horizontal global; todos os dados também permanecem no resumo.
+- `npm run check` aprovado: lint, build, bundle, 62 testes unitários, cobertura
+  EN/FR completa, estrutura e SSR. O teste visual cobre densidade, contenção
+  dos selos e o painel de agendamento com altura natural.
+- Build local em 4200: `main-SGBNDPN2.js` e `styles-4YYPI5UC.css`; `nginx -t`
+  aprovado. Apenas web/SSR foram recriados; API, banco e worker mantiveram os
+  mesmos containers. Deploy público continua cancelado.
+
+## Compactação da página completa do profissional
+
+- A redução deixou de se limitar ao cabeçalho: o conteúdo agora usa um limite
+  de 66rem, coluna lateral de 16rem, intervalo de 14px e cards com 12px de
+  espaço interno. Títulos internos ficam em 16px e o texto de leitura em 15px.
+- Em EN/1280px, a altura do documento passou de 1.337px para 1.059px. A coluna
+  principal caiu de 899px para 641px, sem remover perfil, serviços, avaliações,
+  comentários ou ações de contratação.
+- Os três serviços continuam dentro de um único card, mas passam a três colunas
+  no desktop. O card foi de 271,88px para 130,77px. Em tablet e celular volta
+  automaticamente para uma coluna, preservando descrições e destinos.
+- O resumo passou de 182,95px para 162,47px; avaliações de 184,08px para
+  147,88px; comentários de 224,08px para 176,02px. O painel lateral foi de
+  280,53px para 246px e mantém os dois botões com alvos confortáveis.
+- Conferência real em 1280px, 768px e 390px: sem overflow horizontal global.
+  O painel lateral some nos breakpoints existentes e a barra móvel permanece.
+- `npm run check` aprovado: lint, build, bundle, 62 testes unitários, cobertura
+  EN/FR completa, estrutura e SSR. Build local: `main-SGBNDPN2.js` e
+  `styles-XW6TZ53T.css`; `nginx -t` aprovado. Somente web/SSR atualizados;
+  deploy público continua cancelado.
+
+## Padronização final dos layouts e card lateral do perfil
+
+- A identificação do profissional, a avaliação, as métricas, os selos e a
+  disponibilidade foram organizados em uma coluna lateral de cards no desktop.
+  Em tablet e celular, a mesma informação vira o primeiro card da página, sem
+  perder dados nem criar uma coluna vazia.
+- O grid lateral só é ativado a partir de 1024px. A largura intermediária de
+  960px foi conferida com uma coluna integral; em 390px, as três métricas ficam
+  em uma faixa compacta e a página não tem overflow horizontal.
+- A home passou a ter um `h1` real no hero desktop. A hierarquia da página de
+  serviço, das reservas e dos painéis foi normalizada para que títulos internos
+  não disputem destaque com o título da página.
+- Agenda profissional, tabelas administrativas e troca de etapas da reserva
+  receberam contenção e regras móveis específicas. Ao avançar ou voltar no
+  formulário, o novo título recebe foco e fica abaixo do cabeçalho fixo.
+- Os símbolos tipográficos dos painéis foram substituídos por um conjunto
+  vetorial único, usado na barra lateral e na navegação inferior.
+- Traduções dinâmicas foram completadas para verificação de e-mail,
+  notificações, catálogo, reserva, quantidades e favoritos. A auditoria cobre
+  também os textos passados ao shell de autenticação.
+- Conferência visual real realizada em 1280px, 960px e 390px para home,
+  profissionais, perfil, serviço, agenda, reserva, mensagens e catálogo.
+  `npm test`, `npm run lint` e `npm run build` aprovados; 62 testes unitários,
+  54 templates e 1.085 fragmentos de interface EN/FR verificados.
+- Nenhum deploy foi executado. A prévia usada nesta etapa permaneceu apenas em
+  `127.0.0.1:4300`, conforme o cancelamento do deploy.

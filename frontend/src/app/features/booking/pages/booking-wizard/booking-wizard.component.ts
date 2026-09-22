@@ -8,6 +8,7 @@ import { MarketplaceService } from '../../../../core/data-access/marketplace.ser
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { Address, Booking, BookingDraft, BookingQuote, ProviderProfile, Service } from '../../../../core/models';
 import { StatePanelComponent } from '../../../../shared/components';
+import { formatPostalCode } from '../../../../shared/utils/postal-code.util';
 import { BookingAddressStepComponent } from '../../components/booking-address-step/booking-address-step.component';
 import { BookingConfirmationComponent } from '../../components/booking-confirmation/booking-confirmation.component';
 import { BookingDetailsStepComponent } from '../../components/booking-details-step/booking-details-step.component';
@@ -57,7 +58,7 @@ interface QuoteRequest {
                 @switch (step()) {
                   @case (0) { <cvp-booking-details-step [form]="form" [service]="selectedService" (quoteRequested)="refreshQuote()" /> }
                   @case (1) { <cvp-booking-address-step [form]="form" [addresses]="addresses()" /> }
-                  @case (2) { <cvp-booking-schedule-step [form]="form" [minDate]="minDate" [times]="times()" [loading]="availabilityLoading()" [availabilityError]="availabilityError()" (dateChanged)="dateChanged()" /> }
+                  @case (2) { <cvp-booking-schedule-step [form]="form" [minDate]="minDate" [times]="times()" [loading]="availabilityLoading()" [availabilityError]="availabilityError()" [hasProfessionals]="allProviders().length > 0" (dateChanged)="dateChanged()" /> }
                   @case (3) { <cvp-booking-provider-step [form]="form" [providers]="providers()" (quoteRequested)="refreshQuote()" /> }
                   @case (4) { <cvp-booking-review-step [form]="form" [service]="selectedService" [provider]="selectedProvider()" /> }
                 }
@@ -391,7 +392,7 @@ export class BookingWizardComponent implements OnInit {
 
   private applySavedAddress(address: Address): void {
     this.form.controls.address.patchValue({
-      postalCode: address.postalCode,
+      postalCode: formatPostalCode(address.postalCode),
       street: address.street,
       number: address.number,
       complement: address.complement ?? '',
@@ -402,7 +403,12 @@ export class BookingWizardComponent implements OnInit {
   }
 
   private focusHeading(): void {
-    setTimeout(() => this.document.querySelector<HTMLElement>('.wizard-step h1, .confirmation-page h1')?.focus(), 0);
+    setTimeout(() => {
+      const heading = this.document.querySelector<HTMLElement>('.wizard-step h1, .confirmation-page h1');
+      if (!heading) return;
+      heading.focus({ preventScroll: true });
+      heading.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }, 0);
   }
 
   private buildDraft(): BookingDraft {

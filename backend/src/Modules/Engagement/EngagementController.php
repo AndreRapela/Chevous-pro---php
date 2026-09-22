@@ -438,6 +438,13 @@ final class EngagementController extends Controller
             'INSERT INTO professional_comments (public_id, professional_id, author_id, body, status, created_at, updated_at)
              VALUES (:public_id, :professional_id, :author_id, :body, \'published\', UTC_TIMESTAMP(), UTC_TIMESTAMP())'
         )->execute(['public_id' => $publicId, 'professional_id' => $professional['id'], 'author_id' => $auth['id'], 'body' => $comment]);
+        $this->notify(
+            (int) $professional['id'],
+            'professional.comment',
+            'Novo comentário no perfil',
+            'Um cliente publicou um comentário no seu perfil profissional.',
+            ['commentId' => $publicId]
+        );
         return Response::data([
             'id' => $publicId, 'author' => $this->publicName((string) $auth['name']), 'comment' => $comment, 'createdAt' => gmdate('Y-m-d H:i:s'),
         ], 201);
@@ -525,11 +532,22 @@ final class EngagementController extends Controller
         $this->requireVerifiedEmail($auth);
         $data = Validator::validate($request->body, ['reply' => ['required', 'string', 'min:3', 'max:2000']]);
         $reply = trim(strip_tags((string) $data['reply']));
-        $statement = $this->db->prepare('UPDATE reviews SET provider_reply = :reply, updated_at = UTC_TIMESTAMP() WHERE public_id = :id AND professional_id = :professional_id AND status = \'published\'');
-        $statement->execute(['reply' => $reply, 'id' => $params['id'], 'professional_id' => $auth['id']]);
-        if ($statement->rowCount() === 0) {
-            $this->requireRow('SELECT id FROM reviews WHERE public_id = :id AND professional_id = :professional_id', ['id' => $params['id'], 'professional_id' => $auth['id']], 'Avaliação não encontrada.');
-        }
+        $review = $this->requireRow(
+            'SELECT r.id, r.customer_id, b.public_id AS booking_public_id
+             FROM reviews r INNER JOIN bookings b ON b.id = r.booking_id
+             WHERE r.public_id = :id AND r.professional_id = :professional_id AND r.status = \'published\'',
+            ['id' => $params['id'], 'professional_id' => $auth['id']],
+            'Avaliação não encontrada.'
+        );
+        $this->db->prepare('UPDATE reviews SET provider_reply = :reply, updated_at = UTC_TIMESTAMP() WHERE id = :id')
+            ->execute(['reply' => $reply, 'id' => $review['id']]);
+        $this->notify(
+            (int) $review['customer_id'],
+            'review.replied',
+            'Resposta à sua avaliação',
+            'O profissional respondeu à avaliação que você publicou.',
+            ['bookingId' => $review['booking_public_id'], 'reviewId' => $params['id']]
+        );
         return Response::data(['id' => $params['id'], 'providerReply' => $reply]);
     }
 

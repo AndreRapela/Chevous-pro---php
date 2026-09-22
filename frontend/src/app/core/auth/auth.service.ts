@@ -34,9 +34,12 @@ export class AuthService {
     );
   }
 
-  logout(): void {
-    this.api.post<void>('auth/logout', {}).subscribe({ error: () => undefined });
-    this.session.clear();
+  logout(): Observable<void> {
+    this.busy.set(true);
+    return this.api.post<void>('auth/logout', {}).pipe(
+      tap(() => this.session.clear()),
+      finalize(() => this.busy.set(false))
+    );
   }
 
   logoutAll(): Observable<void> {

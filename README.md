@@ -65,6 +65,11 @@ docker compose up --build
 - API: `http://localhost:8080/api/v1`
 - MySQL: `localhost:3306`
 
+Neste Compose local, a tela de login mostra atalhos para as contas de teste de
+cliente, profissional e administrador. Eles entram com um clique e ficam disponíveis
+somente na interface vinculada a `localhost`. O overlay de produção compila a
+interface sem esses atalhos nem as senhas de demonstração.
+
 Para trabalhar no frontend com recarga automática, mantenha a API do Compose ativa e
 execute `npm start` dentro de `frontend`; o proxy local encaminha `/api/v1` para a API
 real. O modo de interface com dados isolados está disponível apenas por
@@ -123,9 +128,9 @@ ou substituídas em qualquer implantação real:
 Resultado da validação local mais recente:
 
 - lint Angular/TypeScript/templates, build de produção, SSR e inspeção do bundle aprovados;
-- testes unitários do frontend: 19/19, cobrindo agenda, chat, perfil, registros profissionais, SEO e paginação;
+- testes unitários do frontend: 70/70 em 20 suítes, cobrindo agenda, chat, perfil, CEP, registros profissionais, SEO, preços, contraste e paginação;
 - testes centrais PHP: 9/9, incluindo JWT, validação, IP confiável e cifra da outbox;
-- inspeção estrutural: 112 rotas REST, 34 tabelas e seis variantes WebP autorizadas;
+- inspeção estrutural: 113 rotas REST, 34 tabelas e 14 assets visuais autorizados;
 - migração limpa, health check, conversa pré-reserva, SSE autenticado, limpeza da outbox e sintaxe do Nginx validados em MySQL 8.4/Docker.
 
 Testes reais em dispositivos, matriz de concorrência, acessibilidade e segurança

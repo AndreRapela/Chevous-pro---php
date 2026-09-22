@@ -2,7 +2,7 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
-$baseUrl = 'http://localhost:8080/api/v1'
+$baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }
@@ -102,7 +102,8 @@ try {
     $usdQuotePayload = $quotePayload.Clone()
     $usdQuotePayload.currency = 'USD'
     $usdQuote = (Invoke-Api Post '/bookings/quote' $customerHeaders $usdQuotePayload).data
-    Assert-True ($usdQuote.currency -eq 'USD' -and [int]$usdQuote.totalCents -gt [int]$quote.totalCents) 'A cotação em USD não aplicou a moeda e a taxa configuradas.'
+    $usdRatio = [double]$usdQuote.totalCents / [double]$quote.totalCents
+    Assert-True ($usdQuote.currency -eq 'USD' -and $usdRatio -ge 0.19 -and $usdRatio -le 0.21) 'A cotação em USD não aplicou a moeda e a taxa configuradas.'
 
     $bookingPayload = $quotePayload.Clone()
     $bookingPayload.addressId = $address.id
@@ -115,6 +116,9 @@ try {
     $bookingHeaders['Idempotency-Key'] = $bookingKey
     $booking = (Invoke-Api Post '/bookings' $bookingHeaders $bookingPayload).data
     Assert-True ($booking.status -eq 'confirmed' -and $booking.allowedActions -contains 'cancel') 'A reserva direta não foi confirmada.'
+    $customerBookingNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $customerHeaders).data) | Where-Object { $_.type -eq 'booking.confirmed' -and $_.data.bookingId -eq $booking.id } | Select-Object -First 1
+    $providerBookingNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $providerHeaders).data) | Where-Object { $_.type -eq 'booking.confirmed' -and $_.data.bookingId -eq $booking.id } | Select-Object -First 1
+    Assert-True ($null -ne $customerBookingNotice -and $null -ne $providerBookingNotice) 'Cliente e profissional não receberam avisos da reserva confirmada.'
     $repeatedBooking = (Invoke-Api Post '/bookings' $bookingHeaders $bookingPayload).data
     Assert-True ($repeatedBooking.id -eq $booking.id) 'A criação idempotente devolveu outra reserva.'
     $conflictingPayload = $bookingPayload.Clone()
@@ -136,6 +140,9 @@ try {
     Assert-True ($started.status -eq 'in_progress' -and $completed.status -eq 'completed') 'O profissional não conseguiu iniciar e concluir o serviço.'
     $review = (Invoke-Api Post "/bookings/$($booking.id)/reviews" $customerHeaders @{ rating = 5; comment = 'Fluxo E2E concluído com sucesso.' }).data
     Assert-True ([int]$review.rating -eq 5) 'A avaliação do serviço não foi registrada.'
+    Invoke-Api Post "/reviews/$($review.id)/reply" $providerHeaders @{ reply = 'Obrigado pela avaliação E2E.' } | Out-Null
+    $reviewReplyNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $customerHeaders).data) | Where-Object { $_.type -eq 'review.replied' -and $_.data.bookingId -eq $booking.id } | Select-Object -First 1
+    Assert-True ($null -ne $reviewReplyNotice) 'O cliente não foi avisado sobre a resposta à avaliação.'
 
     $conversationMessage = (Invoke-Api Post "/conversations/$($booking.conversationId)/messages" $customerHeaders @{ body = 'Mensagem do fluxo E2E.' }).data
     Assert-True ($conversationMessage.body -eq 'Mensagem do fluxo E2E.') 'A conversa da nova reserva não aceitou mensagem.'
@@ -150,6 +157,8 @@ try {
     $marketHeaders['Idempotency-Key'] = "market-e2e-$([guid]::NewGuid())"
     $marketBooking = (Invoke-Api Post '/bookings' $marketHeaders $marketPayload).data
     Assert-True ($marketBooking.status -eq 'open' -and $marketBooking.allowedActions -contains 'offers') 'A solicitação ao marketplace não ficou aberta.'
+    $opportunityNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $providerHeaders).data) | Where-Object { $_.type -eq 'booking.opportunity' -and $_.data.bookingId -eq $marketBooking.id } | Select-Object -First 1
+    Assert-True ($null -ne $opportunityNotice) 'O profissional compatível não recebeu a nova oportunidade.'
     $requests = @((Invoke-Api Get '/provider/open-requests?perPage=50' $providerHeaders).data)
     Assert-True ($requests.id -contains $marketBooking.id) 'O profissional compatível não recebeu a oportunidade aberta.'
     $offer = (Invoke-Api Post "/provider/bookings/$($marketBooking.id)/offers" $providerHeaders @{ amountCents = [int]$quote.subtotalCents; message = 'Proposta E2E' }).data

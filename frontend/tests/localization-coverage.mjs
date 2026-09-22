@@ -79,7 +79,7 @@ for (const [phrase, english, french] of [
 const dictionary = new Set(entries.flatMap(entry => [entry.pt, entry.en, entry.fr]));
 // Currency/language codes, address identifiers and the brand are not translated.
 const neutral = new Set(['EN', 'FR', 'EUR', 'USD', 'UTC', 'CEP', 'CPF', 'ID', 'CNPJ', 'E-mail', 'Email', 'min', 'm²', 'Pro', 'https://', 'SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'BA', 'PE', 'DF']);
-const attributes = new Set(['aria-label', 'placeholder', 'title', 'alt', 'eyebrow', 'description', 'message', 'data-label']);
+const attributes = new Set(['aria-label', 'placeholder', 'title', 'alt', 'eyebrow', 'description', 'message', 'data-label', 'heroTitle', 'heroDescription', 'imageAlt']);
 const missing = new Map();
 let count = 0;
 let templates = 0;

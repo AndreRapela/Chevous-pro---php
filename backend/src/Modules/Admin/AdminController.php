@@ -95,6 +95,12 @@ final class AdminController extends Controller
                 $this->db->prepare('UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP() WHERE user_id = :id AND revoked_at IS NULL')
                     ->execute(['id' => $user['id']]);
             }
+            $this->notify(
+                (int) $user['id'],
+                'account.status',
+                $data['status'] === 'active' ? 'Conta reativada' : 'Situação da conta atualizada',
+                $data['status'] === 'active' ? 'Sua conta foi reativada pela equipe de suporte.' : 'Sua conta foi suspensa pela equipe de suporte.'
+            );
             $this->audit->record((int) $auth['id'], 'admin.user_status', 'user', $user['public_id'], $request, $data);
             $this->db->commit();
         } catch (\Throwable $exception) {
@@ -305,7 +311,7 @@ final class AdminController extends Controller
         ]);
         $this->db->beginTransaction();
         try {
-            $report = $this->requireRow('SELECT id, content_type AS contentType, content_public_id AS contentId, status FROM content_reports WHERE public_id = :id FOR UPDATE', ['id' => $params['id']], 'Denúncia não encontrada.');
+            $report = $this->requireRow('SELECT id, reporter_id, content_type AS contentType, content_public_id AS contentId, status FROM content_reports WHERE public_id = :id FOR UPDATE', ['id' => $params['id']], 'Denúncia não encontrada.');
             if ($report['status'] !== 'pending') {
                 throw new ApiException(409, 'REPORT_ALREADY_RESOLVED', 'Esta denúncia já foi resolvida.');
             }
@@ -327,6 +333,13 @@ final class AdminController extends Controller
                     'status' => $action === 'hide' ? 'resolved' : 'dismissed', 'action' => $action === 'hide' ? 'hidden' : 'retained',
                     'resolver' => $auth['id'], 'note' => trim(strip_tags((string) $data['note'])), 'id' => $report['id'],
                 ]);
+            $this->notify(
+                (int) $report['reporter_id'],
+                'report.resolved',
+                'Denúncia analisada',
+                $action === 'hide' ? 'A equipe removeu o conteúdo informado na sua denúncia.' : 'A equipe analisou sua denúncia e manteve o conteúdo publicado.',
+                ['reportId' => $params['id']]
+            );
             $this->audit->record((int) $auth['id'], 'admin.content_report_resolved', 'content_report', $params['id'], $request, ['action' => $action]);
             $this->db->commit();
         } catch (\Throwable $exception) {

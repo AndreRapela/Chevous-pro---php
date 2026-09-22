@@ -55,12 +55,16 @@ const productionOptimization = angularArchitect.build.configurations.production.
 assert.equal(productionOptimization.styles.inlineCritical, false, 'CSS crítico inline conflita com a CSP e não deve ser ativado.');
 
 const globalStyles = await text('frontend/src/styles.scss');
-assert.match(globalStyles, /\.desktop-service-strip\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir quatro atalhos em colunas iguais.');
-assert.doesNotMatch(globalStyles, /desktop-hero-lower|desktop-booking-preview|desktop-promo-card/, 'O card simplificado não deve reservar espaço para os painéis removidos.');
+assert.match(globalStyles, /\.desktop-service-links\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir quatro atalhos em colunas iguais.');
+assert.match(globalStyles, /desktop-booking-preview/, 'A prévia de agendamento deve compor o banner inicial.');
+assert.match(globalStyles, /desktop-promo-card/, 'O painel de confiança deve compor o banner inicial.');
+assert.match(globalStyles, /\.desktop-hero-lower\s*\{[^}]*display:\s*grid;/s, 'Os painéis devem compartilhar uma faixa inferior organizada.');
 const homeHero = await text('frontend/src/app/features/public/components/home-hero/home-hero.component.ts');
 const serviceCard = homeHero.match(/<nav class="desktop-service-strip"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? '';
 assert.equal((serviceCard.match(/<a /g) ?? []).length, 4, 'O card deve conter apenas os quatro atalhos de serviço.');
-assert.doesNotMatch(homeHero, /desktop-booking-preview|desktop-promo-card/, 'A prévia fictícia e o painel promocional não devem ser renderizados.');
+assert.match(homeHero, /desktop-booking-preview/, 'A prévia compacta deve ser renderizada no banner.');
+assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança deve ser renderizado no banner.');
+assert.match(homeHero, /desktop-hero-lower[\s\S]*desktop-promo-card[\s\S]*desktop-service-strip[\s\S]*desktop-booking-preview/, 'Os cards devem manter a ordem visual da referência.');
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
 assert.match(globalStyles, /\.portal-header \.icon-button\s*\{[^}]*min-width:\s*2\.75rem/s, 'Ações do cabeçalho devem manter alvo de toque de 44px.');
@@ -129,6 +133,8 @@ const tableCount = (schema.match(/CREATE TABLE IF NOT EXISTS/gi) ?? []).length;
 assert.ok(tableCount >= 32, `Schema incompleto: ${tableCount} tabelas.`);
 assert.match(schema, /KEY idx_messages_conversation \(conversation_id, id\)/, 'Mensagens devem ter índice para leitura incremental por conversa.');
 assert.match(schema, /previous_refresh_token_hash/, 'A rotação concorrente de refresh precisa manter o hash anterior por uma janela curta.');
+assert.match(schema, /failed_at DATETIME NULL/, 'A outbox deve separar eventos irrecuperáveis da fila ativa.');
+assert.match(schema, /last_error VARCHAR\(500\) NULL/, 'A outbox deve guardar um diagnóstico limitado da última falha.');
 assert.doesNotMatch(schema, /CREATE TABLE IF NOT EXISTS coupons/i, 'Cupons não pertencem a uma plataforma sem pagamentos.');
 assert.doesNotMatch(apiRoutes, /coupons/i, 'A API não deve expor recursos de cupom.');
 
@@ -180,6 +186,11 @@ assert.match(authController, /'httponly' => true/, 'Token de renovação deve us
 assert.doesNotMatch(authController, /'refreshToken' => \$tokens\['refreshToken'\]/, 'Login não deve expor o token de renovação ao JavaScript.');
 assert.match(authController, /previous_refresh_expires_at/, 'Refresh concorrente em abas não deve revogar uma sessão válida por corrida.');
 assert.match(authController, /DUMMY_PASSWORD_HASH/, 'Falhas de login devem executar uma verificação de senha mesmo para e-mail inexistente.');
+assert.match(authController, /login-ip:[\s\S]*100, 900/, 'O limite agregado de login por IP não deve bloquear uma rede após poucas tentativas.');
+assert.match(authController, /login-account-ip:[\s\S]*10, 900/, 'Tentativas de login devem ser isoladas por conta e IP.');
+const authService = await text('frontend/src/app/core/auth/auth.service.ts');
+assert.match(authService, /logout\(\): Observable<void>[\s\S]*tap\(\(\) => this\.session\.clear\(\)\)/, 'A sessão local só deve ser limpa após o servidor confirmar o logout.');
+assert.doesNotMatch(authService, /logout\(\): void[\s\S]*error: \(\) => undefined/, 'Falhas de logout não podem ser ocultadas do usuário.');
 const response = await text('backend/src/Core/Response.php');
 assert.match(response, /Cache-Control: no-store, private/, 'Respostas JSON da API não devem permanecer em cache.');
 const account = await text('backend/src/Modules/Users/AccountController.php');
@@ -210,11 +221,16 @@ assert.match(messagesPage, /shouldSendComposerMessage/, 'O compositor deve prese
 assert.match(messagesPage, /pendingMessageKey/, 'Reenvio depois de falha precisa manter a mesma chave de idempotência.');
 assert.match(marketplaceService, /Idempotency-Key/, 'O cliente deve enviar chave idempotente ao publicar mensagem.');
 const productionEnvironment = await text('frontend/src/environments/environment.prod.ts');
+const localEnvironment = await text('frontend/src/environments/environment.ts');
 const mockEnvironment = await text('frontend/src/environments/environment.mock.ts');
 const loginPage = await text('frontend/src/app/features/auth/pages/login/login.component.ts');
+assert.match(localEnvironment, /demoAccounts:\s*\{/, 'O login local deve manter os atalhos das contas de teste.');
 assert.match(mockEnvironment, /demoAccounts:\s*\{/, 'O ambiente de demonstração deve oferecer os perfis de teste solicitados.');
 assert.match(productionEnvironment, /demoAccounts:\s*null/, 'O build de produção não deve expor credenciais de demonstração.');
 assert.doesNotMatch(loginPage, /Cliente@123|Profissional@123|Admin@123/, 'A tela de login não deve embutir senhas de demonstração.');
+const dockerfile = await text('frontend/Dockerfile');
+assert.match(dockerfile, /ARG BUILD_CONFIGURATION=production/, 'A imagem isolada deve compilar em modo de produção por padrão.');
+assert.match(dockerfile, /--configuration=\$\{BUILD_CONFIGURATION\}/, 'O build do frontend deve aceitar a configuração definida pelo Compose.');
 
 const providerDetail = await text('frontend/src/app/features/public/pages/provider-detail/provider-detail.component.ts');
 assert.match(providerDetail, /Avaliações verificadas/, 'Perfil público deve separar avaliações de reservas concluídas.');
@@ -238,8 +254,22 @@ assert.match(brlMigration, /INSERT INTO app_settings/, 'Migração de moeda deve
 const inquiryMigration = await text('database/migrations/202609170001_add_pre_booking_conversations.sql');
 assert.doesNotMatch(inquiryMigration, /ADD COLUMN IF NOT EXISTS|ADD UNIQUE INDEX IF NOT EXISTS/, 'Migração de conversa deve ser compatível com o MySQL suportado.');
 assert.match(inquiryMigration, /uq_conversations_contact_key/, 'Migração de conversa deve preservar a unicidade do contato pré-reserva.');
+const outboxMigration = await text('database/migrations/202609220001_add_outbox_dead_letter.sql');
+assert.match(outboxMigration, /information_schema\.columns/, 'Migração da outbox deve ser segura para bancos existentes.');
+assert.doesNotMatch(outboxMigration, /ADD COLUMN IF NOT EXISTS/, 'Migração da outbox deve ser compatível com o MySQL suportado.');
+const worker = await text('backend/bin/worker.php');
+assert.match(worker, /attempt >= 8[\s\S]*deadLetter/, 'Eventos permanentemente inválidos devem sair da fila ativa após tentativas limitadas.');
+assert.match(worker, /payload = JSON_OBJECT\(\)/, 'O descarte da outbox não deve reter tokens sensíveis.');
 
 const compose = await text('compose.yaml');
+const productionCompose = await text('compose.production.yaml');
+assert.match(compose, /web:\s*\n\s*build:\s*\n[\s\S]*?BUILD_CONFIGURATION: development/, 'O frontend local deve incluir os atalhos de login.');
+assert.match(compose, /ssr:\s*\n\s*build:\s*\n[\s\S]*?BUILD_CONFIGURATION: development/, 'O SSR local deve usar o mesmo modo do frontend.');
+assert.match(compose, /127\.0\.0\.1:\$\{WEB_PORT:-4200\}:80/, 'A interface com contas de teste deve ficar restrita ao loopback.');
+assert.match(productionCompose, /web:\s*\n\s*build:\s*\n\s*args:\s*\n\s*BUILD_CONFIGURATION: production/, 'O overlay público deve remover os atalhos do frontend.');
+assert.match(productionCompose, /ssr:\s*\n\s*build:\s*\n\s*args:\s*\n\s*BUILD_CONFIGURATION: production/, 'O overlay público deve remover os atalhos também do SSR.');
+assert.equal((productionCompose.match(/ports: !reset \[\]/g) ?? []).length, 3, 'Banco, API e web devem remover as portas herdadas no overlay público.');
+assert.doesNotMatch(productionCompose, /web:[\s\S]*?OUTBOX_ENCRYPTION_KEY[\s\S]*?ssr:/, 'O frontend não deve receber o segredo da outbox.');
 for (const service of ['database', 'api', 'web', 'ssr', 'worker']) {
   assert.match(compose, new RegExp(`^  ${service}:`, 'm'), `Serviço Compose ${service} ausente.`);
 }
