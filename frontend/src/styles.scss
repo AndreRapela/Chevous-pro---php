@@ -3388,6 +3388,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
   }
 
   .desktop-hero-lower {
+    --promo-offset: clamp(8.25rem, 12.5vw, 9.5rem);
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 13.4rem);
@@ -3406,7 +3407,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
     z-index: 4;
     top: auto;
     bottom: -4.1rem;
-    left: .4rem;
+    left: var(--promo-offset);
     width: 15rem;
     min-width: 0;
     padding: .4rem;
@@ -3422,7 +3423,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
     justify-content: center;
     align-items: stretch;
     gap: .35rem;
-    padding: 0 .1rem;
+    padding: 0 .1rem 0 var(--promo-offset);
     border: 0;
     border-radius: 0;
     background: transparent;

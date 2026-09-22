@@ -102,6 +102,7 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
     assert.equal(declaration('.desktop-hero-lower', 'min-height'), '5.5rem');
     assert.equal(declaration('.desktop-hero-lower', 'padding'), '.25rem .4rem');
+    assert.equal(declaration('.desktop-hero-lower', '--promo-offset'), 'clamp(8.25rem, 12.5vw, 9.5rem)');
     assert.equal(declaration('.desktop-service-links', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
     assert.equal(declaration('.desktop-service-strip', 'border'), '0');
     assert.equal(declaration('.desktop-service-strip a', 'min-height'), '2.5rem');
@@ -109,7 +110,8 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
     assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
     assert.equal(declaration('.desktop-promo-card', 'bottom'), '-4.1rem');
-    assert.equal(declaration('.desktop-promo-card', 'left'), '.4rem');
+    assert.equal(declaration('.desktop-promo-card', 'left'), 'var(--promo-offset)');
+    assert.equal(declaration('.desktop-service-strip', 'padding'), '0 .1rem 0 var(--promo-offset)');
     assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-4.1rem');
     assert.equal(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
     assert.equal(declaration('.desktop-promo-card > div', 'text-align'), 'center');
