@@ -144,7 +144,7 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .check-row input { flex: 0 0 auto; margin-top: .15rem; }
 
 .brand { display: inline-flex; align-items: center; gap: .55rem; color: var(--brand-900); font-size: 1.05rem; font-weight: 850; letter-spacing: -.03em; white-space: nowrap; }
-.brand-logo { width: 7.7rem; height: auto; max-height: 2.25rem; }
+.brand-logo { display: block; width: 6.3rem; height: auto; max-height: 3.95rem; }
 .brand strong { color: var(--brand-600); }
 .brand-mark { position: relative; width: 2rem; height: 2rem; display: grid; place-items: center; border: 2px solid var(--brand-600); border-radius: .55rem; transform: rotate(45deg); }
 .brand-mark::before { content: ""; width: .65rem; height: .65rem; border-left: 2px solid var(--brand-600); border-bottom: 2px solid var(--brand-600); transform: rotate(-45deg); }
@@ -2931,10 +2931,9 @@ textarea::placeholder { color: var(--ink-500); opacity: 1; }
   .professionals-results .provider-card { padding: .95rem; }
 }
 
-/* Marca compacta: o nome completo continua reconhecível sem aumentar o cabeçalho. */
-.brand { gap: .35rem; color: var(--brand-700); }
-.brand-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -.04em; }
-.brand-logo { width: 3.5rem; height: 1.75rem; max-height: none; }
+/* A marca segue a composição oficial: Pro em destaque e assinatura abaixo. */
+.brand { gap: 0; color: var(--brand-700); }
+.brand-logo { width: 6.3rem; height: auto; max-height: 3.95rem; }
 
 /* Ênfase nos dados de escolha sem voltar aos cartões excessivamente grandes. */
 body :is(.provider-card h3, .service-card h3,
@@ -3123,8 +3122,7 @@ body .portal-page .card-title-row h2 { font-size: 1.0625rem; }
   .hero-banner-copy { padding: .8rem .65rem; }
   .hero-banner h1 { font-size: 1.25rem; }
   body .hero-banner p { font-size: .875rem !important; }
-  .brand-name { font-size: 1rem; }
-  .brand-logo { width: 3rem; height: 1.5rem; }
+  .brand-logo { width: 5.35rem; height: auto; }
 }
 
 /* Final layout contract --------------------------------------------------
