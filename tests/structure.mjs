@@ -88,6 +88,7 @@ assert.match(documentSource, /<html lang="en-US">/, 'O idioma inicial do documen
 assert.match(documentSource, /http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/, 'A hospedagem estática deve impedir que o navegador reutilize HTML antigo.');
 const staticHostingRules = await text('frontend/public/.htaccess');
 assert.match(staticHostingRules, /Header always set Cache-Control "no-cache, no-store, must-revalidate"/, 'O documento HTML publicado deve ser sempre revalidado.');
+assert.match(staticHostingRules, /<FilesMatch "-\[A-Z0-9\]\{8\}\\\.\(css\|js\)\$">/, 'A regra de cache imutável deve reconhecer o hífen usado antes do hash dos assets.');
 assert.match(staticHostingRules, /Header always set Cache-Control "public, max-age=31536000, immutable"/, 'Arquivos com hash devem manter cache imutável de longa duração.');
 const seoService = await text('frontend/src/app/core/seo/seo.service.ts');
 for (const tag of ['canonical', 'og:title', 'twitter:card', 'application/ld+json', 'noindex, nofollow']) {
