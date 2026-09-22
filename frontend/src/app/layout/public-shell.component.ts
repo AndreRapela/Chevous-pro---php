@@ -27,7 +27,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
             </a>
           } @else {
             <a class="btn btn-ghost desktop-only" routerLink="/entrar">Entrar</a>
-            <a class="btn btn-primary" routerLink="/cadastro">Criar conta</a>
+            <a class="btn btn-primary header-create-account" routerLink="/cadastro">Criar conta</a>
           }
           <cvp-locale-controls />
           <button class="menu-button" type="button" (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()" aria-controls="mobile-menu" [attr.aria-label]="menuOpen() ? 'Fechar menu' : 'Abrir menu'">

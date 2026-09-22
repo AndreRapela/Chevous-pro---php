@@ -85,6 +85,18 @@ describe('warm accents on a single neutral-blue theme', () => {
       for (const surface of ['--brand-900', '--brand-800', '--brand-700']) assert.ok(contrast('var(--control-focus-on-dark)', `var(${surface})`) >= 3);
     }
   });
+  it('turns the public header into a brand bar with one prominent account action', () => {
+    assert.equal(declaration('.site-header', 'background'), '#9a3932');
+    assert.equal(declaration('.site-header', 'border-color'), '#9a3932');
+    assert.equal(declaration('body .site-header .header-create-account', 'background'), '#fff');
+    assert.equal(declaration('body .site-header .header-create-account', 'color'), 'var(--brand-900)');
+    assert.equal(declaration('body .site-header .header-create-account', 'font-weight'), '850');
+    assert.equal(declaration('.site-header .locale-trigger', 'min-height'), '2.2rem');
+    assert.equal(declaration('.site-header .locale-trigger', 'box-shadow'), 'none');
+    assert.equal(declaration('body .site-header .locale-trigger-value', 'font-size'), '.78rem !important');
+    const template = readFileSync(new URL('../src/app/layout/public-shell.component.ts', import.meta.url), 'utf8');
+    assert.match(template, /class="btn btn-primary header-create-account" routerLink="\/cadastro"/);
+  });
   it('places two raised hero cards around a slimmer strip with four balanced service links', () => {
     assert.match(declaration('.desktop-hero-lower', 'grid-template-columns'), /minmax\(0, 1fr\)/);
     assert.equal(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
