@@ -327,6 +327,7 @@ assert.deepEqual(imageFiles, [
   'frontend/public/images/profissional-limpeza-hero-887.webp',
   'frontend/public/images/profissional-limpeza-hero-warm-480.jpg',
   'frontend/public/images/profissional-limpeza-hero-warm-887.jpg',
+  'frontend/public/images/promo-laundry-discount-v1.webp',
   'frontend/public/pro-logo.svg'
 ], `Somente as imagens autorizadas pelo usuário podem existir: ${imageFiles.join(', ')}`);
 for (const image of imageFiles) {

@@ -192,6 +192,29 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.match(template, /class="category-symbol" aria-hidden="true"/);
     assert.ok(!template.includes('{{ category.serviceCount }}'));
   });
+  it('adds a responsive discount banner with a real promotional image', () => {
+    assert.equal(declaration('.home-discount-banner', 'display'), 'grid');
+    assert.equal(declaration('.home-discount-banner', 'min-height'), '11.75rem');
+    assert.ok(source.includes('min-height: 13.5rem;'));
+    assert.equal(declaration('.home-discount-banner', 'overflow'), 'hidden');
+    assert.equal(declaration('.home-discount-copy h3', 'color'), '#fff');
+    assert.equal(declaration('.home-discount-cta', 'background'), '#fff');
+    assert.equal(declaration('.home-discount-art img', 'position'), 'absolute');
+    const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
+    assert.match(template, /<section class="section home-section home-deals"/);
+    assert.match(template, /src="\/images\/promo-laundry-discount-v1\.webp"/);
+    assert.match(template, /<h3>Até 25% de desconto<\/h3>/);
+  });
+  it('uses one compact mobile booking action and removes the home steps section', () => {
+    assert.equal(declaration('.hero-mobile-action', 'display'), 'flex');
+    assert.equal(declaration('.hero-mobile-action .btn', 'border-radius'), '999px');
+    assert.equal(declaration('.hero-mobile-action .btn', 'background'), '#087e66');
+    const hero = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.ts', import.meta.url), 'utf8');
+    const home = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
+    assert.match(hero, /class="hero-mobile-action"/);
+    assert.ok(!hero.includes('id="home-search"'));
+    assert.ok(!home.includes('class="section home-section home-steps"'));
+  });
   it('gives catalog cards a clear visual hierarchy and distinct action', () => {
     assert.equal(declaration('.catalog-results .service-card', 'background'), 'linear-gradient(155deg, #fff 62%, var(--brand-50))');
     assert.equal(declaration('.catalog-results .service-card::before', 'height'), '.22rem');
