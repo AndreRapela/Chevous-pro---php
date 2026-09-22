@@ -53,6 +53,7 @@ assert.equal(angularArchitect.build.options.ssr.entry, 'src/server.ts', 'O proce
 assert.equal(angularArchitect.serve.builder, '@angular/build:dev-server', 'O servidor local deve usar o construtor moderno do Angular.');
 const productionOptimization = angularArchitect.build.configurations.production.optimization;
 assert.equal(productionOptimization.styles.inlineCritical, false, 'CSS crítico inline conflita com a CSP e não deve ser ativado.');
+assert.equal(angularArchitect.build.configurations.mock.optimization.styles.inlineCritical, true, 'A hospedagem estática de demonstração deve incluir CSS crítico para evitar conteúdo sem estilo.');
 
 const globalStyles = await text('frontend/src/styles.scss');
 assert.match(globalStyles, /\.desktop-service-links\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir quatro atalhos em colunas iguais.');

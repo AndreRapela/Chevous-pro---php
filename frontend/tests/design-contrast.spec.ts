@@ -172,6 +172,8 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.home-categories .category-card .category-symbol', 'background'), 'linear-gradient(145deg, var(--brand-600), var(--brand-800)) !important');
     assert.equal(declaration('.home-categories .service-icon', 'width'), '1.5rem');
     assert.equal(declaration('body .home-categories .category-card strong', 'overflow-wrap'), 'anywhere');
+    assert.equal(declaration('body .home-categories .category-card strong', 'align-self'), 'center');
+    assert.equal(declaration('body .home-categories .category-card strong', 'text-align'), 'center');
     const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
     assert.match(template, /class="category-symbol" aria-hidden="true"/);
     assert.ok(!template.includes('{{ category.serviceCount }}'));
