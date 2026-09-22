@@ -90,6 +90,13 @@ const staticHostingRules = await text('frontend/public/.htaccess');
 assert.match(staticHostingRules, /Header always set Cache-Control "no-cache, no-store, must-revalidate"/, 'O documento HTML publicado deve ser sempre revalidado.');
 assert.match(staticHostingRules, /<FilesMatch "-\[A-Z0-9\]\{8\}\\\.\(css\|js\)\$">/, 'A regra de cache imutável deve reconhecer o hífen usado antes do hash dos assets.');
 assert.match(staticHostingRules, /Header always set Cache-Control "public, max-age=31536000, immutable"/, 'Arquivos com hash devem manter cache imutável de longa duração.');
+const brandComponent = await text('frontend/src/app/shared/components/brand/brand.component.ts');
+const brandLogo = await text('frontend/public/pro-logo.svg');
+assert.doesNotMatch(brandComponent, /brand-name/, 'A marca não deve recompor o nome fora do SVG oficial.');
+assert.match(brandComponent, /pro-logo\.svg\?v=20260922/, 'A marca nova deve invalidar a versão anterior no navegador.');
+assert.match(brandLogo, /viewBox="0 0 220 138"/, 'A marca deve preservar a proporção vertical da referência enviada.');
+assert.match(brandLogo, />Chez vous pro<\/text>/, 'A assinatura deve aparecer centralizada abaixo de Pro.');
+assert.equal((brandLogo.match(/<use href="#slit"/g) ?? []).length, 5, 'O obturador deve conter seis lâminas, incluindo a forma-base.');
 const seoService = await text('frontend/src/app/core/seo/seo.service.ts');
 for (const tag of ['canonical', 'og:title', 'twitter:card', 'application/ld+json', 'noindex, nofollow']) {
   assert.ok(seoService.includes(tag), `Metadado SEO ${tag} ausente.`);
