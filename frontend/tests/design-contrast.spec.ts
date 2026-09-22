@@ -97,8 +97,10 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
     assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
     assert.equal(declaration('.desktop-promo-card', 'bottom'), '-4.1rem');
+    assert.equal(declaration('.desktop-promo-card', 'left'), 'clamp(1rem, 2.5vw, 2rem)');
     assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-4.1rem');
     assert.equal(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
+    assert.equal(declaration('.desktop-promo-card > div', 'text-align'), 'center');
     assert.equal(declaration('.desktop-booking-preview .btn', 'min-height'), '2.2rem');
     assert.equal(declaration('.desktop-hero-tag', 'font-size'), '.7rem');
     assert.equal(declaration('.desktop-hero-tag', 'background'), 'rgba(255,255,255,.84)');
@@ -158,8 +160,12 @@ describe('warm accents on a single neutral-blue theme', () => {
   });
   it('shows home categories as a compact rail of dimensional icons and labels', () => {
     assert.equal(declaration('.home-categories .category-grid', 'grid-template-columns'), 'repeat(auto-fit, minmax(6.5rem, 1fr))');
-    assert.equal(declaration('.home-categories .category-grid', 'background'), 'rgba(255, 255, 255, .88)');
+    assert.equal(declaration('.home-categories .category-grid', 'background'), 'transparent');
+    assert.equal(declaration('.home-categories .category-grid', 'border'), '0');
+    assert.equal(declaration('.home-categories .category-grid', 'box-shadow'), 'none');
     assert.equal(declaration('.home-categories .category-card', 'background'), 'transparent');
+    assert.equal(declaration('.home-categories .category-card', 'flex-direction'), 'column');
+    assert.equal(declaration('.home-categories .category-card', 'align-items'), 'center');
     assert.equal(declaration('.home-categories .category-card::after', 'display'), 'none');
     assert.equal(declaration('.home-categories .category-card .category-symbol', 'width'), '3.2rem');
     assert.equal(declaration('.home-categories .category-card .category-symbol', 'color'), '#fff !important');

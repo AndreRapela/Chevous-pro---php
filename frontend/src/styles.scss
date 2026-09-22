@@ -3352,7 +3352,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
     z-index: 4;
     top: auto;
     bottom: -4.1rem;
-    left: .5rem;
+    left: clamp(1rem, 2.5vw, 2rem);
     width: 15rem;
     min-width: 0;
     padding: .4rem;
@@ -3397,6 +3397,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
     border-radius: .75rem;
     color: #fff;
     background: var(--brand-800);
+    text-align: center;
   }
   body .desktop-promo-card .eyebrow {
     margin: 0;
@@ -3482,12 +3483,12 @@ cvp-provider-detail .feedback-section .review-list article {
 /* One compact rail: dimensional brand icons with white symbols and labels below. */
 .home-categories .category-grid {
   align-items: start;
-  gap: .45rem;
-  padding: .8rem .7rem .65rem;
-  border: 1px solid var(--ink-200);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, .88);
-  box-shadow: 0 5px 18px rgba(53, 23, 20, .06);
+  gap: .65rem;
+  padding: .35rem 0 .5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .home-categories .category-card {
   min-height: 0;
@@ -3496,7 +3497,7 @@ cvp-provider-detail .feedback-section .review-list article {
   align-items: center;
   justify-content: flex-start;
   gap: .4rem;
-  padding: .15rem .25rem;
+  padding: .15rem .25rem .35rem;
   border: 0;
   border-radius: .7rem;
   background: transparent;
@@ -3534,6 +3535,7 @@ cvp-provider-detail .feedback-section .review-list article {
   stroke-width: 2.1;
 }
 body .home-categories .category-card strong {
+  display: block;
   max-width: 100%;
   margin: 0;
   color: var(--ink-900);
