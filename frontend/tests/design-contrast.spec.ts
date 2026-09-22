@@ -97,7 +97,7 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
     assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
     assert.equal(declaration('.desktop-promo-card', 'bottom'), '-4.1rem');
-    assert.equal(declaration('.desktop-promo-card', 'left'), 'clamp(1rem, 2.5vw, 2rem)');
+    assert.equal(declaration('.desktop-promo-card', 'left'), '.4rem');
     assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-4.1rem');
     assert.equal(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
     assert.equal(declaration('.desktop-promo-card > div', 'text-align'), 'center');
