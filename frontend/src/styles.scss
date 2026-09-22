@@ -2935,6 +2935,62 @@ textarea::placeholder { color: var(--ink-500); opacity: 1; }
 .brand { gap: 0; color: var(--brand-700); }
 .brand-logo { width: 6.3rem; height: auto; max-height: 3.95rem; }
 
+/* O cabeçalho funciona como uma faixa única da marca; a criação de conta é o CTA principal. */
+.site-header {
+  background: #9a3932;
+  border-color: #9a3932;
+  box-shadow: 0 6px 18px rgba(53, 23, 20, .16);
+  backdrop-filter: none;
+}
+.site-header :focus-visible { outline-color: #fff; }
+.site-header .desktop-nav a,
+.site-header .header-actions > .btn-ghost,
+.site-header .user-shortcut { color: rgba(255, 255, 255, .88); }
+.site-header .desktop-nav a:hover,
+.site-header .desktop-nav a.active { color: #fff; background: transparent; }
+.site-header .header-actions > .btn-ghost:hover { color: #fff; background: rgba(255, 255, 255, .1); }
+.site-header .desktop-nav a::after { background: #fff; }
+body .site-header .header-create-account {
+  min-height: 2.65rem;
+  padding-inline: 1.1rem;
+  color: var(--brand-900);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 8px 22px rgba(53, 23, 20, .28);
+  font-weight: 850;
+}
+body .site-header .header-create-account:hover {
+  color: var(--brand-900);
+  background: var(--brand-50);
+  border-color: var(--brand-50);
+  box-shadow: 0 10px 26px rgba(53, 23, 20, .34);
+}
+.site-header .locale-trigger {
+  min-height: 2.2rem;
+  gap: .3rem;
+  padding: .3rem .48rem;
+  color: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .1);
+  border-color: rgba(255, 255, 255, .34);
+  box-shadow: none;
+}
+.site-header .locale-trigger:hover,
+.site-header .locale-trigger.open {
+  color: #fff;
+  background: rgba(255, 255, 255, .17);
+  border-color: rgba(255, 255, 255, .58);
+  box-shadow: none;
+}
+body .site-header .locale-trigger-value { font-size: .78rem !important; }
+.site-header .locale-trigger-icon { width: .88rem; height: .88rem; }
+.site-header .locale-trigger-chevron { width: .62rem; height: .62rem; }
+.site-header .menu-button {
+  color: #fff;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .28);
+}
+.site-header .menu-button span { background: #fff; }
+
 /* Ênfase nos dados de escolha sem voltar aos cartões excessivamente grandes. */
 body :is(.provider-card h3, .service-card h3,
   .provider-card .card-footer strong, .service-card .card-footer strong) {
