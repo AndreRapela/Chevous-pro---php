@@ -284,11 +284,19 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .hero-banner h1 { max-width: 29rem; margin: .05rem 0; color: #fff; font-size: clamp(1.35rem, 7vw, 2rem); letter-spacing: -.045em; text-wrap: balance; }
 .hero-banner p { margin: 0; color: rgba(255,255,255,.84); font-size: .82rem; }
 .hero-banner-cta { min-height: 2rem; margin-top: .15rem; padding: .4rem .65rem; border-color: rgba(255,255,255,.75); color: var(--brand-900); background: #fff; border-radius: .55rem; box-shadow: var(--shadow-xs); font-size: .82rem; }
-.hero-quick-bar { display: grid; gap: .45rem; }
-.hero-quick-bar .hero-search { width: 100%; max-width: none; margin: 0; padding: .25rem; border-radius: .75rem; }
-.hero-quick-bar .hero-search input { min-height: 2.25rem; font-size: .82rem; }
-.hero-quick-bar .hero-search .btn { min-height: 2.3rem; padding: .45rem .7rem; border-radius: .6rem; font-size: .82rem; }
-.hero-quick-bar .hero-trust { padding-inline: .15rem; }
+.hero-mobile-action { display: flex; justify-content: flex-start; padding: .15rem 0 0; }
+.hero-mobile-action .btn {
+  min-height: 2.45rem;
+  padding: .5rem .9rem;
+  border: 1px solid #08735e;
+  border-radius: 999px;
+  color: #fff;
+  background: #087e66;
+  box-shadow: 0 7px 16px rgba(8, 126, 102, .2);
+  font-size: .8rem;
+}
+.hero-mobile-action .btn:hover,
+.hero-mobile-action .btn:focus-visible { color: #fff; background: #05634f; }
 
 .section-heading { display: flex; align-items: end; justify-content: space-between; gap: 1rem; margin-bottom: 1.35rem; }
 .section-heading h2 { margin: 0; }
@@ -882,7 +890,7 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .hero-banner, .hero-banner-copy { min-height: 10.5rem; }
   .hero-banner-image { width: 145%; object-position: 50% 18%; }
   .hero-banner-cta { min-height: 2.75rem; padding: .55rem .75rem; }
-  .hero-quick-bar .hero-search .btn { min-height: 2.75rem; }
+  .hero-mobile-action .btn { min-height: 2.65rem; padding-inline: 1rem; }
   .hero-grid { gap: .75rem; }
   .hero-copy h1 { font-size: clamp(1.75rem, 8.5vw, 2.05rem); line-height: 1.05; }
   .hero-copy p { font-size: .82rem; }
@@ -1238,7 +1246,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .hero-banner-label { padding: .3rem .55rem; font-size: .82rem; }
   .hero-banner-proof { font-size: .82rem; }
   .hero-banner-cta { min-height: 2.45rem; padding: .55rem .85rem; font-size: .82rem; }
-  .hero-quick-bar { grid-template-columns: minmax(22rem, 38rem) 1fr; align-items: center; gap: 1rem; }
   .hero-showcase { width: 19rem; height: 20rem; border-radius: 1.35rem; }
   .showcase-orb-coral { width: 6.5rem; height: 6.5rem; }
   .showcase-orb-amber { width: 4rem; height: 4rem; }
@@ -3618,6 +3625,155 @@ body .home-categories .category-card strong {
 }
 @media (max-width: 63.99rem) {
   .home-categories .category-card { flex: 0 0 7.25rem; min-height: 6.75rem; }
+}
+
+/* A compact promotional strip inspired by retail specials, adapted to the site palette. */
+.home-deals {
+  padding-block: 1.1rem 1.4rem;
+  background: var(--page-background);
+}
+.home-deals-heading {
+  display: grid;
+  gap: .15rem;
+  margin-bottom: .8rem;
+}
+.home-deals-heading .eyebrow { margin: 0; }
+.home-deals-heading h2 {
+  margin: 0;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+}
+.home-discount-banner {
+  position: relative;
+  isolation: isolate;
+  min-height: 13.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(18rem, .85fr);
+  overflow: hidden;
+  border: 1px solid rgba(5, 87, 68, .2);
+  border-radius: 1.25rem;
+  background: linear-gradient(112deg, #096653 0%, #0c9471 60%, #dff4ec 60%, #f6fbf9 100%);
+  box-shadow: 0 14px 32px rgba(22, 73, 61, .14);
+}
+.home-discount-banner::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: -4.5rem;
+  left: 42%;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: #f5c84c;
+  opacity: .96;
+}
+.home-discount-copy {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  max-width: 36rem;
+  display: grid;
+  justify-items: start;
+  gap: .4rem;
+  padding: 1.5rem clamp(1.25rem, 3vw, 2.5rem);
+  color: #fff;
+}
+.home-discount-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  padding: .28rem .65rem;
+  border: 1px solid rgba(255, 255, 255, .45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .17);
+  backdrop-filter: blur(5px);
+  font-size: .72rem;
+  font-weight: 850;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.home-discount-copy h3 {
+  max-width: 13ch;
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2rem, 4.4vw, 3.25rem);
+  line-height: .98;
+  letter-spacing: -.035em;
+}
+body .home-discount-copy p {
+  max-width: 34rem;
+  margin: 0;
+  color: rgba(255, 255, 255, .94);
+  font-size: .95rem !important;
+}
+.home-discount-cta {
+  min-height: 2.55rem;
+  margin-top: .25rem;
+  padding: .55rem .9rem;
+  border: 1px solid rgba(255, 255, 255, .55);
+  color: var(--brand-900);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(3, 61, 47, .18);
+}
+.home-discount-cta:hover,
+.home-discount-cta:focus-visible { color: #fff; background: var(--brand-800); }
+.home-discount-art {
+  position: relative;
+  min-width: 0;
+  min-height: 13.5rem;
+}
+.home-discount-art img {
+  position: absolute;
+  z-index: 2;
+  right: .45rem;
+  bottom: -.35rem;
+  width: min(31rem, 112%);
+  height: auto;
+  filter: drop-shadow(0 14px 16px rgba(26, 60, 51, .2));
+}
+.home-discount-bubble {
+  position: absolute;
+  z-index: 3;
+  top: 1.05rem;
+  left: -.9rem;
+  width: 4.7rem;
+  height: 4.7rem;
+  display: grid;
+  place-content: center;
+  border: .3rem solid rgba(255, 255, 255, .9);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand-700);
+  box-shadow: 0 10px 22px rgba(70, 27, 23, .24);
+  text-align: center;
+  transform: rotate(5deg);
+}
+.home-discount-bubble strong { font-size: 1.25rem; line-height: 1; }
+.home-discount-bubble small { font-size: .6rem; font-weight: 900; letter-spacing: .12em; }
+.home-discount-terms {
+  margin: .5rem .2rem 0;
+  color: var(--ink-500);
+  font-size: .75rem !important;
+}
+@media (max-width: 47.99rem) {
+  .home-deals { padding-block: .9rem 1.25rem; }
+  .home-deals-heading { margin-bottom: .65rem; }
+  .home-discount-banner {
+    min-height: 11.75rem;
+    grid-template-columns: minmax(0, 1.25fr) minmax(7.5rem, .75fr);
+    border-radius: 1rem;
+    background: linear-gradient(112deg, #096653 0%, #0c9471 68%, #e8f6f1 68%, #f7fcfa 100%);
+  }
+  .home-discount-banner::before { top: -5rem; left: 50%; width: 9rem; height: 9rem; }
+  .home-discount-copy { gap: .3rem; padding: .9rem .25rem .9rem 1rem; }
+  .home-discount-pill { min-height: 1.45rem; padding: .2rem .48rem; font-size: .58rem; }
+  .home-discount-copy h3 { max-width: 10ch; font-size: clamp(1.45rem, 7.2vw, 2rem); }
+  body .home-discount-copy p { max-width: 15rem; font-size: .78rem !important; line-height: 1.35; }
+  .home-discount-cta { min-height: 2.2rem; padding: .4rem .68rem; font-size: .74rem; }
+  .home-discount-art { min-height: 11.75rem; }
+  .home-discount-art img { right: -3.8rem; bottom: .15rem; width: 14.5rem; max-width: none; }
+  .home-discount-bubble { top: .75rem; left: -.55rem; width: 3.5rem; height: 3.5rem; border-width: .22rem; }
+  .home-discount-bubble strong { font-size: .95rem; }
+  .home-discount-bubble small { font-size: .48rem; }
 }
 
 /* A featured link should remain distinct against the white hero strip. */

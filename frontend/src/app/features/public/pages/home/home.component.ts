@@ -34,6 +34,28 @@ import { SeoService } from '../../../../core/seo/seo.service';
       </div>
     </section>
 
+    <section class="section home-section home-deals" aria-labelledby="discounts-title">
+      <div class="container">
+        <div class="home-deals-heading">
+          <span class="eyebrow">Ofertas para você</span>
+          <h2 id="discounts-title">Descontos e ofertas especiais</h2>
+        </div>
+        <article class="home-discount-banner">
+          <div class="home-discount-copy">
+            <span class="home-discount-pill">Oferta por tempo limitado</span>
+            <h3>Até 25% de desconto</h3>
+            <p>Em serviços selecionados para cuidar da sua casa.</p>
+            <a class="btn home-discount-cta" routerLink="/servicos">Ver ofertas <span aria-hidden="true">→</span></a>
+          </div>
+          <div class="home-discount-art" aria-hidden="true">
+            <span class="home-discount-bubble"><strong>25%</strong><small>OFF</small></span>
+            <img src="/images/promo-laundry-discount-v1.webp" alt="" width="720" height="377" loading="lazy" decoding="async">
+          </div>
+        </article>
+        <p class="home-discount-terms">Consulte as condições e a disponibilidade de cada oferta.</p>
+      </div>
+    </section>
+
     @if (popularServices().length) {
       <section class="section section-mint home-section home-popular" aria-labelledby="popular-title">
         <div class="container">
@@ -57,17 +79,6 @@ import { SeoService } from '../../../../core/seo/seo.service';
         </div>
       </section>
     }
-
-    <section class="section home-section home-steps" aria-labelledby="steps-title">
-      <div class="container">
-        <div class="section-heading"><div><span class="eyebrow">Como funciona</span><h2 id="steps-title">Resolva em três passos</h2></div></div>
-        <ol class="steps-grid">
-          <li><span>1</span><h3>Conte o que precisa</h3><p>Responda perguntas rápidas para calcular uma estimativa justa.</p></li>
-          <li><span>2</span><h3>Escolha com confiança</h3><p>Compare avaliações, experiências, preço e disponibilidade.</p></li>
-          <li><span>3</span><h3>Acompanhe em um só lugar</h3><p>Converse, acompanhe e avalie pelo seu painel com segurança.</p></li>
-        </ol>
-      </div>
-    </section>
 
     <section class="section home-section home-provider-cta" aria-labelledby="provider-cta-title">
       <div class="container provider-cta">
