@@ -13,6 +13,7 @@ use ChezVoust\Modules\Engagement\EngagementController;
 use ChezVoust\Modules\Professionals\ProviderController;
 use ChezVoust\Modules\Users\AccountController;
 use ChezVoust\Modules\Users\MediaController;
+use ChezVoust\Modules\Users\PostalCodeController;
 
 return static function (array $services): void {
     $router = $services['router'];
@@ -25,6 +26,7 @@ return static function (array $services): void {
     $bookings = new BookingController($db, $config, $pricing, $services['audit']);
     $account = new AccountController($db, $config, $services['rateLimiter']);
     $media = new MediaController($db, $config);
+    $postalCode = new PostalCodeController($db, $config, $services['rateLimiter']);
     $engagement = new EngagementController($db, $config, $services['rateLimiter']);
     $provider = new ProviderController($db, $config);
     $admin = new AdminController($db, $config, $services['audit']);
@@ -38,6 +40,7 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/app-config', [$catalog, 'appConfig']);
     $router->add('GET', '/api/v1/home', [$catalog, 'home']);
     $router->add('GET', '/api/v1/categories', [$catalog, 'categories']);
+    $router->add('GET', '/api/v1/postal-codes/{cep}', [$postalCode, 'lookup']);
     $router->add('GET', '/api/v1/avatars/{id}', [$media, 'avatar']);
     $router->add('GET', '/api/v1/services', [$catalog, 'services']);
     $router->add('GET', '/api/v1/services/{id}', [$catalog, 'service']);

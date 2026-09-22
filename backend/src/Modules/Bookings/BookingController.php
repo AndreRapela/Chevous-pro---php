@@ -170,6 +170,13 @@ final class BookingController extends Controller
             }
             $this->recordHistory($bookingId, null, $status, (int) $auth['id'], 'Reserva criada');
             $conversationId = $this->createConversation($bookingId, (int) $auth['id'], $professional ? (int) $professional['id'] : null);
+            $this->notify(
+                (int) $auth['id'],
+                $professional ? 'booking.confirmed' : 'booking.requested',
+                $professional ? 'Reserva confirmada' : 'Solicitação publicada',
+                $professional ? 'Sua reserva foi confirmada e já está na agenda.' : 'Sua solicitação foi enviada aos profissionais disponíveis.',
+                ['bookingId' => $bookingPublicId]
+            );
             if ($professional) {
                 $this->db->prepare(
                     'INSERT INTO slot_reservations (booking_id, professional_id, starts_at, ends_at, status, expires_at, created_at)
@@ -179,6 +186,8 @@ final class BookingController extends Controller
                     'starts_at' => $startUtc->format('Y-m-d H:i:s'), 'ends_at' => $endUtc->format('Y-m-d H:i:s'),
                 ]);
                 $this->notify((int) $professional['id'], 'booking.confirmed', 'Nova reserva confirmada', 'Uma reserva foi confirmada na agenda.', ['bookingId' => $bookingPublicId]);
+            } else {
+                $this->notifyMatchingProfessionals((int) $quote['serviceInternalId'], $bookingPublicId);
             }
             if ($idempotencyKey !== '') {
                 $this->db->prepare(
@@ -394,6 +403,7 @@ final class BookingController extends Controller
             )->execute(['conversation_id' => $conversationId, 'user_id' => $offer['professional_id']]);
             $this->recordHistory((int) $offer['booking_id'], 'open', 'confirmed', (int) $auth['id'], 'Proposta aceita e reserva confirmada');
             $this->notify((int) $offer['professional_id'], 'offer.accepted', 'Proposta aceita', 'O cliente aceitou sua proposta.', ['bookingId' => $offer['booking_public_id']]);
+            $this->notify((int) $auth['id'], 'booking.confirmed', 'Reserva confirmada', 'A proposta foi aceita e o profissional já está reservado.', ['bookingId' => $offer['booking_public_id']]);
             $this->db->commit();
         } catch (\Throwable $exception) {
             if ($this->db->inTransaction()) {
@@ -699,6 +709,26 @@ final class BookingController extends Controller
             'INSERT INTO booking_status_history (booking_id, from_status, to_status, actor_id, reason, created_at)
              VALUES (:booking_id, :from_status, :to_status, :actor_id, :reason, UTC_TIMESTAMP())'
         )->execute(['booking_id' => $bookingId, 'from_status' => $from, 'to_status' => $to, 'actor_id' => $actorId, 'reason' => $reason]);
+    }
+
+    private function notifyMatchingProfessionals(int $serviceId, string $bookingPublicId): void
+    {
+        $statement = $this->db->prepare(
+            'SELECT DISTINCT u.id FROM users u
+             INNER JOIN professional_profiles p ON p.user_id = u.id AND p.verification_status = \'approved\'
+             INNER JOIN professional_services ps ON ps.professional_id = u.id AND ps.service_id = :service_id AND ps.active = 1
+             WHERE u.role = \'provider\' AND u.status = \'active\''
+        );
+        $statement->execute(['service_id' => $serviceId]);
+        foreach ($statement->fetchAll() as $professional) {
+            $this->notify(
+                (int) $professional['id'],
+                'booking.opportunity',
+                'Nova oportunidade de serviço',
+                'Uma nova solicitação compatível com seus serviços foi publicada.',
+                ['bookingId' => $bookingPublicId]
+            );
+        }
     }
 
     private function allowedActions(string $role, string $status, bool $hasConversation, bool $hasReview): array

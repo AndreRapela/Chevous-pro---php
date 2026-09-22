@@ -7,7 +7,7 @@ services:
       MYSQL_USER: ${DB_USERNAME:?DB_USERNAME é obrigatório}
       MYSQL_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD é obrigatório}
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD é obrigatório}
-    ports: []
+    ports: !reset []
   api:
     environment:
       APP_ENV: production
@@ -27,15 +27,20 @@ services:
       MAIL_DRIVER: resend
       MAIL_FROM: ${MAIL_FROM:?MAIL_FROM é obrigatório}
       RESEND_API_KEY: ${RESEND_API_KEY:?RESEND_API_KEY é obrigatório}
-    ports: []
+    ports: !reset []
   web:
+    build:
+      args:
+        BUILD_CONFIGURATION: production
     environment:
       API_PROXY_TARGET: http://api
       SSR_UPSTREAM: http://ssr:4000
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:?PROXY_SHARED_SECRET é obrigatório}
-      OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:?OUTBOX_ENCRYPTION_KEY é obrigatório}
-    ports: []
+    ports: !reset []
   ssr:
+    build:
+      args:
+        BUILD_CONFIGURATION: production
     environment:
       NODE_ENV: production
       SSR_API_URL: http://api/api/v1

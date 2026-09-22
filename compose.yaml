@@ -72,13 +72,15 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        BUILD_CONFIGURATION: development
     restart: unless-stopped
     environment:
       API_PROXY_TARGET: http://api
       SSR_UPSTREAM: http://ssr:4000
       PROXY_SHARED_SECRET: ${PROXY_SHARED_SECRET:-local-only-proxy-secret-change-before-public-use}
     ports:
-      - "${WEB_PORT:-4200}:80"
+      - "127.0.0.1:${WEB_PORT:-4200}:80"
     depends_on:
       api:
         condition: service_healthy
@@ -90,6 +92,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: ssr
+      args:
+        BUILD_CONFIGURATION: development
     restart: unless-stopped
     environment:
       SSR_API_URL: http://api/api/v1

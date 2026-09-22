@@ -4,6 +4,7 @@ import { environment } from '../../../environments/environment';
 import { ApiQuery, ApiService } from '../http/api.service';
 import { AppCurrency, LocalizationService } from '../localization/localization.service';
 import { normalizeProviderServicePrices } from '../../shared/utils/provider-service.util';
+import { PostalCodeAddress, postalCodeDigits } from '../../shared/utils/postal-code.util';
 import {
   Address, AppNotification, AvailabilityException, AvailabilityRule, Booking, BookingDraft, BookingOffer, BookingQuote, BookingStatus, ChatMessage,
   BookingConfirmation, Conversation, DashboardMetric, ProviderDashboard, ProviderJob,
@@ -47,6 +48,7 @@ export class MarketplaceService {
   createProviderComment(id: string, comment: string) { return this.api.post<unknown>(`professionals/${encodeURIComponent(id)}/comments`, { comment }).pipe(map((item) => this.commentModel(item))); }
   startProfessionalConversation(id: string) { return this.api.post<{ conversationId: string }>(`professionals/${encodeURIComponent(id)}/conversation`, {}); }
   publicProviderAvailability(id: string, query: ApiQuery = {}) { return this.api.get<PublicAvailability>(`professionals/${encodeURIComponent(id)}/availability`, query); }
+  lookupPostalCode(cep: string) { return this.api.get<PostalCodeAddress>(`postal-codes/${postalCodeDigits(cep)}`); }
   bookings(query: ApiQuery = {}) { return this.allPages<unknown>('bookings', query).pipe(map((items) => items.map((item) => this.bookingModel(item)))); }
   booking(id: string) { return this.api.get<unknown>(`bookings/${encodeURIComponent(id)}`).pipe(map((item) => this.bookingModel(item))); }
 

@@ -35,4 +35,37 @@ jobs:
       - run: php tests/backend_core.php
       - run: find backend -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 php -l
       - run: node tests/structure.mjs
-      - run: docker compose -f compose.yaml -f compose.production.yaml --env-file .env.production.example config --quiet
+      - run: node tests/production_compose.mjs
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Subir aplicação completa
+        run: docker compose up -d --build --wait
+      - name: Validar saúde e contas de teste
+        shell: pwsh
+        run: ./tests/compose_smoke.ps1
+      - name: Validar descarte seguro da outbox
+        shell: pwsh
+        run: ./tests/outbox_flow.ps1
+      - name: Validar sessões e rotação de tokens
+        shell: pwsh
+        run: ./tests/security_sessions_flow.ps1
+      - name: Validar mensagens em tempo real
+        shell: pwsh
+        run: ./tests/messaging_flow.ps1
+      - name: Validar jornada completa de reserva
+        shell: pwsh
+        run: ./tests/booking_flow.ps1
+      - name: Coletar logs em caso de falha
+        if: failure()
+        run: docker compose logs --no-color > compose-integration.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compose-integration-logs
+          path: compose-integration.log
+      - name: Encerrar containers
+        if: always()
+        run: docker compose down -v --remove-orphans

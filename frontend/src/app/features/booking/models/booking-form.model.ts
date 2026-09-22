@@ -8,7 +8,7 @@ export function createBookingForm(formBuilder: FormBuilder) {
     addonIds: formBuilder.nonNullable.control<string[]>([]),
     notes: ['', Validators.maxLength(500)],
     address: formBuilder.nonNullable.group({
-      postalCode: ['', Validators.required],
+      postalCode: ['', [Validators.required, Validators.pattern(/^\d{5}-\d{3}$/)]],
       street: ['', Validators.required],
       number: ['', Validators.required],
       complement: [''],

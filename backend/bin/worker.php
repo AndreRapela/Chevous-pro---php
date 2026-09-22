@@ -34,7 +34,8 @@ $pdo->beginTransaction();
 try {
     $events = $pdo->query(
         'SELECT id, event_type, payload, attempts
-         FROM outbox_events WHERE processed_at IS NULL AND available_at <= UTC_TIMESTAMP()
+         FROM outbox_events
+         WHERE processed_at IS NULL AND failed_at IS NULL AND available_at <= UTC_TIMESTAMP()
          ORDER BY id LIMIT 50 FOR UPDATE SKIP LOCKED'
     )->fetchAll();
     $claim = $pdo->prepare(
@@ -52,8 +53,9 @@ try {
     throw $exception;
 }
 
-$mark = $pdo->prepare("UPDATE outbox_events SET processed_at = UTC_TIMESTAMP(), payload = JSON_OBJECT() WHERE id = :id AND processed_at IS NULL");
-$retry = $pdo->prepare('UPDATE outbox_events SET available_at = :available_at WHERE id = :id AND processed_at IS NULL');
+$mark = $pdo->prepare("UPDATE outbox_events SET processed_at = UTC_TIMESTAMP(), last_error = NULL, payload = JSON_OBJECT() WHERE id = :id AND processed_at IS NULL AND failed_at IS NULL");
+$retry = $pdo->prepare('UPDATE outbox_events SET available_at = :available_at, last_error = :last_error WHERE id = :id AND processed_at IS NULL AND failed_at IS NULL');
+$deadLetter = $pdo->prepare("UPDATE outbox_events SET failed_at = UTC_TIMESTAMP(), last_error = :last_error, payload = JSON_OBJECT() WHERE id = :id AND processed_at IS NULL AND failed_at IS NULL");
 foreach ($events as $event) {
     try {
         if (!str_starts_with((string) $event['event_type'], 'email.')) {
@@ -69,12 +71,20 @@ foreach ($events as $event) {
         }
         $mark->execute(['id' => $event['id']]);
     } catch (Throwable $exception) {
-        $delay = min(3600, max(60, 60 * (2 ** min(5, (int) $event['attempts']))));
+        $attempt = (int) $event['attempts'] + 1;
+        $error = mb_substr(preg_replace('/[\r\n]+/', ' ', $exception->getMessage()) ?: 'Falha desconhecida.', 0, 500);
+        if ($attempt >= 8) {
+            $deadLetter->execute(['last_error' => $error, 'id' => $event['id']]);
+            error_log('[ChezVoust Pro] Evento ' . (int) $event['id'] . ' movido para descarte após ' . $attempt . ' tentativas: ' . $error);
+            continue;
+        }
+        $delay = min(3600, 60 * (2 ** min(5, $attempt - 1)));
         $retry->execute([
             'available_at' => gmdate('Y-m-d H:i:s', time() + $delay),
+            'last_error' => $error,
             'id' => $event['id'],
         ]);
-        error_log('[ChezVoust Pro] Falha ao processar evento de e-mail ' . (int) $event['id'] . ': ' . $exception->getMessage());
+        error_log('[ChezVoust Pro] Falha ao processar evento ' . (int) $event['id'] . ' (tentativa ' . $attempt . '): ' . $error);
     }
 }
 
@@ -84,5 +94,7 @@ $pdo->exec('DELETE FROM api_rate_limits WHERE expires_at < DATE_SUB(UTC_TIMESTAM
 // Remove tokens de eventos de e-mail que foram processados por versões
 // anteriores do worker. Eventos novos já são limpos no mesmo UPDATE de $mark.
 $pdo->exec("UPDATE outbox_events SET payload = JSON_OBJECT()\n    WHERE processed_at IS NOT NULL AND event_type LIKE 'email.%' AND JSON_LENGTH(payload) > 0 LIMIT 10000");
+$pdo->exec('DELETE FROM outbox_events WHERE processed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY) LIMIT 10000');
+$pdo->exec('DELETE FROM outbox_events WHERE failed_at < DATE_SUB(UTC_TIMESTAMP(), INTERVAL 90 DAY) LIMIT 10000');
 
 fwrite(STDOUT, count($events) . " evento(s) processado(s).\n");

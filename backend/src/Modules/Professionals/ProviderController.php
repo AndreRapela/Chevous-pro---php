@@ -436,14 +436,28 @@ final class ProviderController extends Controller
     public function withdrawOffer(Request $request, array $params, ?array $auth): Response
     {
         $this->requireVerifiedEmail($auth);
+        $offer = $this->requireRow(
+            'SELECT o.id, b.customer_id, b.public_id AS booking_public_id
+             FROM booking_offers o INNER JOIN bookings b ON b.id = o.booking_id
+             WHERE o.public_id = :id AND o.professional_id = :professional_id AND o.status = \'pending\'',
+            ['id' => $params['offerId'], 'professional_id' => $auth['id']],
+            'Proposta pendente não encontrada.'
+        );
         $statement = $this->db->prepare(
             'UPDATE booking_offers SET status = \'withdrawn\', updated_at = UTC_TIMESTAMP()
-             WHERE public_id = :id AND professional_id = :professional_id AND status = \'pending\''
+             WHERE id = :id AND status = \'pending\''
         );
-        $statement->execute(['id' => $params['offerId'], 'professional_id' => $auth['id']]);
+        $statement->execute(['id' => $offer['id']]);
         if ($statement->rowCount() === 0) {
             throw new ApiException(404, 'OFFER_NOT_FOUND', 'Proposta pendente não encontrada.');
         }
+        $this->notify(
+            (int) $offer['customer_id'],
+            'offer.withdrawn',
+            'Proposta retirada',
+            'Um profissional retirou a proposta enviada para sua solicitação.',
+            ['bookingId' => $offer['booking_public_id']]
+        );
         return Response::noContent();
     }
 
