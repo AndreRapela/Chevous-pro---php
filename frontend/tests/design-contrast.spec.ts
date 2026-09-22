@@ -172,19 +172,19 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.ok(source.includes('.page-hero.catalog-hero { padding-block: 2.1rem 2.35rem; }'));
     assert.ok(source.includes('.page-hero.catalog-hero { padding-block: 1.9rem 2.1rem; }'));
   });
-  it('shows home categories as a compact rail of dimensional icons and labels', () => {
-    assert.equal(declaration('.home-categories .category-grid', 'grid-template-columns'), 'repeat(auto-fit, minmax(6.5rem, 1fr))');
+  it('shows home categories as compact illustrated tiles with labels only', () => {
+    assert.equal(declaration('.home-categories .category-grid', 'grid-template-columns'), 'repeat(auto-fit, minmax(7.25rem, 1fr))');
     assert.equal(declaration('.home-categories .category-grid', 'background'), 'transparent');
     assert.equal(declaration('.home-categories .category-grid', 'border'), '0');
     assert.equal(declaration('.home-categories .category-grid', 'box-shadow'), 'none');
-    assert.equal(declaration('.home-categories .category-card', 'background'), 'transparent');
+    assert.equal(declaration('.home-categories .category-card', 'background'), 'linear-gradient(150deg, rgba(255, 255, 255, .76), var(--category-soft))');
     assert.equal(declaration('.home-categories .category-card', 'flex-direction'), 'column');
     assert.equal(declaration('.home-categories .category-card', 'align-items'), 'center');
     assert.equal(declaration('.home-categories .category-card::after', 'display'), 'none');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'width'), '3.2rem');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'color'), '#fff !important');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'background'), 'linear-gradient(145deg, var(--brand-600), var(--brand-800)) !important');
-    assert.equal(declaration('.home-categories .service-icon', 'width'), '1.5rem');
+    assert.equal(declaration('.home-categories .category-card .category-symbol', 'width'), '3.65rem');
+    assert.equal(declaration('.home-categories .category-card .category-symbol', 'color'), 'var(--category-accent) !important');
+    assert.equal(declaration('.home-categories .category-card .category-symbol', 'background'), 'rgba(255, 255, 255, .78) !important');
+    assert.equal(declaration('.home-categories .service-icon', 'width'), '2rem');
     assert.equal(declaration('body .home-categories .category-card strong', 'overflow-wrap'), 'anywhere');
     assert.equal(declaration('body .home-categories .category-card strong', 'align-self'), 'center');
     assert.equal(declaration('body .home-categories .category-card strong', 'text-align'), 'center');
