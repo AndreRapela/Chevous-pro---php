@@ -3536,12 +3536,14 @@ cvp-provider-detail .feedback-section .review-list article {
 }
 body .home-categories .category-card strong {
   display: block;
+  align-self: center;
   max-width: 100%;
   margin: 0;
   color: var(--ink-900);
   font-size: .9rem !important;
   font-weight: 750;
   line-height: 1.2;
+  text-align: center;
   hyphens: auto;
   overflow-wrap: anywhere;
 }
