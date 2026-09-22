@@ -3535,59 +3535,68 @@ cvp-provider-detail .feedback-section .review-list article {
   .desktop-service-strip b { width: 1.8rem; height: 1.8rem; }
 }
 
-/* One compact rail: dimensional brand icons with white symbols and labels below. */
+/* Compact illustrated service tiles: image first, label only, no description. */
 .home-categories .category-grid {
-  align-items: start;
-  gap: .65rem;
-  padding: .35rem 0 .5rem;
+  align-items: stretch;
+  gap: .75rem;
+  padding: .35rem 0 .65rem;
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
 }
 .home-categories .category-card {
-  min-height: 0;
+  --category-accent: #087e66;
+  --category-soft: #e5f6ee;
+  min-height: 7rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  gap: .4rem;
-  padding: .15rem .25rem .35rem;
-  border: 0;
-  border-radius: .7rem;
-  background: transparent;
-  box-shadow: none;
+  justify-content: center;
+  gap: .45rem;
+  padding: .7rem .4rem .6rem;
+  border: 1px solid rgba(57, 91, 76, .13);
+  border-radius: 1rem;
+  background: linear-gradient(150deg, rgba(255, 255, 255, .76), var(--category-soft));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 7px 17px rgba(40, 78, 62, .08);
   text-align: center;
 }
+.home-categories .category-card:nth-child(2) { --category-accent: #237d98; --category-soft: #e5f4f8; }
+.home-categories .category-card:nth-child(3) { --category-accent: #b06b08; --category-soft: #fff3d6; }
+.home-categories .category-card:nth-child(4) { --category-accent: #b95740; --category-soft: #fbe9e2; }
+.home-categories .category-card:nth-child(5) { --category-accent: #7158a3; --category-soft: #eee9f8; }
+.home-categories .category-card:nth-child(6) { --category-accent: #56813c; --category-soft: #eaf4e4; }
+.home-categories .category-card:nth-child(7) { --category-accent: #9d4e6d; --category-soft: #f7e7ee; }
+.home-categories .category-card:nth-child(8) { --category-accent: #426b96; --category-soft: #e8eff7; }
 .home-categories .category-card::before,
 .home-categories .category-card::after { display: none; }
 .home-categories .category-card:hover {
-  transform: translateY(-3px);
-  border-color: transparent;
-  box-shadow: none;
+  transform: translateY(-4px);
+  border-color: var(--category-accent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .9), 0 12px 24px rgba(40, 78, 62, .14);
 }
 .home-categories .category-card .category-symbol,
 .home-categories .category-card:nth-child(3n+2) .category-symbol,
 .home-categories .category-card:nth-child(3n+3) .category-symbol {
-  width: 3.2rem;
-  height: 3.2rem;
+  width: 3.65rem;
+  height: 3.65rem;
   flex: 0 0 auto;
-  border: 1px solid rgba(90, 36, 30, .25);
-  border-radius: .8rem;
-  color: #fff !important;
-  background: linear-gradient(145deg, var(--brand-600), var(--brand-800)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28), inset 0 -3px 0 rgba(53, 23, 20, .2), 0 8px 15px rgba(90, 36, 30, .2);
+  border: 1px solid rgba(255, 255, 255, .92);
+  border-radius: 1rem;
+  color: var(--category-accent) !important;
+  background: rgba(255, 255, 255, .78) !important;
+  box-shadow: inset 0 -1px 0 rgba(45, 82, 65, .08), 0 5px 12px rgba(45, 82, 65, .1);
   transition: transform .18s ease, box-shadow .18s ease;
 }
 .home-categories .category-card:hover .category-symbol,
 .home-categories .category-card:focus-visible .category-symbol {
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .3), inset 0 -3px 0 rgba(53, 23, 20, .23), 0 12px 20px rgba(90, 36, 30, .26);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow: inset 0 -1px 0 rgba(45, 82, 65, .08), 0 8px 16px rgba(45, 82, 65, .16);
 }
 .home-categories .service-icon {
-  width: 1.5rem;
-  height: 1.5rem;
-  stroke-width: 2.1;
+  width: 2rem;
+  height: 2rem;
+  stroke-width: 2.15;
 }
 body .home-categories .category-card strong {
   display: block;
@@ -3595,8 +3604,8 @@ body .home-categories .category-card strong {
   max-width: 100%;
   margin: 0;
   color: var(--ink-900);
-  font-size: .9rem !important;
-  font-weight: 750;
+  font-size: .84rem !important;
+  font-weight: 800;
   line-height: 1.2;
   text-align: center;
   hyphens: auto;
@@ -3605,10 +3614,10 @@ body .home-categories .category-card strong {
 @media (min-width: 64rem) {
   .home-categories { padding-block: 2.4rem .9rem; }
   .home-popular { padding-top: 2rem; }
-  .home-categories .category-grid { grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); }
+  .home-categories .category-grid { grid-template-columns: repeat(auto-fit, minmax(7.25rem, 1fr)); }
 }
 @media (max-width: 63.99rem) {
-  .home-categories .category-card { flex: 0 0 6.5rem; }
+  .home-categories .category-card { flex: 0 0 7.25rem; min-height: 6.75rem; }
 }
 
 /* A featured link should remain distinct against the white hero strip. */
