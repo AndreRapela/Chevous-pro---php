@@ -3876,3 +3876,343 @@ body .home-discount-copy p {
     max-height: none;
   }
 }
+
+/* Mobile home composition: visual hero, offers, then four compact services. */
+.mobile-hero-orb { display: none; }
+
+@media (max-width: 47.99rem) {
+  cvp-home { display: flex; flex-direction: column; }
+  cvp-home > cvp-home-hero { order: 1; }
+  cvp-home > .home-deals { order: 2; }
+  cvp-home > .home-categories { order: 3; }
+  cvp-home > .home-popular { order: 4; }
+  cvp-home > .home-providers { order: 5; }
+  cvp-home > .home-provider-cta { order: 6; }
+
+  cvp-home .hero-section {
+    padding: 0;
+    overflow: hidden;
+    background: #f3fbf7;
+  }
+  cvp-home .hero-stack.container { width: 100%; }
+  cvp-home .hero-stack { gap: 0; }
+  cvp-home .hero-banner {
+    min-height: clamp(14rem, 62vw, 15rem);
+    display: block;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: #f3fbf7;
+    box-shadow: none;
+    isolation: isolate;
+  }
+  cvp-home .hero-banner-photo {
+    position: absolute;
+    z-index: 2;
+    top: .85rem;
+    left: 50%;
+    width: clamp(13.8rem, 63vw, 16.5rem);
+    aspect-ratio: 1;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--brand-600);
+    transform: translateX(-50%);
+  }
+  cvp-home .hero-banner-image {
+    position: absolute;
+    z-index: 0;
+    inset: -.2rem 0 auto;
+    width: 100%;
+    height: 141%;
+    object-fit: cover;
+    object-position: 50% 8%;
+  }
+  cvp-home .hero-banner-copy,
+  cvp-home .hero-banner-shade,
+  cvp-home .hero-mobile-action { display: none; }
+
+  cvp-home .mobile-hero-orb {
+    --orb-drift-x: 0;
+    --orb-drift-y: .35rem;
+    position: absolute;
+    z-index: 1;
+    display: block;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: mobile-orb-scroll linear both;
+    animation-timeline: scroll(root block);
+    animation-range: 0 34rem;
+    will-change: translate;
+  }
+  cvp-home .mobile-hero-orb-mint {
+    --orb-drift-x: .2rem;
+    --orb-drift-y: .45rem;
+    top: -2.8rem;
+    left: -3.2rem;
+    width: 7.5rem;
+    height: 7.5rem;
+    background: var(--brand-100);
+  }
+  cvp-home .mobile-hero-orb-coral {
+    --orb-drift-x: -.3rem;
+    --orb-drift-y: .6rem;
+    z-index: 1;
+    top: 1.2rem;
+    right: 1.55rem;
+    width: 6.5rem;
+    height: 6.5rem;
+    background: var(--coral-500);
+  }
+  cvp-home .mobile-hero-orb-amber {
+    --orb-drift-x: .25rem;
+    --orb-drift-y: -.45rem;
+    z-index: 3;
+    left: 1.35rem;
+    bottom: 1.05rem;
+    width: 6.1rem;
+    height: 6.1rem;
+    background: var(--amber-500);
+  }
+  cvp-home .mobile-hero-orb-small {
+    --orb-drift-x: -.2rem;
+    --orb-drift-y: -.3rem;
+    z-index: 3;
+    right: 2rem;
+    bottom: 3.9rem;
+    width: 2.65rem;
+    height: 2.65rem;
+    background: var(--coral-500);
+  }
+
+  cvp-home .home-deals {
+    padding: .95rem 0 .55rem;
+    background: #fff;
+  }
+  cvp-home .home-deals-heading { margin-bottom: .55rem; }
+  cvp-home .home-deals-heading .eyebrow { display: none; }
+  cvp-home .home-deals-heading h2 {
+    font-size: .82rem;
+    font-weight: 900;
+    letter-spacing: .015em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  cvp-home .home-discount-banner {
+    min-height: 7.15rem;
+    grid-template-columns: minmax(0, 1.35fr) minmax(7.6rem, .65fr);
+    border-radius: .9rem;
+    background: linear-gradient(108deg, #087259 0%, #0b9b72 68%, #e8f6f1 68%, #f7fcfa 100%);
+    box-shadow: 0 8px 18px rgba(15, 84, 61, .14);
+  }
+  cvp-home .home-discount-banner::before {
+    top: -4.75rem;
+    left: 52%;
+    width: 7.5rem;
+    height: 7.5rem;
+  }
+  cvp-home .home-discount-copy {
+    gap: .2rem;
+    padding: .65rem .15rem .65rem .85rem;
+  }
+  cvp-home .home-discount-pill {
+    min-height: 1.2rem;
+    padding: .15rem .4rem;
+    font-size: .5rem;
+  }
+  cvp-home .home-discount-copy h3 {
+    max-width: 11ch;
+    font-size: clamp(1.25rem, 6vw, 1.55rem);
+    line-height: 1;
+  }
+  body cvp-home .home-discount-copy p {
+    max-width: 12.5rem;
+    font-size: .68rem !important;
+    line-height: 1.25;
+  }
+  cvp-home .home-discount-cta,
+  cvp-home .home-discount-bubble,
+  cvp-home .home-discount-terms { display: none; }
+  cvp-home .home-discount-art { min-height: 7.15rem; }
+  cvp-home .home-discount-art img {
+    right: -1.9rem;
+    bottom: -.15rem;
+    width: 11.25rem;
+    max-width: none;
+  }
+
+  cvp-home .home-categories {
+    padding: .5rem 0 1.1rem;
+    background: #fff;
+  }
+  cvp-home .home-categories .section-heading {
+    display: block;
+    margin-bottom: .45rem;
+  }
+  cvp-home .home-categories .section-heading .eyebrow,
+  cvp-home .home-categories .section-heading .text-link { display: none; }
+  cvp-home .home-categories .section-heading h2 {
+    font-size: .82rem;
+    font-weight: 900;
+    letter-spacing: .015em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+  body cvp-home .home-categories .category-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .5rem;
+    padding: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  body cvp-home .home-categories .category-card {
+    min-width: 0;
+    min-height: 4.55rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .15rem;
+    padding: .3rem .15rem;
+    border: 0;
+    border-radius: .82rem;
+    background: #edf8f1;
+    box-shadow: none;
+  }
+  body cvp-home .home-categories .category-card:nth-child(n + 5) { display: none; }
+  body cvp-home .home-categories .category-card .category-symbol {
+    width: 2.2rem;
+    height: 2.2rem;
+    border: 0;
+    border-radius: .7rem;
+    background: transparent !important;
+    box-shadow: none;
+  }
+  body cvp-home .home-categories .service-icon {
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+  body cvp-home .home-categories .category-card strong {
+    font-size: .66rem !important;
+    line-height: 1.1;
+  }
+  cvp-home .home-categories .mobile-scroll-hint { display: none; }
+
+  /* Keep the secondary home rails informative without letting them dominate mobile. */
+  cvp-home .home-popular,
+  cvp-home .home-providers { padding: .75rem 0 .9rem; }
+  cvp-home .home-popular .section-heading,
+  cvp-home .home-providers .section-heading {
+    align-items: center;
+    margin-bottom: .5rem;
+  }
+  cvp-home .home-popular .section-heading .eyebrow,
+  cvp-home .home-providers .section-heading .eyebrow { display: none; }
+  cvp-home .home-popular .section-heading h2,
+  cvp-home .home-providers .section-heading h2 {
+    font-size: .9rem;
+    font-weight: 900;
+    letter-spacing: .01em;
+    line-height: 1.2;
+  }
+  cvp-home .home-popular .section-heading .text-link,
+  cvp-home .home-providers .section-heading .text-link { font-size: .72rem; }
+  body cvp-home .home-popular .service-grid,
+  body cvp-home .home-providers .provider-grid {
+    gap: .5rem;
+    padding: 0 .6rem .25rem 0;
+  }
+  body cvp-home .home-popular cvp-service-card {
+    width: 11.75rem;
+    min-width: 0;
+    flex: 0 0 11.75rem;
+  }
+  body cvp-home .home-popular .service-card {
+    min-height: 7.6rem;
+    height: 100%;
+    gap: .42rem;
+    padding: .55rem;
+    border-radius: .75rem;
+  }
+  body cvp-home .home-popular .service-symbol {
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: .55rem;
+  }
+  body cvp-home .home-popular .service-icon { width: 1.08rem; height: 1.08rem; }
+  body cvp-home .home-popular .service-card .eyebrow {
+    margin-bottom: .12rem;
+    font-size: .6rem;
+  }
+  body cvp-home .home-popular .service-card h3 {
+    margin-bottom: 0;
+    font-size: .78rem;
+    line-height: 1.2;
+  }
+  body cvp-home .home-popular .service-card p { display: none; }
+  body cvp-home .home-popular .service-card .card-footer {
+    gap: .3rem;
+    justify-content: flex-start;
+    padding-top: .3rem;
+    margin-top: .3rem;
+    font-size: .66rem;
+  }
+  body cvp-home .home-popular .service-card .card-footer strong { font-size: .76rem; }
+  body cvp-home .home-popular .service-card .card-footer > span { white-space: nowrap; }
+  body cvp-home .home-popular .service-card .text-link { display: none; }
+
+  body cvp-home .home-providers cvp-provider-card { flex: 0 0 13.75rem; }
+  body cvp-home .home-providers .provider-card {
+    min-height: 8.7rem;
+    height: 100%;
+    padding: .58rem;
+    border-radius: .75rem;
+  }
+  body cvp-home .home-providers .provider-card-head { gap: .5rem; }
+  body cvp-home .home-providers .avatar-lg {
+    width: 2.6rem;
+    height: 2.6rem;
+    font-size: .72rem;
+  }
+  body cvp-home .home-providers .provider-card h3 {
+    overflow: hidden;
+    font-size: .78rem;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body cvp-home .home-providers .provider-card-head p {
+    overflow: hidden;
+    margin: .1rem 0 .18rem;
+    font-size: .68rem !important;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body cvp-home .home-providers .rating { font-size: .68rem; }
+  body cvp-home .home-providers .provider-card .chip-row,
+  body cvp-home .home-providers .availability { display: none; }
+  body cvp-home .home-providers .provider-card .card-footer {
+    gap: .35rem;
+    padding-top: .4rem;
+    margin-top: .4rem;
+    font-size: .66rem;
+  }
+  body cvp-home .home-providers .provider-card .card-footer strong { font-size: .76rem; }
+  body cvp-home .home-providers .provider-card .btn {
+    min-height: 2rem;
+    padding: .3rem .5rem;
+    border-radius: .55rem;
+    font-size: .66rem;
+  }
+  cvp-home .home-popular .mobile-scroll-hint,
+  cvp-home .home-providers .mobile-scroll-hint { display: none; }
+}
+
+@keyframes mobile-orb-scroll {
+  from { translate: 0 0; }
+  to { translate: var(--orb-drift-x) var(--orb-drift-y); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  cvp-home .mobile-hero-orb { animation: none; translate: 0 0; }
+}

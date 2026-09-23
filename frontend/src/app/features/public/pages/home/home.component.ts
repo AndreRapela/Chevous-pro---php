@@ -17,11 +17,11 @@ import { SeoService } from '../../../../core/seo/seo.service';
 
     <section class="section home-section home-categories" aria-labelledby="categorias-title">
       <div class="container">
-        <div class="section-heading"><div><span class="eyebrow">Tudo em um só lugar</span><h2 id="categorias-title">Do que sua casa precisa?</h2></div><a class="text-link" routerLink="/servicos">Ver todos <span aria-hidden="true">→</span></a></div>
+        <div class="section-heading"><div><span class="eyebrow">Tudo em um só lugar</span><h2 id="categorias-title">Nossos serviços</h2></div><a class="text-link" routerLink="/servicos">Ver todos <span aria-hidden="true">→</span></a></div>
         @if (loading()) { <cvp-state-panel kind="loading" message="Buscando os melhores serviços para você." /> }
         @else if (error()) { <cvp-state-panel kind="error" title="Não conseguimos carregar os serviços" [message]="error()" (retry)="load()" /> }
         @else {
-          <div class="category-grid" cvpHorizontalScroll aria-label="Do que sua casa precisa? Deslize horizontalmente para ver mais categorias.">
+          <div class="category-grid" cvpHorizontalScroll aria-label="Nossos serviços. Deslize horizontalmente para ver mais categorias.">
             @for (category of categories(); track category.id) {
               <a class="category-card" [routerLink]="categoryPath(category)">
                 <span class="category-symbol" aria-hidden="true"><cvp-service-icon [category]="category.id" [serviceSlug]="category.slug" [icon]="category.symbol" /></span><strong>{{ category.shortName }}</strong>

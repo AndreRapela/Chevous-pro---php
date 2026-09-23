@@ -221,6 +221,25 @@ describe('original green brand palette', () => {
     assert.match(template, /src="\/images\/promo-laundry-discount-v1\.webp"/);
     assert.match(template, /<h3>Até 25% de desconto<\/h3>/);
   });
+  it('matches the compact mobile reference without changing the desktop hero', () => {
+    assert.equal(declaration('cvp-home .hero-banner', 'border-radius'), '0');
+    assert.equal(declaration('cvp-home .hero-banner-copy', 'display'), 'none');
+    assert.equal(declaration('cvp-home .home-discount-banner', 'min-height'), '7.15rem');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
+    assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n + 5)', 'display'), 'none');
+    assert.equal(declaration('cvp-home .mobile-hero-orb', 'animation-timeline'), 'scroll(root block)');
+  });
+  it('keeps the lower mobile home rails compact', () => {
+    assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'flex'), '0 0 11.75rem');
+    assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'min-width'), '0');
+    assert.equal(declaration('body cvp-home .home-popular .service-card', 'min-height'), '7.6rem');
+    assert.equal(declaration('body cvp-home .home-popular .service-card p', 'display'), 'none');
+    assert.equal(declaration('body cvp-home .home-popular .service-card .text-link', 'display'), 'none');
+    assert.equal(declaration('body cvp-home .home-providers cvp-provider-card', 'flex'), '0 0 13.75rem');
+    assert.equal(declaration('body cvp-home .home-providers .provider-card', 'min-height'), '8.7rem');
+    assert.equal(declaration('body cvp-home .home-providers .provider-card .chip-row', 'display'), 'none');
+    assert.equal(declaration('body cvp-home .home-providers .availability', 'display'), 'none');
+  });
   it('uses one compact mobile booking action and removes the home steps section', () => {
     assert.equal(declaration('.hero-mobile-action', 'display'), 'flex');
     assert.equal(declaration('.hero-mobile-action .btn', 'border-radius'), '999px');

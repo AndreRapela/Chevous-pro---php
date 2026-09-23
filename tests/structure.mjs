@@ -67,6 +67,18 @@ assert.match(homeHero, /desktop-booking-preview/, 'A prévia compacta deve ser r
 assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança deve ser renderizado no banner.');
 assert.match(homeHero, /profissional-limpeza-hero-887\.webp/, 'O banner deve usar a imagem original de fundo verde.');
 assert.doesNotMatch(homeHero, /hero-warm/, 'O banner não deve reintroduzir a variante marrom da imagem.');
+assert.equal((homeHero.match(/mobile-hero-orb mobile-hero-orb-/g) ?? []).length, 4, 'O herói móvel deve conter quatro círculos decorativos sutis.');
+assert.match(globalStyles, /animation-timeline:\s*scroll\(root block\)/, 'Os círculos do herói móvel devem responder à rolagem.');
+assert.match(globalStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mobile-hero-orb\s*\{[^}]*animation:\s*none/s, 'A animação decorativa deve respeitar movimento reduzido.');
+assert.match(globalStyles, /cvp-home > \.home-deals\s*\{\s*order:\s*2;/, 'As ofertas devem aparecer logo após o herói no celular.');
+assert.match(globalStyles, /cvp-home > \.home-categories\s*\{\s*order:\s*3;/, 'Os serviços devem aparecer depois das ofertas no celular.');
+assert.match(globalStyles, /body cvp-home \.home-categories \.category-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s, 'A home móvel deve mostrar quatro serviços compactos por linha.');
+assert.match(globalStyles, /body cvp-home \.home-popular cvp-service-card\s*\{[^}]*flex:\s*0 0 11\.75rem;/s, 'Os serviços populares não devem ocupar quase toda a largura do celular.');
+assert.match(globalStyles, /body cvp-home \.home-popular \.service-card p\s*\{\s*display:\s*none;/s, 'A vitrine móvel deve omitir descrições longas nos cards compactos.');
+assert.match(globalStyles, /body cvp-home \.home-providers cvp-provider-card\s*\{[^}]*flex:\s*0 0 13\.75rem;/s, 'Os profissionais recomendados devem permanecer compactos no carrossel móvel.');
+assert.match(globalStyles, /body cvp-home \.home-providers \.availability\s*\{\s*display:\s*none;/s, 'O card profissional da home móvel deve priorizar identidade, avaliação, preço e perfil.');
+const homePage = await text('frontend/src/app/features/public/pages/home/home.component.ts');
+assert.match(homePage, /id="categorias-title">Nossos serviços<\/h2>/, 'A seção compacta deve se apresentar como nossos serviços.');
 assert.match(homeHero, /desktop-hero-lower[\s\S]*desktop-promo-card[\s\S]*desktop-service-strip[\s\S]*desktop-booking-preview/, 'Os cards devem manter a ordem visual da referência.');
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
