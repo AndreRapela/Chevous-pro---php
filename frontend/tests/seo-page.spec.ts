@@ -19,7 +19,7 @@ function compileMethods(path: string, names: string[], dependencies: Record<stri
   return new Function(...Object.keys(dependencies), `${output}; return Harness;`)(...Object.values(dependencies));
 }
 
-const Harness = compileMethods('../src/app/core/seo/seo.service.ts', ['update', 'updateRoute', 'render', 'setName', 'setProperty', 'setCanonical', 'setStructuredData', 'absoluteUrl', 'structuredDataValue', 'clean'], { DEFAULT_IMAGE_PATH: '/images/profissional-limpeza-hero-warm-887.jpg' });
+const Harness = compileMethods('../src/app/core/seo/seo.service.ts', ['update', 'updateRoute', 'render', 'setName', 'setProperty', 'setCanonical', 'setStructuredData', 'absoluteUrl', 'structuredDataValue', 'clean'], { DEFAULT_IMAGE_PATH: '/images/profissional-limpeza-hero-887.webp' });
 const AppHarness = compileMethods('../src/app/app.component.ts', ['applyStaticRouteSeo'], { DEFAULT_SEO: { title: 'Pro | Home services', description: 'Find trusted professionals for your home.', canonicalPath: '/' } });
 
 class MetadataNode {

@@ -39,7 +39,7 @@ function contrast(first: string, second: string): number {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
-describe('warm accents on a single neutral-blue theme', () => {
+describe('original green brand palette', () => {
   it('keeps secondary reading text above 4.5:1 across the main light surfaces', () => {
     for (const background of ['--surface', '--surface-soft', '--page-background', '--hero-background', '--control-background', '--brand-100', '--coral-100', '--amber-100', '--danger-soft', '--warning-soft']) {
       for (const foreground of ['--ink-500', '--ink-600', '--ink-700']) {
@@ -67,9 +67,12 @@ describe('warm accents on a single neutral-blue theme', () => {
       for (const surface of ['--surface', '--page-background', '--hero-background', '--control-background']) assert.ok(contrast('var(--control-focus)', `var(${surface})`) >= 3);
     }
   });
-  it('retains the requested neutral blue and the established readable type scale', () => {
-    assert.equal(variables.get('--page-background'), '#eaf1f6');
-    assert.equal(variables.get('--hero-background'), '#dce9f1');
+  it('restores the original green surfaces and the established readable type scale', () => {
+    assert.equal(variables.get('--brand-900'), '#004332');
+    assert.equal(variables.get('--brand-700'), '#006b4d');
+    assert.equal(variables.get('--brand-500'), '#00a874');
+    assert.equal(variables.get('--page-background'), '#edf6f1');
+    assert.equal(variables.get('--hero-background'), '#dff7ed');
     assert.equal(declaration('.hero-section', 'background'), 'var(--hero-background)');
     assert.ok(contrast('var(--hero-background)', 'var(--page-background)') > 1);
     assert.ok(contrast('var(--hero-background)', 'var(--page-background)') < 1.1);
@@ -86,16 +89,16 @@ describe('warm accents on a single neutral-blue theme', () => {
     }
   });
   it('turns the public header into a brand bar with one prominent account action', () => {
-    assert.equal(declaration('.site-header', 'background'), '#9a3932');
-    assert.equal(declaration('.site-header', 'border-color'), '#9a3932');
+    assert.equal(declaration('.site-header', 'background'), 'var(--brand-700)');
+    assert.equal(declaration('.site-header', 'border-color'), 'var(--brand-700)');
     assert.equal(declaration('body .site-header .header-create-account', 'background'), '#fff');
     assert.equal(declaration('body .site-header .header-create-account', 'color'), 'var(--brand-900)');
     assert.equal(declaration('body .site-header .header-create-account', 'font-weight'), '850');
     assert.equal(declaration('.site-header .locale-trigger', 'min-height'), '2.2rem');
     assert.equal(declaration('.site-header .locale-trigger', 'box-shadow'), 'none');
     assert.equal(declaration('body .site-header .locale-trigger-value', 'font-size'), '.78rem !important');
-    assert.equal(declaration('.site-footer', 'background'), '#9a3932');
-    assert.equal(declaration('.site-footer', 'border-color'), '#9a3932');
+    assert.equal(declaration('.site-footer', 'background'), 'var(--brand-700)');
+    assert.equal(declaration('.site-footer', 'border-color'), 'var(--brand-700)');
     assert.equal(declaration('.site-footer .footer-group summary', 'color'), '#fff');
     assert.equal(declaration('.site-footer .footer-group h2', 'color'), '#fff');
     assert.equal(declaration('.site-footer .footer-bottom', 'border-color'), 'rgba(255, 255, 255, .24)');
@@ -150,13 +153,13 @@ describe('warm accents on a single neutral-blue theme', () => {
     const template = readFileSync(new URL('../src/app/features/public/pages/provider-detail/provider-detail.component.ts', import.meta.url), 'utf8');
     assert.match(template, /<\/div><p class="feedback-intro">Somente clientes que fecharam negócio pela plataforma podem avaliar com estrelas\.<\/p>/);
   });
-  it('harmonizes portrait decorations with brand tones while retaining the neutral blue page', () => {
+  it('harmonizes portrait decorations with the restored green surfaces', () => {
     assert.equal(declaration('.desktop-hero-visual::before', 'background'), 'linear-gradient(145deg, var(--brand-600), var(--brand-700))');
     assert.equal(declaration('.desktop-hero-visual::after', 'background'), 'var(--brand-400)');
     assert.equal(declaration('.desktop-hero-orb', 'border-color'), 'var(--brand-200)');
     assert.equal(declaration('.desktop-hero-orb.orb-mint', 'background'), 'var(--brand-700)');
     assert.equal(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--brand-200)');
-    assert.equal(variables.get('--page-background'), '#eaf1f6');
+    assert.equal(variables.get('--page-background'), '#edf6f1');
   });
   it('uses reading-size professional benefits and a larger invitation button without a fixed card height', () => {
     assert.equal(declaration('.provider-cta-actions', 'font-size'), '1rem');

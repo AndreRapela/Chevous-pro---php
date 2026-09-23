@@ -70,12 +70,12 @@ export class ServiceDetailComponent implements OnInit {
 
   heroImage(service: Service): string {
     if (service.categoryId === 'cleaning' || service.categoryId === 'laundry') {
-      return '/images/profissional-limpeza-hero-warm-887.jpg';
+      return '/images/profissional-limpeza-hero-887.webp';
     }
     if (service.categoryId === 'care') {
-      return '/images/garconete-cadastro-warm-1086.jpg';
+      return '/images/garconete-cadastro-v1-1086.webp';
     }
-    return '/images/eletricista-login-warm-1280.jpg';
+    return '/images/eletricista-login-v1-1280.webp';
   }
 
   private updateSeo(service: Service): void {

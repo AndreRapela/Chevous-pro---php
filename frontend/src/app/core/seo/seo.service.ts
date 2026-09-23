@@ -17,7 +17,7 @@ export interface SeoPage {
   structuredData?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
-const DEFAULT_IMAGE_PATH = '/images/profissional-limpeza-hero-warm-887.jpg';
+const DEFAULT_IMAGE_PATH = '/images/profissional-limpeza-hero-887.webp';
 
 @Injectable({ providedIn: 'root' })
 export class SeoService {
