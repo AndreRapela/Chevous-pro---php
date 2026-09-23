@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, catchError, expand, map, of, reduce, switchMap } from 'rxjs';
+import { EMPTY, Observable, catchError, expand, map, of, reduce, shareReplay, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiQuery, ApiService } from '../http/api.service';
 import { AppCurrency, LocalizationService } from '../localization/localization.service';
@@ -17,8 +17,12 @@ type UnknownRecord = Record<string, unknown>;
 export class MarketplaceService {
   private readonly api = inject(ApiService);
   private readonly localization = inject(LocalizationService);
+  private readonly categoriesRequest$ = this.api.get<unknown[]>('categories').pipe(
+    map((items) => items.map((item) => this.category(item))),
+    shareReplay({ bufferSize: 1, refCount: false })
+  );
 
-  categories() { return this.api.get<unknown[]>('categories').pipe(map((items) => items.map((item) => this.category(item)))); }
+  categories() { return this.categoriesRequest$; }
   services(query: ApiQuery = {}) { return this.allPages<unknown>('services', query).pipe(map((items) => items.map((item) => this.serviceModel(item)))); }
   servicesPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('services', query).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.serviceModel(item)) }))); }
   service(idOrSlug: string): Observable<Service> {

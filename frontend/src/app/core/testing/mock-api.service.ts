@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { Observable, mergeMap, of, throwError, timer } from 'rxjs';
+import { Observable, defer, of, throwError } from 'rxjs';
 import { MOCK_BOOKINGS, MOCK_CATEGORIES, MOCK_PROVIDERS, MOCK_SERVICES } from './mock-data';
 import { ApiClientError, ApiEnvelope, AppNotification, AuthSession, AvailabilityException, Booking, BookingDraft, BookingQuote, ChatMessage, Conversation, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Service, User, UserRole } from '../models';
 
@@ -41,7 +41,7 @@ export class MockApiService {
 
   request<T>(method: string, path: string, body?: unknown, params: QueryParams = {}): Observable<ApiEnvelope<T>> {
     const normalized = path.replace(/^\//, '').split('?')[0] ?? '';
-    return timer(120).pipe(mergeMap(() => this.resolve(method.toUpperCase(), normalized, body, params) as Observable<ApiEnvelope<T>>));
+    return defer(() => this.resolve(method.toUpperCase(), normalized, body, params) as Observable<ApiEnvelope<T>>);
   }
 
   private resolve(method: string, path: string, body: unknown, params: QueryParams): Observable<ApiEnvelope<unknown>> {

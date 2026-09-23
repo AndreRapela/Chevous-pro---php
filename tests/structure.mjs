@@ -72,6 +72,13 @@ assert.match(globalStyles, /\.portal-header \.icon-button\s*\{[^}]*min-width:\s*
 assert.match(globalStyles, /--public-bottom-nav-height:\s*calc\(4\.4rem \+ env\(safe-area-inset-bottom\)\)/, 'A navegação pública deve declarar uma altura compartilhada com a safe area.');
 assert.match(globalStyles, /\.mobile-sticky-action\s*\{[^}]*var\(--public-bottom-nav-height\)/s, 'O CTA fixo do perfil deve ficar acima da navegação inferior.');
 assert.match(globalStyles, /body:has\(cvp-provider-detail\) \.site-footer\s*\{[^}]*--mobile-sticky-action-height/s, 'O rodapé do perfil deve reservar espaço para CTA e navegação fixos.');
+const publicShell = await text('frontend/src/app/layout/public-shell.component.ts');
+assert.equal((publicShell.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length, 3, 'Os grupos móveis do rodapé devem iniciar recolhidos.');
+assert.equal((publicShell.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3, 'O desktop deve manter os três grupos de links visíveis.');
+assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-group" open>/, 'O rodapé móvel não deve ocupar a tela com todos os grupos abertos.');
+assert.match(globalStyles, /\.footer-desktop-group\s*\{\s*display:\s*grid\s*!important;/s, 'Os links do rodapé devem continuar visíveis a partir do breakpoint de desktop.');
+const mockApi = await text('frontend/src/app/core/testing/mock-api.service.ts');
+assert.doesNotMatch(mockApi, /timer\(120\)/, 'O catálogo local não deve introduzir latência artificial.');
 assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat móvel deve respeitar o viewport dinâmico quando o teclado aparece.');
 assert.match(globalStyles, /\.catalog-results \.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/s, 'O catálogo deve manter informação de decisão em uma coluna no celular.');
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');
