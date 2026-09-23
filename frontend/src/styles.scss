@@ -3410,8 +3410,8 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
   }
 
   .desktop-hero-lower {
-    --promo-offset: clamp(2.75rem, 4vw, 3.5rem);
-    --services-offset: clamp(8.25rem, 12.5vw, 9.5rem);
+    --promo-offset: clamp(1.5rem, 2.3vw, 2rem);
+    --services-offset: clamp(6.25rem, 9vw, 7rem);
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 13.4rem);
@@ -3429,7 +3429,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
     position: absolute;
     z-index: 4;
     top: auto;
-    bottom: -2.25rem;
+    bottom: -1.5rem;
     left: var(--promo-offset);
     width: 15rem;
     min-width: 0;
@@ -3455,7 +3455,7 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
   .desktop-service-strip > .eyebrow { margin: 0; font-size: .75rem; }
   .desktop-service-links {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: .25rem;
   }
   .desktop-service-strip a {

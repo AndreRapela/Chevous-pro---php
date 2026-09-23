@@ -56,13 +56,13 @@ assert.equal(productionOptimization.styles.inlineCritical, false, 'CSS crítico 
 assert.equal(angularArchitect.build.configurations.mock.optimization.styles.inlineCritical, true, 'A hospedagem estática de demonstração deve incluir CSS crítico para evitar conteúdo sem estilo.');
 
 const globalStyles = await text('frontend/src/styles.scss');
-assert.match(globalStyles, /\.desktop-service-links\s*\{[^}]*grid-template-columns:\s*repeat\(4,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir quatro atalhos em colunas iguais.');
+assert.match(globalStyles, /\.desktop-service-links\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir cinco atalhos em colunas iguais.');
 assert.match(globalStyles, /desktop-booking-preview/, 'A prévia de agendamento deve compor o banner inicial.');
 assert.match(globalStyles, /desktop-promo-card/, 'O painel de confiança deve compor o banner inicial.');
 assert.match(globalStyles, /\.desktop-hero-lower\s*\{[^}]*display:\s*grid;/s, 'Os painéis devem compartilhar uma faixa inferior organizada.');
 const homeHero = await text('frontend/src/app/features/public/components/home-hero/home-hero.component.ts');
 const serviceCard = homeHero.match(/<nav class="desktop-service-strip"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? '';
-assert.equal((serviceCard.match(/<a /g) ?? []).length, 4, 'O card deve conter apenas os quatro atalhos de serviço.');
+assert.equal((serviceCard.match(/<a /g) ?? []).length, 5, 'O card deve conter apenas os cinco atalhos de serviço.');
 assert.match(homeHero, /desktop-booking-preview/, 'A prévia compacta deve ser renderizada no banner.');
 assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança deve ser renderizado no banner.');
 assert.match(homeHero, /desktop-hero-lower[\s\S]*desktop-promo-card[\s\S]*desktop-service-strip[\s\S]*desktop-booking-preview/, 'Os cards devem manter a ordem visual da referência.');

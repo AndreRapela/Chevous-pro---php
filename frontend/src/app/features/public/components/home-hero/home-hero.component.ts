@@ -28,6 +28,7 @@ import { ServiceIconComponent } from '../../../../shared/components/service-icon
                 <a routerLink="/servicos" [queryParams]="{ q: 'lavagem' }"><b aria-hidden="true"><cvp-service-icon category="laundry" /></b>Lavagem</a>
                 <a routerLink="/servicos" [queryParams]="{ q: 'reparo' }"><b aria-hidden="true"><cvp-service-icon category="repairs" /></b>Reparos</a>
                 <a routerLink="/servicos" [queryParams]="{ q: 'pintura' }"><b aria-hidden="true"><cvp-service-icon category="painting" /></b>Pintura</a>
+                <a routerLink="/servicos" [queryParams]="{ q: 'jardim' }"><b aria-hidden="true"><cvp-service-icon category="gardening" /></b>Jardim</a>
               </div>
             </nav>
             <article class="desktop-booking-preview" aria-label="Prévia de agendamento">
