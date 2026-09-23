@@ -179,7 +179,7 @@ describe('original green brand palette', () => {
           rule.declarations.includes('padding-block: clamp(2rem, 3.2vw, 2.75rem)'),
       ),
     );
-    assert.equal(declaration('.catalog-hero h1', 'font-size'), 'clamp(1.9rem, 5vw, 2.4rem)');
+    assert.equal(declaration('.catalog-hero h1', 'font-size'), 'clamp(2rem, 3vw, 2.7rem)');
     assert.equal(declaration('body .catalog-hero p', 'font-size'), '1rem !important');
     assert.equal(declaration('.catalog-hero .search-field', 'min-height'), '3.1rem');
     assert.equal(declaration('.catalog-hero .search-field input', 'font-size'), '1rem !important');
@@ -208,26 +208,32 @@ describe('original green brand palette', () => {
     assert.match(template, /class="category-symbol" aria-hidden="true"/);
     assert.ok(!template.includes('{{ category.serviceCount }}'));
   });
-  it('adds a responsive discount banner with a real promotional image', () => {
+  it('adds a responsive product campaign with admin-controlled artwork', () => {
     assert.equal(declaration('.home-discount-banner', 'display'), 'grid');
     assert.equal(declaration('.home-discount-banner', 'min-height'), '11.75rem');
     assert.ok(source.includes('min-height: 13.5rem;'));
     assert.equal(declaration('.home-discount-banner', 'overflow'), 'hidden');
-    assert.equal(declaration('.home-discount-copy h3', 'color'), '#fff');
+    assert.equal(declaration('.home-discount-copy h3', 'color'), 'var(--promo-text, #fff)');
     assert.equal(declaration('.home-discount-cta', 'background'), '#fff');
     assert.equal(declaration('.home-discount-art img', 'position'), 'absolute');
     const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
     assert.match(template, /<section class="section home-section home-deals"/);
-    assert.match(template, /src="\/images\/promo-laundry-discount-v1\.webp"/);
-    assert.match(template, /<h3>Até 25% de desconto<\/h3>/);
+    assert.match(template, /\[src\]="promotion\(\)\.imageUrl"/);
+    assert.match(template, /<h3>\{\{ promotion\(\)\.title \}\}<\/h3>/);
+    assert.match(template, /ctaUrl/);
   });
   it('matches the compact mobile reference without changing the desktop hero', () => {
     assert.equal(declaration('cvp-home .hero-banner', 'border-radius'), '0');
     assert.equal(declaration('cvp-home .hero-banner-copy', 'display'), 'none');
     assert.equal(declaration('cvp-home .home-discount-banner', 'min-height'), '7.15rem');
     assert.equal(declaration('body cvp-home .home-categories .category-grid', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'grid-auto-rows'), '4.55rem');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'align-items'), 'stretch');
+    assert.equal(declaration('body cvp-home .home-categories .category-card', 'height'), '100%');
+    assert.equal(declaration('body cvp-home .home-categories .category-card', 'flex-direction'), 'column');
+    assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n) .category-symbol', 'flex-basis'), '2.2rem');
     assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n + 5)', 'display'), 'none');
-    assert.equal(declaration('cvp-home .mobile-hero-orb', 'animation-timeline'), 'scroll(root block)');
+    assert.match(source, /cvp-home \.mobile-hero-orb\s*\{[^}]*animation:\s*mobile-orb-float[^;]*infinite/s);
   });
   it('keeps the lower mobile home rails compact', () => {
     assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'flex'), '0 0 11.75rem');
@@ -251,7 +257,7 @@ describe('original green brand palette', () => {
     assert.ok(!home.includes('class="section home-section home-steps"'));
   });
   it('gives catalog cards a clear visual hierarchy and distinct action', () => {
-    assert.equal(declaration('.catalog-results .service-card', 'background'), 'linear-gradient(155deg, #fff 62%, var(--brand-50))');
+    assert.equal(declaration('.catalog-results .service-card', 'background'), '#fff');
     assert.equal(declaration('.catalog-results .service-card::before', 'height'), '.22rem');
     assert.equal(declaration('.catalog-results .service-card .card-footer', 'border-top-color'), 'var(--ink-200)');
     assert.equal(declaration('.catalog-results .service-card .text-link', 'border-radius'), '999px');

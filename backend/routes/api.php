@@ -44,6 +44,7 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/avatars/{id}', [$media, 'avatar']);
     $router->add('GET', '/api/v1/services', [$catalog, 'services']);
     $router->add('GET', '/api/v1/services/{id}', [$catalog, 'service']);
+    $router->add('GET', '/api/v1/products', [$catalog, 'products']);
     $router->add('GET', '/api/v1/professionals', [$catalog, 'professionals']);
     $router->add('GET', '/api/v1/professionals/{id}', [$catalog, 'professional']);
     $router->add('GET', '/api/v1/professionals/{id}/availability', [$catalog, 'availability']);
@@ -125,6 +126,7 @@ return static function (array $services): void {
     $router->add('PUT', '/api/v1/provider/profile/courses/{id}', [$provider, 'updateCourse'], true, ['provider']);
     $router->add('DELETE', '/api/v1/provider/profile/courses/{id}', [$provider, 'deleteCourse'], true, ['provider']);
     $router->add('GET', '/api/v1/provider/services', [$provider, 'services'], true, ['provider']);
+    $router->add('POST', '/api/v1/provider/services', [$provider, 'createCustomService'], true, ['provider']);
     $router->add('PUT', '/api/v1/provider/services/{serviceId}', [$provider, 'upsertService'], true, ['provider']);
     $router->add('DELETE', '/api/v1/provider/services/{serviceId}', [$provider, 'removeService'], true, ['provider']);
     $router->add('GET', '/api/v1/provider/availability', [$provider, 'availability'], true, ['provider']);
@@ -149,6 +151,10 @@ return static function (array $services): void {
     $router->add('PATCH', '/api/v1/admin/services/{id}', [$admin, 'updateService'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/promotions', [$admin, 'promotions'], true, ['admin']);
     $router->add('POST', '/api/v1/admin/promotions', [$admin, 'createPromotion'], true, ['admin']);
+    $router->add('PATCH', '/api/v1/admin/promotions/{id}', [$admin, 'updatePromotion'], true, ['admin']);
+    $router->add('GET', '/api/v1/admin/products', [$admin, 'products'], true, ['admin']);
+    $router->add('POST', '/api/v1/admin/products', [$admin, 'createProduct'], true, ['admin']);
+    $router->add('PATCH', '/api/v1/admin/products/{id}', [$admin, 'updateProduct'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/bookings', [$bookings, 'index'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/audit-logs', [$admin, 'auditLogs'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/content-reports', [$admin, 'contentReports'], true, ['admin']);

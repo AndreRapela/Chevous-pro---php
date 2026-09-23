@@ -237,6 +237,7 @@ final class AdminController extends Controller
     {
         return Response::data($this->db->query(
             'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
+                    image_url AS imageUrl, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor, active, starts_at AS startsAt,
                     ends_at AS endsAt, sort_order AS sortOrder FROM promotions ORDER BY sort_order, created_at DESC'
         )->fetchAll());
@@ -247,22 +248,101 @@ final class AdminController extends Controller
         $data = Validator::validate($request->body, [
             'title' => ['required', 'string', 'min:3', 'max:160'], 'subtitle' => ['nullable', 'string', 'max:300'],
             'ctaLabel' => ['nullable', 'string', 'max:60'], 'ctaUrl' => ['nullable', 'string', 'max:255'],
+            'imageUrl' => ['nullable', 'string', 'max:1024'], 'badgeText' => ['nullable', 'string', 'max:80'],
+            'termsText' => ['nullable', 'string', 'max:300'],
             'backgroundColor' => ['nullable', 'string', 'max:20'], 'textColor' => ['nullable', 'string', 'max:20'],
             'startsAt' => ['nullable', 'date'], 'endsAt' => ['nullable', 'date'], 'sortOrder' => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
+        $this->validateWebPath($data['ctaUrl'] ?? null);
+        $this->validateWebPath($data['imageUrl'] ?? null);
         $publicId = Uuid::v4();
         $this->db->prepare(
             'INSERT INTO promotions
-                (public_id, title, subtitle, cta_label, cta_url, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
-             VALUES (:public_id, :title, :subtitle, :cta_label, :cta_url, :background_color, :text_color, 1,
+                (public_id, title, subtitle, cta_label, cta_url, image_url, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
+             VALUES (:public_id, :title, :subtitle, :cta_label, :cta_url, :image_url, :badge_text, :terms_text, :background_color, :text_color, 1,
                      :starts_at, :ends_at, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
         )->execute([
             'public_id' => $publicId, 'title' => $data['title'], 'subtitle' => $data['subtitle'] ?? null,
             'cta_label' => $data['ctaLabel'] ?? null, 'cta_url' => $data['ctaUrl'] ?? null,
+            'image_url' => $data['imageUrl'] ?? null, 'badge_text' => $data['badgeText'] ?? null,
+            'terms_text' => $data['termsText'] ?? null,
             'background_color' => $data['backgroundColor'] ?? '#08B86F', 'text_color' => $data['textColor'] ?? '#FFFFFF',
             'starts_at' => $data['startsAt'] ?? null, 'ends_at' => $data['endsAt'] ?? null, 'sort_order' => $data['sortOrder'] ?? 0,
         ]);
         return Response::data(['id' => $publicId] + $data, 201);
+    }
+
+    public function updatePromotion(Request $request, array $params, ?array $auth): Response
+    {
+        $data = Validator::validate($request->body, [
+            'title' => ['sometimes', 'string', 'min:3', 'max:160'], 'subtitle' => ['sometimes', 'nullable', 'string', 'max:300'],
+            'ctaLabel' => ['sometimes', 'nullable', 'string', 'max:60'], 'ctaUrl' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'imageUrl' => ['sometimes', 'nullable', 'string', 'max:1024'], 'badgeText' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'termsText' => ['sometimes', 'nullable', 'string', 'max:300'], 'backgroundColor' => ['sometimes', 'string', 'max:20'],
+            'textColor' => ['sometimes', 'string', 'max:20'], 'active' => ['sometimes', 'boolean'],
+            'startsAt' => ['sometimes', 'nullable', 'date'], 'endsAt' => ['sometimes', 'nullable', 'date'],
+            'sortOrder' => ['sometimes', 'integer', 'min:0', 'max:999'],
+        ]);
+        $this->validateWebPath($data['ctaUrl'] ?? null);
+        $this->validateWebPath($data['imageUrl'] ?? null);
+        $map = [
+            'title' => 'title', 'subtitle' => 'subtitle', 'ctaLabel' => 'cta_label', 'ctaUrl' => 'cta_url',
+            'imageUrl' => 'image_url', 'badgeText' => 'badge_text', 'termsText' => 'terms_text',
+            'backgroundColor' => 'background_color', 'textColor' => 'text_color', 'active' => 'active',
+            'startsAt' => 'starts_at', 'endsAt' => 'ends_at', 'sortOrder' => 'sort_order',
+        ];
+        $this->dynamicUpdate('promotions', $params['id'], $data, $map);
+        return Response::data(['id' => $params['id']] + $data);
+    }
+
+    public function products(Request $request, array $params, ?array $auth): Response
+    {
+        return Response::data($this->db->query(
+            'SELECT public_id AS id, name, slug, short_description AS shortDescription,
+                    price_cents AS priceCents, compare_at_price_cents AS compareAtPriceCents, currency,
+                    image_url AS imageUrl, purchase_url AS purchaseUrl, badge_text AS badgeText,
+                    inventory_count AS inventoryCount, featured, active, sort_order AS sortOrder
+             FROM products ORDER BY sort_order, created_at DESC'
+        )->fetchAll());
+    }
+
+    public function createProduct(Request $request, array $params, ?array $auth): Response
+    {
+        $data = $this->validatedProduct($request->body, false);
+        $publicId = Uuid::v4();
+        $slug = !empty($data['slug']) ? $this->slug((string) $data['slug']) : $this->slug((string) $data['name']);
+        $this->db->prepare(
+            'INSERT INTO products
+                (public_id, name, slug, short_description, price_cents, compare_at_price_cents, currency,
+                 image_url, purchase_url, badge_text, inventory_count, featured, active, sort_order, created_at, updated_at)
+             VALUES (:public_id, :name, :slug, :short_description, :price_cents, :compare_at_price_cents, :currency,
+                     :image_url, :purchase_url, :badge_text, :inventory_count, :featured, :active, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+        )->execute([
+            'public_id' => $publicId, 'name' => $data['name'], 'slug' => $slug,
+            'short_description' => $data['shortDescription'] ?? null, 'price_cents' => $data['priceCents'],
+            'compare_at_price_cents' => $data['compareAtPriceCents'] ?? null, 'currency' => $data['currency'] ?? 'BRL',
+            'image_url' => $data['imageUrl'] ?? null, 'purchase_url' => $data['purchaseUrl'],
+            'badge_text' => $data['badgeText'] ?? null, 'inventory_count' => $data['inventoryCount'] ?? 0,
+            'featured' => !empty($data['featured']) ? 1 : 0, 'active' => array_key_exists('active', $data) && !$data['active'] ? 0 : 1,
+            'sort_order' => $data['sortOrder'] ?? 0,
+        ]);
+        return Response::data(['id' => $publicId, 'slug' => $slug] + $data, 201);
+    }
+
+    public function updateProduct(Request $request, array $params, ?array $auth): Response
+    {
+        $data = $this->validatedProduct($request->body, true);
+        if (isset($data['slug'])) {
+            $data['slug'] = $this->slug((string) $data['slug']);
+        }
+        $map = [
+            'name' => 'name', 'slug' => 'slug', 'shortDescription' => 'short_description', 'priceCents' => 'price_cents',
+            'compareAtPriceCents' => 'compare_at_price_cents', 'currency' => 'currency', 'imageUrl' => 'image_url',
+            'purchaseUrl' => 'purchase_url', 'badgeText' => 'badge_text', 'inventoryCount' => 'inventory_count',
+            'featured' => 'featured', 'active' => 'active', 'sortOrder' => 'sort_order',
+        ];
+        $this->dynamicUpdate('products', $params['id'], $data, $map);
+        return Response::data(['id' => $params['id']] + $data);
     }
 
     public function auditLogs(Request $request, array $params, ?array $auth): Response
@@ -370,6 +450,32 @@ final class AdminController extends Controller
             if (!$exists->fetchColumn()) {
                 throw new ApiException(404, 'NOT_FOUND', 'Registro não encontrado.');
             }
+        }
+    }
+
+    private function validatedProduct(array $body, bool $partial): array
+    {
+        $presence = $partial ? 'sometimes' : 'required';
+        $data = Validator::validate($body, [
+            'name' => [$presence, 'string', 'min:2', 'max:160'], 'slug' => ['sometimes', 'nullable', 'string', 'max:180'],
+            'shortDescription' => ['sometimes', 'nullable', 'string', 'max:300'],
+            'priceCents' => [$presence, 'integer', 'min:1', 'max:100000000'],
+            'compareAtPriceCents' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:100000000'],
+            'currency' => ['sometimes', 'string', 'in:BRL,EUR,USD'], 'imageUrl' => ['sometimes', 'nullable', 'string', 'max:1024'],
+            'purchaseUrl' => [$presence, 'string', 'min:1', 'max:1024'], 'badgeText' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'inventoryCount' => ['sometimes', 'integer', 'min:0', 'max:1000000'], 'featured' => ['sometimes', 'boolean'],
+            'active' => ['sometimes', 'boolean'], 'sortOrder' => ['sometimes', 'integer', 'min:0', 'max:999'],
+        ]);
+        foreach (['imageUrl', 'purchaseUrl'] as $field) {
+            $this->validateWebPath($data[$field] ?? null);
+        }
+        return $data;
+    }
+
+    private function validateWebPath(mixed $value): void
+    {
+        if (is_string($value) && $value !== '' && preg_match('#^(?:/|https://)#i', $value) !== 1) {
+            throw new ApiException(422, 'INVALID_URL', 'Use um endereço interno iniciado por / ou um endereço HTTPS.');
         }
     }
 

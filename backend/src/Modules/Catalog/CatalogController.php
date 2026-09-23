@@ -38,6 +38,7 @@ final class CatalogController extends Controller
         $entries = [
             ['/', 'weekly', '1.0', null],
             ['/servicos', 'daily', '0.9', null],
+            ['/produtos', 'daily', '0.8', null],
             ['/profissionais', 'daily', '0.9', null],
             ['/como-funciona', 'monthly', '0.6', null],
             ['/seguranca', 'monthly', '0.6', null],
@@ -109,6 +110,7 @@ final class CatalogController extends Controller
         )->fetchAll();
         $promotions = $this->db->query(
             'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
+                    image_url AS imageUrl, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor
              FROM promotions WHERE active = 1
                AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
@@ -123,6 +125,35 @@ final class CatalogController extends Controller
              ORDER BY p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC LIMIT 8'
         )->fetchAll();
         return Response::data(compact('promotions', 'categories', 'professionals'));
+    }
+
+    public function products(Request $request, array $params, ?array $auth): Response
+    {
+        [$page, $perPage, $offset] = $this->pagination($request, 24, 50);
+        $where = ['active = 1'];
+        $values = [];
+        if (!empty($request->query['q'])) {
+            $where[] = '(name LIKE :name_query OR short_description LIKE :description_query)';
+            $search = '%' . mb_substr((string) $request->query['q'], 0, 100) . '%';
+            $values['name_query'] = $search;
+            $values['description_query'] = $search;
+        }
+        $whereSql = implode(' AND ', $where);
+        $count = $this->db->prepare("SELECT COUNT(*) FROM products WHERE {$whereSql}");
+        $count->execute($values);
+        $total = (int) $count->fetchColumn();
+        $statement = $this->db->prepare(
+            "SELECT public_id AS id, name, slug, short_description AS shortDescription,
+                    price_cents AS priceCents, compare_at_price_cents AS compareAtPriceCents, currency,
+                    image_url AS imageUrl, purchase_url AS purchaseUrl, badge_text AS badgeText,
+                    inventory_count AS inventoryCount, featured
+             FROM products WHERE {$whereSql}
+             ORDER BY featured DESC, sort_order, created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+        );
+        $statement->execute($values);
+        return Response::data($statement->fetchAll(), 200, [
+            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+        ]);
     }
 
     public function categories(Request $request, array $params, ?array $auth): Response
@@ -147,9 +178,10 @@ final class CatalogController extends Controller
             $values['category_slug'] = (string) $request->query['category'];
         }
         if (!empty($request->query['q'])) {
-            $where[] = '(s.name LIKE :search_name OR s.description LIKE :search_description)';
+            $where[] = '(s.name LIKE :search_name OR s.short_description LIKE :search_short_description OR s.description LIKE :search_description)';
             $search = '%' . mb_substr((string) $request->query['q'], 0, 80) . '%';
             $values['search_name'] = $search;
+            $values['search_short_description'] = $search;
             $values['search_description'] = $search;
         }
         if (!empty($request->query['professional'])) {
@@ -166,7 +198,8 @@ final class CatalogController extends Controller
             "SELECT s.public_id AS id, s.name, s.slug, s.short_description AS shortDescription,
                     s.pricing_type AS pricingType, s.price_cents AS priceCents, s.unit_label AS unitLabel,
                     s.default_duration_minutes AS defaultDurationMinutes,
-                    c.public_id AS categoryId, c.name AS categoryName, c.slug AS categorySlug
+                    c.public_id AS categoryId, c.name AS categoryName, c.slug AS categorySlug,
+                    (c.slug = 'outros') AS isCustom
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
              WHERE {$whereSql} ORDER BY s.featured DESC, s.sort_order, s.name LIMIT {$perPage} OFFSET {$offset}"
         );
@@ -184,7 +217,7 @@ final class CatalogController extends Controller
                     s.price_cents AS priceCents, s.unit_label AS unitLabel,
                     s.default_duration_minutes AS defaultDurationMinutes,
                     s.minimum_quantity AS minimumQuantity, s.maximum_quantity AS maximumQuantity,
-                    c.public_id AS categoryId, c.name AS categoryName
+                    c.public_id AS categoryId, c.name AS categoryName, (c.slug = \'outros\') AS isCustom
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
              WHERE (s.public_id = :public_id OR s.slug = :slug) AND s.active = 1 AND c.active = 1',
             ['public_id' => $params['id'], 'slug' => $params['id']],

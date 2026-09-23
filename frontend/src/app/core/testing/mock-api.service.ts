@@ -1,7 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { MOCK_BOOKINGS, MOCK_CATEGORIES, MOCK_PROVIDERS, MOCK_SERVICES } from './mock-data';
-import { ApiClientError, ApiEnvelope, AppNotification, AuthSession, AvailabilityException, Booking, BookingDraft, BookingQuote, ChatMessage, Conversation, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Service, User, UserRole } from '../models';
+import { ApiClientError, ApiEnvelope, AppNotification, AuthSession, AvailabilityException, Booking, BookingDraft, BookingQuote, ChatMessage, Conversation, Product, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Promotion, ProviderService, Service, User, UserRole } from '../models';
+import { cleanServiceName, serviceNameExists } from '../../shared/utils/service-name.util';
 
 type QueryValue = string | number | boolean | undefined;
 type QueryParams = Record<string, QueryValue>;
@@ -11,12 +12,18 @@ interface Credentials { email?: string; password?: string; name?: string; phone?
 @Injectable({ providedIn: 'root' })
 export class MockApiService {
   private servicesState: Service[] = [...MOCK_SERVICES];
+  private promotionsState: Promotion[] = [{ id: 'promotion-store', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.', ctaLabel: 'Conhecer a loja', ctaUrl: '/produtos', imageUrl: '/images/promo-laundry-discount-v1.webp', badgeText: 'Novidades na loja', termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.', backgroundColor: '#096653', textColor: '#FFFFFF', active: true, sortOrder: 10 }];
+  private productsState: Product[] = [
+    { id: 'product-laundry', name: 'Kit de lavanderia essencial', slug: 'kit-lavanderia-essencial', shortDescription: 'Itens práticos para organizar a lavanderia e cuidar das roupas no dia a dia.', priceCents: 8990, compareAtPriceCents: 10990, currency: 'BRL', imageUrl: '/images/promo-laundry-discount-v1.webp', purchaseUrl: '/ajuda?produto=kit-lavanderia-essencial', badgeText: 'Mais vendido', inventoryCount: 18, featured: true, active: true, sortOrder: 10 },
+    { id: 'product-cleaning', name: 'Kit limpeza da casa', slug: 'kit-limpeza-da-casa', shortDescription: 'Uma seleção versátil para a manutenção semanal dos ambientes.', priceCents: 6490, compareAtPriceCents: null, currency: 'BRL', imageUrl: null, purchaseUrl: '/ajuda?produto=kit-limpeza-da-casa', badgeText: 'Pronta entrega', inventoryCount: 24, featured: true, active: true, sortOrder: 20 },
+    { id: 'product-organizer', name: 'Organizador multiuso', slug: 'organizador-multiuso', shortDescription: 'Organização simples para lavanderia, cozinha ou área de serviço.', priceCents: 3990, compareAtPriceCents: 4990, currency: 'BRL', imageUrl: null, purchaseUrl: '/ajuda?produto=organizador-multiuso', badgeText: '', inventoryCount: 12, featured: false, active: true, sortOrder: 30 }
+  ];
   private bookings = [...MOCK_BOOKINGS];
   private addresses: Row[] = [{ id: 'addr-demo', label: 'Casa', postalCode: '04001-000', street: 'Rua das Flores', number: '120', neighborhood: 'Vila Mariana', city: 'São Paulo', state: 'SP' }];
   private favorites = [...MOCK_PROVIDERS.slice(0, 2)];
   private activeUser: User | null = null;
   private providerProfile: Row = { id: 'ana-clara', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', phone: '11999990000', headline: 'Especialista em limpeza residencial', bio: 'Atendimento cuidadoso e organizado.', yearsExperience: 6, baseCity: 'São Paulo', baseState: 'SP', serviceRadiusKm: 10, verificationStatus: 'approved', rating: 4.96, reviewsCount: 128, completedJobs: 214 };
-  private providerServicesState = MOCK_SERVICES.slice(0, 3).map((service) => ({ id: service.id, name: service.name, slug: service.slug, pricingType: this.pricingType(service), catalogPriceCents: service.priceFromCents, customPriceCents: service.priceFromCents, active: true }));
+  private providerServicesState: ProviderService[] = MOCK_SERVICES.slice(0, 3).map((service) => ({ id: service.id, name: service.name, slug: service.slug, pricingType: this.pricingType(service), catalogPriceCents: service.priceFromCents, customPriceCents: service.priceFromCents, active: true, isCustom: Boolean(service.isCustom) }));
   private availabilityState = [{ id: 'av-1', weekday: 1, startTime: '08:00', endTime: '17:00' }, { id: 'av-2', weekday: 3, startTime: '08:00', endTime: '17:00' }, { id: 'av-3', weekday: 5, startTime: '08:00', endTime: '16:00' }];
   private availabilityExceptionsState: AvailabilityException[] = [];
   private notificationsState: AppNotification[] = [
@@ -45,7 +52,14 @@ export class MockApiService {
   }
 
   private resolve(method: string, path: string, body: unknown, params: QueryParams): Observable<ApiEnvelope<unknown>> {
+    if (method === 'GET' && path === 'home') return this.ok({ promotions: this.promotionsState.filter((item) => item.active), categories: MOCK_CATEGORIES, professionals: MOCK_PROVIDERS });
     if (method === 'GET' && path === 'categories') return this.ok(MOCK_CATEGORIES);
+    if (method === 'GET' && path === 'products') {
+      const q = String(params['q'] ?? '').trim().toLocaleLowerCase('pt-BR');
+      const items = this.productsState.filter((item) => item.active && (!q || `${item.name} ${item.shortDescription}`.toLocaleLowerCase('pt-BR').includes(q)));
+      const paginated = this.paginate(items, params);
+      return this.ok(paginated.items, paginated.meta);
+    }
     if (method === 'GET' && path === 'services') {
       const category = String(params['category'] ?? '').trim(); const professional = String(params['professional'] ?? '').trim(); const q = String(params['q'] ?? '').trim().toLocaleLowerCase('pt-BR');
       const categoryId = MOCK_CATEGORIES.find((item) => item.id === category || item.slug === category)?.id ?? category;
@@ -137,7 +151,15 @@ export class MockApiService {
     if (method === 'POST' && path === 'provider/profile/courses') { const course = { id: `course-${Date.now()}`, ...(body as Omit<ProfessionalCourse, 'id'>) }; this.coursesState = [course, ...this.coursesState]; return this.ok(course); }
     const course = path.match(/^provider\/profile\/courses\/([^/]+)$/); if (method === 'PUT' && course) { const value = { id: course[1] ?? '', ...(body as Omit<ProfessionalCourse, 'id'>) }; this.coursesState = this.coursesState.map((item) => item.id === course[1] ? value : item); return this.ok(value); } if (method === 'DELETE' && course) { this.coursesState = this.coursesState.filter((item) => item.id !== course[1]); return this.ok(undefined); }
     if (method === 'GET' && path === 'provider/services') return this.ok(this.providerServicesState);
-    const providerService = path.match(/^provider\/services\/([^/]+)$/); if (method === 'PUT' && providerService) { const value = body as Row; this.providerServicesState = this.providerServicesState.map((item) => item.id === providerService[1] ? { ...item, customPriceCents: Number(value['priceCents']), active: Boolean(value['active']) } : item); return this.ok(this.providerServicesState.find((item) => item.id === providerService[1])); } if (method === 'DELETE' && providerService) { this.providerServicesState = this.providerServicesState.filter((item) => item.id !== providerService[1]); return this.ok(undefined); }
+    if (method === 'POST' && path === 'provider/services') {
+      const value = body as Row; const name = cleanServiceName(String(value['name'] ?? '')); const priceCents = Number(value['priceCents']);
+      if (serviceNameExists(name, this.servicesState)) return this.fail('service_name_exists', 'Esse nome já pertence a um serviço. Selecione-o na lista.', 409);
+      const id = `custom-${Date.now()}`; const slug = `${name.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${String(Date.now()).slice(-6)}`;
+      const service: Service = { id, categoryId: 'other', slug, name, description: 'Serviço personalizado. Consulte o escopo e combine os detalhes com o profissional.', symbol: this.initials(name).slice(0, 1), priceFromCents: priceCents, unit: 'serviço', pricingType: 'fixed', durationMinutes: 120, isCustom: true };
+      const providerService: ProviderService = { id, name, slug, pricingType: 'fixed', catalogPriceCents: priceCents, customPriceCents: priceCents, active: true, isCustom: true };
+      this.servicesState = [...this.servicesState, service]; this.providerServicesState = [...this.providerServicesState, providerService]; return this.ok(providerService);
+    }
+    const providerService = path.match(/^provider\/services\/([^/]+)$/); if (method === 'PUT' && providerService) { const value = body as Row; const current = this.providerServicesState.find((item) => item.id === providerService[1]); const catalog = this.servicesState.find((item) => item.id === providerService[1]); const updated: ProviderService | undefined = current ? { ...current, customPriceCents: Number(value['priceCents']), active: Boolean(value['active']) } : catalog ? { id: catalog.id, name: catalog.name, slug: catalog.slug, pricingType: this.pricingType(catalog), catalogPriceCents: catalog.priceFromCents, customPriceCents: Number(value['priceCents']), active: Boolean(value['active']), isCustom: Boolean(catalog.isCustom) } : undefined; if (!updated) return this.notFound('Serviço não encontrado.'); this.providerServicesState = [...this.providerServicesState.filter((item) => item.id !== updated.id), updated]; return this.ok(updated); } if (method === 'DELETE' && providerService) { this.providerServicesState = this.providerServicesState.filter((item) => item.id !== providerService[1]); return this.ok(undefined); }
     if (method === 'GET' && path === 'provider/availability') return this.ok(this.availabilityState);
     if (method === 'PUT' && path === 'provider/availability') { this.availabilityState = ((body as Row)['rules'] as typeof this.availabilityState) ?? []; return this.ok(this.availabilityState); }
     if (method === 'GET' && path === 'provider/availability-exceptions') return this.ok(this.availabilityExceptionsState);
@@ -151,6 +173,12 @@ export class MockApiService {
     if (method === 'GET' && path === 'admin/users') { const role = String(params['role'] ?? ''); const users = this.adminUsers().filter((item) => !role || item['role'] === role); return this.ok(users, { total: users.length }); }
     if (method === 'GET' && path === 'admin/professionals/pending') return this.ok([{ id: 'pending-provider', name: 'Paulo Nascimento', email: 'paulo@exemplo.test', phone: '11911112222', headline: 'Jardinagem', bio: '', city: 'Campinas', state: 'SP', yearsExperience: 3, verificationStatus: 'pending', createdAt: '2026-08-18 12:00:00' }], { total: 1 });
     if (method === 'GET' && path === 'admin/bookings') return this.ok(this.bookings.map((item) => this.adminBooking(item)), { total: this.bookings.length });
+    if (method === 'GET' && path === 'admin/promotions') return this.ok(this.promotionsState);
+    if (method === 'POST' && path === 'admin/promotions') { const value = body as Partial<Promotion>; const promotion: Promotion = { id: `promotion-${Date.now()}`, title: String(value.title ?? 'Nova campanha'), subtitle: String(value.subtitle ?? ''), ctaLabel: String(value.ctaLabel ?? 'Ver produtos'), ctaUrl: String(value.ctaUrl ?? '/produtos'), imageUrl: value.imageUrl ?? null, badgeText: String(value.badgeText ?? ''), termsText: String(value.termsText ?? ''), backgroundColor: String(value.backgroundColor ?? '#096653'), textColor: String(value.textColor ?? '#FFFFFF'), active: true, sortOrder: Number(value.sortOrder) || 0 }; this.promotionsState = [promotion, ...this.promotionsState]; return this.ok(promotion); }
+    const adminPromotion = path.match(/^admin\/promotions\/([^/]+)$/); if (method === 'PATCH' && adminPromotion) { let updated: Promotion | undefined; this.promotionsState = this.promotionsState.map((item) => item.id === adminPromotion[1] ? (updated = { ...item, ...(body as Partial<Promotion>) }) : item); return updated ? this.ok(updated) : this.notFound('Campanha não encontrada.'); }
+    if (method === 'GET' && path === 'admin/products') return this.ok(this.productsState);
+    if (method === 'POST' && path === 'admin/products') { const value = body as Partial<Product>; const product: Product = { id: `product-${Date.now()}`, name: String(value.name ?? 'Novo produto'), slug: String(value.slug ?? value.name ?? 'produto').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), shortDescription: String(value.shortDescription ?? ''), priceCents: Number(value.priceCents) || 0, compareAtPriceCents: value.compareAtPriceCents == null ? null : Number(value.compareAtPriceCents), currency: value.currency ?? 'BRL', imageUrl: value.imageUrl ?? null, purchaseUrl: String(value.purchaseUrl ?? '/ajuda'), badgeText: String(value.badgeText ?? ''), inventoryCount: Number(value.inventoryCount) || 0, featured: Boolean(value.featured), active: value.active ?? true, sortOrder: Number(value.sortOrder) || 0 }; this.productsState = [...this.productsState, product]; return this.ok(product); }
+    const adminProduct = path.match(/^admin\/products\/([^/]+)$/); if (method === 'PATCH' && adminProduct) { let updated: Product | undefined; this.productsState = this.productsState.map((item) => item.id === adminProduct[1] ? (updated = { ...item, ...(body as Partial<Product>) }) : item); return updated ? this.ok(updated) : this.notFound('Produto não encontrado.'); }
     if (method === 'POST' && path === 'admin/services') { const value = body as Row; const name = String(value['name'] ?? 'Novo serviço'); const service: Service = { id: `service-${Date.now()}`, categoryId: String(value['categoryId'] ?? ''), slug: name.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), name, description: String(value['shortDescription'] ?? ''), symbol: this.initials(name), priceFromCents: Number(value['priceCents']) || 0, unit: value['pricingType'] === 'hourly' ? 'hora' : value['pricingType'] === 'area' ? 'm²' : 'serviço', pricingType: String(value['pricingType'] ?? 'fixed') as Service['pricingType'], durationMinutes: Number(value['defaultDurationMinutes']) || 120 }; this.servicesState = [...this.servicesState, service]; return this.ok(service); }
     if (method === 'POST' && /^admin\/professionals\/[^/]+\/review$/.test(path)) return this.ok({ success: true });
     if (method === 'PATCH' && /^admin\/users\/[^/]+\/status$/.test(path)) return this.ok({ success: true });

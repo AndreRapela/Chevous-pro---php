@@ -14,8 +14,8 @@ import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
   standalone: true,
   imports: [ServiceCardComponent, StatePanelComponent],
   template: `
-    <section class="page-hero compact catalog-hero"><div class="container narrow"><span class="eyebrow">Catálogo completo</span><h1>Encontre o serviço certo</h1><p>Profissionais para cuidar da casa, da rotina e de quem você ama.</p>
-      <label class="search-field"><span aria-hidden="true">⌕</span><span class="sr-only">Buscar serviço</span><input type="search" [value]="query()" (input)="setQuery($any($event.target).value)" placeholder="Busque por limpeza, montagem, pet..." autocomplete="off"></label>
+    <section class="page-hero compact catalog-hero"><div class="container narrow"><span class="eyebrow">O que oferecemos</span><h1>Nossos serviços</h1><p>Encontre profissionais para cuidar da casa, da rotina e de quem você ama.</p>
+      <label class="search-field"><span aria-hidden="true">⌕</span><span class="sr-only">Buscar serviço por nome ou descrição</span><input type="search" [value]="query()" (input)="setQuery($any($event.target).value)" placeholder="Busque pelo nome ou pela descrição" autocomplete="off"></label>
     </div></section>
     <section class="section section-tight catalog-results"><div class="container">
       <div class="filter-scroll" aria-label="Filtrar por categoria">
@@ -61,7 +61,7 @@ export class CatalogComponent implements OnInit {
   readonly total = signal(0);
   readonly page = signal(1);
   readonly lastPage = signal(1);
-  readonly pageSize = 9;
+  readonly pageSize = 20;
   readonly pageNumbers = computed(() => {
     const last = this.lastPage();
     const start = Math.max(1, Math.min(this.page() - 2, Math.max(1, last - 4)));

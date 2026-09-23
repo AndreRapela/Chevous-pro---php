@@ -8,7 +8,7 @@ import { PostalCodeAddress, postalCodeDigits } from '../../shared/utils/postal-c
 import {
   Address, AppNotification, AvailabilityException, AvailabilityRule, Booking, BookingDraft, BookingOffer, BookingQuote, BookingStatus, ChatMessage,
   BookingConfirmation, Conversation, DashboardMetric, ProviderDashboard, ProviderJob,
-  ProfessionalComment, ProfessionalCourse, ProfessionalExperience, ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
+  HomeContent, Product, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Promotion, ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
 } from '../models';
 
 type UnknownRecord = Record<string, unknown>;
@@ -23,6 +23,15 @@ export class MarketplaceService {
   );
 
   categories() { return this.categoriesRequest$; }
+  home(): Observable<HomeContent> {
+    return this.api.get<unknown>('home').pipe(map((value) => {
+      const item = this.record(value);
+      const promotions = Array.isArray(item['promotions']) ? item['promotions'].map((promotion) => this.promotionModel(promotion)) : [];
+      return { promotions };
+    }));
+  }
+  productsPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('products', query).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.productModel(item)) }))); }
+  products(query: ApiQuery = {}) { return this.allPages<unknown>('products', query).pipe(map((items) => items.map((item) => this.productModel(item)))); }
   services(query: ApiQuery = {}) { return this.allPages<unknown>('services', query).pipe(map((items) => items.map((item) => this.serviceModel(item)))); }
   servicesPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('services', query).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.serviceModel(item)) }))); }
   service(idOrSlug: string): Observable<Service> {
@@ -134,8 +143,9 @@ export class MarketplaceService {
   createProviderCourse(payload: Omit<ProfessionalCourse, 'id'>) { return this.api.post<unknown>('provider/profile/courses', payload).pipe(map((item) => this.courseModel(item))); }
   updateProviderCourse(id: string, payload: Omit<ProfessionalCourse, 'id'>) { return this.api.put<unknown>(`provider/profile/courses/${encodeURIComponent(id)}`, payload).pipe(map((item) => this.courseModel(item))); }
   removeProviderCourse(id: string) { return this.api.delete<void>(`provider/profile/courses/${encodeURIComponent(id)}`); }
-  providerServices() { return this.api.get<ProviderService[]>('provider/services').pipe(map((items) => items.map((item) => normalizeProviderServicePrices(item)))); }
-  updateProviderService(id: string, payload: { priceCents: number; active: boolean }) { return this.api.put<ProviderService>(`provider/services/${id}`, payload).pipe(map((item) => normalizeProviderServicePrices(item))); }
+  providerServices() { return this.api.get<ProviderService[]>('provider/services').pipe(map((items) => items.map((item) => this.providerServiceModel(item)))); }
+  createCustomProviderService(payload: { name: string; priceCents: number }) { return this.api.post<ProviderService>('provider/services', payload).pipe(map((item) => this.providerServiceModel(item))); }
+  updateProviderService(id: string, payload: { priceCents: number; active: boolean }) { return this.api.put<ProviderService>(`provider/services/${id}`, payload).pipe(map((item) => this.providerServiceModel(item))); }
   removeProviderService(id: string) { return this.api.delete<void>(`provider/services/${id}`); }
   providerAvailability() { return this.api.get<AvailabilityRule[]>('provider/availability'); }
   saveProviderAvailability(rules: AvailabilityRule[]) { return this.api.put<AvailabilityRule[]>('provider/availability', { rules: rules.map(({ weekday, startTime, endTime }) => ({ weekday, startTime, endTime })) }); }
@@ -154,6 +164,12 @@ export class MarketplaceService {
   adminResolveContentReport(id: string, action: 'hide' | 'retain', note: string) { return this.api.post<unknown>(`admin/content-reports/${encodeURIComponent(id)}/resolve`, { action, note }); }
   reportContent(contentType: 'professional_comment' | 'review' | 'message', contentId: string, reason: string) { return this.api.post<unknown>('content-reports', { contentType, contentId, reason }); }
   adminCreateService(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/services', payload); }
+  adminPromotions() { return this.api.get<unknown[]>('admin/promotions').pipe(map((items) => items.map((item) => this.promotionModel(item)))); }
+  adminCreatePromotion(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/promotions', payload); }
+  adminUpdatePromotion(id: string, payload: Record<string, unknown>) { return this.api.patch<unknown>(`admin/promotions/${encodeURIComponent(id)}`, payload); }
+  adminProducts() { return this.api.get<unknown[]>('admin/products').pipe(map((items) => items.map((item) => this.productModel(item)))); }
+  adminCreateProduct(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/products', payload); }
+  adminUpdateProduct(id: string, payload: Record<string, unknown>) { return this.api.patch<unknown>(`admin/products/${encodeURIComponent(id)}`, payload); }
   adminReviewProvider(id: string, status: 'approved' | 'rejected' | 'suspended', notes = '') { return this.api.post<unknown>(`admin/professionals/${id}/review`, { status, notes }); }
   adminUserStatus(id: string, status: 'active' | 'suspended', reason = '') { return this.api.patch<unknown>(`admin/users/${id}/status`, { status, reason }); }
 
@@ -173,7 +189,39 @@ export class MarketplaceService {
     const unitLabel = this.string(item['unit'] ?? item['unitLabel'], pricingType === 'area' ? 'm²' : 'serviço').toLocaleLowerCase('pt-BR');
     const unit: Service['unit'] = pricingType === 'area' || unitLabel.includes('m²') ? 'm²' : unitLabel.includes('hora') ? 'hora' : unitLabel.includes('diária') ? 'diária' : 'serviço';
     const rawAddons = Array.isArray(item['addons']) ? item['addons'] : [];
-    return { id: this.string(item['id']), categoryId: this.string(item['categoryId']), slug: this.string(item['slug']), name, description: this.string(item['description'] ?? item['shortDescription']), symbol: this.string(item['symbol'], this.initials(name)), priceFromCents: this.number(item['priceFromCents'] ?? item['priceCents']), unit, pricingType, durationMinutes: this.number(item['durationMinutes'] ?? item['defaultDurationMinutes'], 120), minimumQuantity: this.number(item['minimumQuantity'], 1), maximumQuantity: this.number(item['maximumQuantity'], 10000), addons: rawAddons.map((raw) => { const addon = this.record(raw); return { id: this.string(addon['id']), name: this.string(addon['name']), description: this.string(addon['description']), priceCents: this.number(addon['priceCents']), pricingType: this.string(addon['pricingType'], 'fixed') as 'fixed' | 'hourly' | 'quantity' }; }), popular: Boolean(item['popular']) };
+    return { id: this.string(item['id']), categoryId: this.string(item['categoryId']), slug: this.string(item['slug']), name, description: this.string(item['description'] ?? item['shortDescription']), symbol: this.string(item['symbol'], this.initials(name)), priceFromCents: this.number(item['priceFromCents'] ?? item['priceCents']), unit, pricingType, durationMinutes: this.number(item['durationMinutes'] ?? item['defaultDurationMinutes'], 120), minimumQuantity: this.number(item['minimumQuantity'], 1), maximumQuantity: this.number(item['maximumQuantity'], 10000), addons: rawAddons.map((raw) => { const addon = this.record(raw); return { id: this.string(addon['id']), name: this.string(addon['name']), description: this.string(addon['description']), priceCents: this.number(addon['priceCents']), pricingType: this.string(addon['pricingType'], 'fixed') as 'fixed' | 'hourly' | 'quantity' }; }), popular: this.boolean(item['popular']), isCustom: this.boolean(item['isCustom']) };
+  }
+
+  private providerServiceModel(value: ProviderService): ProviderService {
+    const normalized = normalizeProviderServicePrices(value);
+    return { ...normalized, active: this.boolean(value.active), isCustom: this.boolean(value.isCustom) };
+  }
+
+  private promotionModel(value: unknown): Promotion {
+    const item = this.record(value);
+    return {
+      id: this.string(item['id']), title: this.string(item['title'], 'Produtos para sua casa'),
+      subtitle: this.string(item['subtitle']), ctaLabel: this.string(item['ctaLabel'], 'Ver produtos'),
+      ctaUrl: this.string(item['ctaUrl'], '/produtos'), imageUrl: this.string(item['imageUrl']) || null,
+      badgeText: this.string(item['badgeText'], 'Novidades na loja'), termsText: this.string(item['termsText']),
+      backgroundColor: this.string(item['backgroundColor'], '#096653'), textColor: this.string(item['textColor'], '#FFFFFF'),
+      active: item['active'] === undefined ? true : Boolean(Number(item['active'])),
+      startsAt: this.string(item['startsAt']) || null, endsAt: this.string(item['endsAt']) || null,
+      sortOrder: this.number(item['sortOrder'])
+    };
+  }
+
+  private productModel(value: unknown): Product {
+    const item = this.record(value);
+    return {
+      id: this.string(item['id']), name: this.string(item['name'], 'Produto'), slug: this.string(item['slug']),
+      shortDescription: this.string(item['shortDescription']), priceCents: this.number(item['priceCents']),
+      compareAtPriceCents: item['compareAtPriceCents'] == null ? null : this.number(item['compareAtPriceCents']),
+      currency: this.currency(item['currency']), imageUrl: this.string(item['imageUrl']) || null,
+      purchaseUrl: this.string(item['purchaseUrl'], '/ajuda'), badgeText: this.string(item['badgeText']),
+      inventoryCount: this.number(item['inventoryCount']), featured: Boolean(Number(item['featured'])),
+      active: item['active'] === undefined ? true : Boolean(Number(item['active'])), sortOrder: this.number(item['sortOrder'])
+    };
   }
 
   private providerModel(value: unknown, hintedServices: string[] = []): ProviderProfile {
@@ -331,6 +379,7 @@ export class MarketplaceService {
   private record(value: unknown): UnknownRecord { return value !== null && typeof value === 'object' ? value as UnknownRecord : {}; }
   private string(value: unknown, fallback = ''): string { return typeof value === 'string' && value.trim() ? value : fallback; }
   private number(value: unknown, fallback = 0): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
+  private boolean(value: unknown): boolean { return value === true || value === 1 || value === '1' || value === 'true'; }
   private initials(name: string): string { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join(''); }
   private money(cents: number): string { return this.localization.formatMoney(cents / 100, 'BRL', 0); }
   private currency(value: unknown): AppCurrency {

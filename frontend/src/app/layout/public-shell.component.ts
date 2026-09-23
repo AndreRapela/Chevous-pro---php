@@ -16,6 +16,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         <nav class="desktop-nav" aria-label="Navegação principal">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Início</a>
           <a routerLink="/servicos" routerLinkActive="active">Serviços</a>
+          <a routerLink="/produtos" routerLinkActive="active">Produtos</a>
           <a routerLink="/profissionais" routerLinkActive="active">Profissionais</a>
           <a routerLink="/como-funciona" routerLinkActive="active">Como funciona</a>
         </nav>
@@ -39,6 +40,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         <nav id="mobile-menu" class="mobile-menu" aria-label="Navegação principal">
           <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMenu()">Início</a>
           <a routerLink="/servicos" routerLinkActive="active" (click)="closeMenu()">Serviços</a>
+          <a routerLink="/produtos" routerLinkActive="active" (click)="closeMenu()">Produtos</a>
           <a routerLink="/profissionais" routerLinkActive="active" (click)="closeMenu()">Profissionais</a>
           <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
           <a routerLink="/seguranca" (click)="closeMenu()">Segurança</a>
@@ -53,7 +55,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         <div><cvp-brand /><p>Cuidado profissional para sua casa, do seu jeito.</p></div>
         <div class="footer-group footer-desktop-group">
           <h2 data-cvp-no-localize>ChezVoust Pro</h2>
-          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
+          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/produtos">Produtos</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
         </div>
         <div class="footer-group footer-desktop-group">
           <h2>Atendimento</h2>
@@ -65,7 +67,7 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         </div>
         <details class="footer-group footer-mobile-group">
           <summary data-cvp-no-localize>ChezVoust Pro</summary>
-          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
+          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/produtos">Produtos</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
         </details>
         <details class="footer-group footer-mobile-group">
           <summary>Atendimento</summary>

@@ -8,6 +8,7 @@ export const adminRoutes: Routes = [
   { path: 'clientes', title: 'Clientes | Admin', data: { page: 'customers' }, loadComponent: table },
   { path: 'prestadores', title: 'Prestadores | Admin', data: { page: 'providers' }, loadComponent: table },
   { path: 'catalogo', title: 'Catálogo | Admin', data: { page: 'catalog' }, loadComponent: table },
+  { path: 'conteudo', title: 'Site e loja | Admin', loadComponent: () => import('./pages/store/admin-store.component').then((m) => m.AdminStoreComponent) },
   { path: 'suporte', title: 'Suporte | Admin', data: { page: 'support' }, loadComponent: table },
   { path: 'configuracoes', title: 'Configurações | Admin', data: { page: 'settings' }, loadComponent: table }
 ];

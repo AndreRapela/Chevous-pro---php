@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
-import { ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
+import { Promotion, ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
 import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
 import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
@@ -36,22 +36,21 @@ import { SeoService } from '../../../../core/seo/seo.service';
     <section class="section home-section home-deals" aria-labelledby="discounts-title">
       <div class="container">
         <div class="home-deals-heading">
-          <span class="eyebrow">Ofertas para você</span>
-          <h2 id="discounts-title">Descontos e ofertas especiais</h2>
+          <span class="eyebrow">Loja ChezVoust</span>
+          <h2 id="discounts-title">Produtos e ofertas especiais</h2>
         </div>
-        <article class="home-discount-banner">
+        <article class="home-discount-banner" data-cvp-no-localize [style.--promo-bg]="promotion().backgroundColor" [style.--promo-text]="promotion().textColor">
           <div class="home-discount-copy">
-            <span class="home-discount-pill">Oferta por tempo limitado</span>
-            <h3>Até 25% de desconto</h3>
-            <p>Em serviços selecionados para cuidar da sua casa.</p>
-            <a class="btn home-discount-cta" routerLink="/servicos">Ver ofertas <span aria-hidden="true">→</span></a>
+            <span class="home-discount-pill">{{ promotion().badgeText }}</span>
+            <h3>{{ promotion().title }}</h3>
+            <p>{{ promotion().subtitle }}</p>
+            <a class="btn home-discount-cta" [attr.href]="promotion().ctaUrl">{{ promotion().ctaLabel }} <span aria-hidden="true">→</span></a>
           </div>
           <div class="home-discount-art" aria-hidden="true">
-            <span class="home-discount-bubble"><strong>25%</strong><small>OFF</small></span>
-            <img src="/images/promo-laundry-discount-v1.webp" alt="" width="720" height="377" loading="lazy" decoding="async">
+            @if (promotion().imageUrl) { <img [src]="promotion().imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
           </div>
         </article>
-        <p class="home-discount-terms">Consulte as condições e a disponibilidade de cada oferta.</p>
+        @if (promotion().termsText) { <p class="home-discount-terms">{{ promotion().termsText }}</p> }
       </div>
     </section>
 
@@ -99,6 +98,11 @@ export class HomeComponent implements OnInit {
   readonly categories = signal<ServiceCategory[]>([]);
   readonly popularServices = signal<Service[]>([]);
   readonly providers = signal<ProviderProfile[]>([]);
+  readonly promotion = signal<Promotion>({
+    id: 'default', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
+    ctaLabel: 'Conhecer a loja', ctaUrl: '/produtos', imageUrl: '/images/promo-laundry-discount-v1.webp', badgeText: 'Novidades na loja',
+    termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.', backgroundColor: '#096653', textColor: '#FFFFFF'
+  });
   readonly loading = signal(true);
   readonly error = signal('');
   query = '';
@@ -128,6 +132,10 @@ export class HomeComponent implements OnInit {
     this.marketplace.categories().subscribe({
       next: (categories) => { this.categories.set(categories); this.loading.set(false); },
       error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
+    });
+    this.marketplace.home().subscribe({
+      next: (content) => { if (content.promotions[0]) this.promotion.set(content.promotions[0]); },
+      error: () => undefined
     });
     this.marketplace.servicesPage({ perPage: 4 }).subscribe({
       next: (services) => {

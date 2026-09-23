@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { normalizeProviderServicePrices } from '../src/app/shared/utils/provider-service.util.ts';
+import { cleanServiceName, serviceInitial, serviceNameExists } from '../src/app/shared/utils/service-name.util.ts';
 
 describe('provider service price responses', () => {
   it('uses catalog prices when the nullable override is absent', () => {
@@ -20,5 +21,21 @@ describe('provider service price responses', () => {
       assert.equal(normalizeProviderServicePrices({ catalogPriceCents: 14400, customPriceCents }).customPriceCents, 14400);
     }
     assert.deepEqual(normalizeProviderServicePrices({ catalogPriceCents: 'invalid', customPriceCents: null }), { catalogPriceCents: 0, customPriceCents: 0 });
+  });
+});
+
+describe('custom provider service names', () => {
+  const catalog = [{ name: 'Limpeza residencial' }, { name: 'Configuração de Wi-Fi' }];
+
+  it('blocks names already present regardless of case, accents or surrounding spaces', () => {
+    assert.equal(serviceNameExists('  limpeza RESIDENCIAL ', catalog), true);
+    assert.equal(serviceNameExists('Configuracao de Wi-Fi', catalog), true);
+    assert.equal(serviceNameExists('Limpeza de aquário', catalog), false);
+  });
+
+  it('cleans the submitted title and uses its first letter as the custom image', () => {
+    assert.equal(cleanServiceName('  Limpeza   de aquário  '), 'Limpeza de aquário');
+    assert.equal(serviceInitial('  árvore de natal'), 'Á');
+    assert.equal(serviceInitial(''), '?');
   });
 });

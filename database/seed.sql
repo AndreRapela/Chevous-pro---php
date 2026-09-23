@@ -61,7 +61,8 @@ VALUES
     ('30000000-0000-4000-8000-000000000004', 'Pintura', 'pintura', 'Pintura e acabamento para todos os ambientes.', 'paint-roller', '#F05B78', 1, 40, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('30000000-0000-4000-8000-000000000005', 'Montagem', 'montagem', 'Montagem e desmontagem de móveis.', 'package', '#725AC1', 1, 50, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('30000000-0000-4000-8000-000000000006', 'Jardinagem', 'jardinagem', 'Cuidados para jardins, vasos e áreas verdes.', 'leaf', '#4F9D4D', 1, 60, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
-    ('30000000-0000-4000-8000-000000000007', 'Organização', 'organizacao', 'Organização de ambientes, armários e mudanças.', 'boxes', '#E1883E', 1, 70, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    ('30000000-0000-4000-8000-000000000007', 'Organização', 'organizacao', 'Organização de ambientes, armários e mudanças.', 'boxes', '#E1883E', 1, 70, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('30000000-0000-4000-8000-000000000008', 'Outros', 'outros', 'Serviços personalizados oferecidos por profissionais.', 'letter', '#087E66', 1, 80, UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
     name = VALUES(name), description = VALUES(description), icon = VALUES(icon), color = VALUES(color),
     active = 1, sort_order = VALUES(sort_order), updated_at = UTC_TIMESTAMP();
@@ -156,14 +157,28 @@ ON DUPLICATE KEY UPDATE
     end_time = VALUES(end_time), active = 1, updated_at = UTC_TIMESTAMP();
 
 INSERT INTO promotions
-    (public_id, title, subtitle, cta_label, cta_url, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
+    (public_id, title, subtitle, cta_label, cta_url, image_url, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
 VALUES
-    ('70000000-0000-4000-8000-000000000001', 'Atendimento organizado', 'Encontre profissionais avaliados para cada necessidade da sua casa.', 'Ver serviços', '/servicos', '#08B86F', '#FFFFFF', 1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
-    ('70000000-0000-4000-8000-000000000002', 'Profissionais verificados', 'Agende com praticidade, acompanhe tudo pelo aplicativo.', 'Encontrar profissional', '/profissionais', '#F7D44A', '#241A1C', 1, NULL, NULL, 20, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+    ('70000000-0000-4000-8000-000000000001', 'Produtos para cuidar melhor da sua casa', 'Seleção de utilidades e equipamentos para facilitar sua rotina.', 'Conhecer a loja', '/produtos', '/images/promo-laundry-discount-v1.webp', 'Novidades na loja', 'Preços e disponibilidade podem mudar sem aviso prévio.', '#096653', '#FFFFFF', 1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('70000000-0000-4000-8000-000000000002', 'Ofertas escolhidas para você', 'Encontre produtos úteis para limpeza, organização e manutenção.', 'Ver produtos', '/produtos', '/images/promo-laundry-discount-v1.webp', 'Oferta especial', 'Consulte as condições de cada produto.', '#0C9471', '#FFFFFF', 0, NULL, NULL, 20, UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
     title = VALUES(title), subtitle = VALUES(subtitle), cta_label = VALUES(cta_label), cta_url = VALUES(cta_url),
-    background_color = VALUES(background_color), text_color = VALUES(text_color), active = 1,
+    image_url = VALUES(image_url), badge_text = VALUES(badge_text), terms_text = VALUES(terms_text),
+    background_color = VALUES(background_color), text_color = VALUES(text_color), active = VALUES(active),
     ends_at = VALUES(ends_at), sort_order = VALUES(sort_order), updated_at = UTC_TIMESTAMP();
+
+INSERT INTO products
+    (public_id, name, slug, short_description, price_cents, compare_at_price_cents, currency, image_url, purchase_url,
+     badge_text, inventory_count, featured, active, sort_order, created_at, updated_at)
+VALUES
+    ('71000000-0000-4000-8000-000000000001', 'Kit de lavanderia essencial', 'kit-lavanderia-essencial', 'Itens práticos para organizar a lavanderia e cuidar das roupas no dia a dia.', 8990, 10990, 'BRL', '/images/promo-laundry-discount-v1.webp', '/ajuda?produto=kit-lavanderia-essencial', 'Mais vendido', 18, 1, 1, 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('71000000-0000-4000-8000-000000000002', 'Kit limpeza da casa', 'kit-limpeza-da-casa', 'Uma seleção versátil para a manutenção semanal dos ambientes.', 6490, NULL, 'BRL', NULL, '/ajuda?produto=kit-limpeza-da-casa', 'Pronta entrega', 24, 1, 1, 20, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
+    ('71000000-0000-4000-8000-000000000003', 'Organizador multiuso', 'organizador-multiuso', 'Organização simples para lavanderia, cozinha ou área de serviço.', 3990, 4990, 'BRL', NULL, '/ajuda?produto=organizador-multiuso', NULL, 12, 0, 1, 30, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+ON DUPLICATE KEY UPDATE
+    name = VALUES(name), short_description = VALUES(short_description), price_cents = VALUES(price_cents),
+    compare_at_price_cents = VALUES(compare_at_price_cents), currency = VALUES(currency), image_url = VALUES(image_url),
+    purchase_url = VALUES(purchase_url), badge_text = VALUES(badge_text), inventory_count = VALUES(inventory_count),
+    featured = VALUES(featured), active = VALUES(active), sort_order = VALUES(sort_order), updated_at = UTC_TIMESTAMP();
 
 INSERT INTO app_settings (setting_key, setting_value, is_public, updated_at)
 VALUES

@@ -11,6 +11,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'servicos', renderMode: RenderMode.Server },
   { path: 'servicos/categoria/:category', renderMode: RenderMode.Server },
   { path: 'servicos/:slug', renderMode: RenderMode.Server },
+  { path: 'produtos', renderMode: RenderMode.Server },
   { path: 'profissionais', renderMode: RenderMode.Server },
   { path: 'profissionais/:id/:slug', renderMode: RenderMode.Server },
   { path: 'profissionais/:id', renderMode: RenderMode.Server },
