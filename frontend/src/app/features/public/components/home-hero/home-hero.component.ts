@@ -39,7 +39,15 @@ import { ServiceIconComponent } from '../../../../shared/components/service-icon
         </div>
       </div>
       <div class="container hero-stack">
-        <article class="hero-banner"><div class="hero-banner-photo"><img class="hero-banner-image" src="/images/profissional-limpeza-hero-480.webp" srcset="/images/profissional-limpeza-hero-480.webp 480w, /images/profissional-limpeza-hero-887.webp 887w" sizes="(max-width: 42rem) calc(100vw - 2rem), 50vw" alt="Profissional de limpeza sorrindo com luvas e frasco de limpeza" width="887" height="1774" fetchpriority="high"></div><div class="hero-banner-shade" aria-hidden="true"></div><div class="hero-banner-copy"><span class="hero-banner-label">Em destaque</span><span class="hero-banner-proof"><span aria-hidden="true">✓</span> Perfis aprovados</span><h1>Serviços para sua casa, sem complicação.</h1><p>Escolha, compare e agende em poucos minutos.</p><a class="btn hero-banner-cta" routerLink="/servicos">Explorar serviços <span aria-hidden="true">→</span></a></div></article>
+        <article class="hero-banner">
+          <span class="mobile-hero-orb mobile-hero-orb-mint" aria-hidden="true"></span>
+          <span class="mobile-hero-orb mobile-hero-orb-coral" aria-hidden="true"></span>
+          <span class="mobile-hero-orb mobile-hero-orb-amber" aria-hidden="true"></span>
+          <span class="mobile-hero-orb mobile-hero-orb-small" aria-hidden="true"></span>
+          <div class="hero-banner-photo"><img class="hero-banner-image" src="/images/profissional-limpeza-hero-480.webp" srcset="/images/profissional-limpeza-hero-480.webp 480w, /images/profissional-limpeza-hero-887.webp 887w" sizes="(max-width: 42rem) calc(100vw - 2rem), 50vw" alt="Profissional de limpeza sorrindo com luvas e frasco de limpeza" width="887" height="1774" fetchpriority="high"></div>
+          <div class="hero-banner-shade" aria-hidden="true"></div>
+          <div class="hero-banner-copy"><span class="hero-banner-label">Em destaque</span><span class="hero-banner-proof"><span aria-hidden="true">✓</span> Perfis aprovados</span><h1>Serviços para sua casa, sem complicação.</h1><p>Escolha, compare e agende em poucos minutos.</p><a class="btn hero-banner-cta" routerLink="/servicos">Explorar serviços <span aria-hidden="true">→</span></a></div>
+        </article>
         <div class="hero-mobile-action"><a class="btn" routerLink="/servicos">Agendar serviço <span aria-hidden="true">→</span></a></div>
       </div>
     </section>

@@ -449,6 +449,8 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Atalhos do aplicativo', en: 'App shortcuts', fr: "Raccourcis de l’application" },
   { pt: 'Conta', en: 'Account', fr: 'Compte' },
   { pt: 'Tudo em um só lugar', en: 'Everything in one place', fr: 'Tout au même endroit' },
+  { pt: 'Nossos serviços. Deslize horizontalmente para ver mais categorias.', en: 'Our services. Swipe horizontally to see more categories.', fr: 'Nos services. Faites défiler horizontalement pour voir plus de catégories.' },
+  { pt: 'Nossos serviços', en: 'Our services', fr: 'Nos services' },
   { pt: 'Do que sua casa precisa?', en: 'What does your home need?', fr: 'De quoi votre maison a-t-elle besoin ?' },
   { pt: 'Ver todos', en: 'View all', fr: 'Tout voir' },
   { pt: 'Buscando os melhores serviços para você.', en: 'Finding the best services for you.', fr: 'Recherche des meilleurs services pour vous.' },
