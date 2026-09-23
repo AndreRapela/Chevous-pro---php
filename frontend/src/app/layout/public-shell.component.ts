@@ -51,15 +51,27 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
     <footer class="site-footer">
       <div class="container footer-grid">
         <div><cvp-brand /><p>Cuidado profissional para sua casa, do seu jeito.</p></div>
-        <details class="footer-group" open>
+        <div class="footer-group footer-desktop-group">
+          <h2 data-cvp-no-localize>ChezVoust Pro</h2>
+          <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
+        </div>
+        <div class="footer-group footer-desktop-group">
+          <h2>Atendimento</h2>
+          <div class="footer-links"><a routerLink="/ajuda">Central de ajuda</a><a routerLink="/termos">Termos de uso</a><a routerLink="/privacidade">Privacidade</a></div>
+        </div>
+        <div class="footer-group footer-desktop-group">
+          <h2>Para profissionais</h2>
+          <div class="footer-links"><a routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero prestar serviços</a><a routerLink="/entrar">Acessar painel</a></div>
+        </div>
+        <details class="footer-group footer-mobile-group">
           <summary data-cvp-no-localize>ChezVoust Pro</summary>
           <div class="footer-links"><a routerLink="/como-funciona">Como funciona</a><a routerLink="/seguranca">Segurança</a><a routerLink="/profissionais">Profissionais</a></div>
         </details>
-        <details class="footer-group" open>
+        <details class="footer-group footer-mobile-group">
           <summary>Atendimento</summary>
           <div class="footer-links"><a routerLink="/ajuda">Central de ajuda</a><a routerLink="/termos">Termos de uso</a><a routerLink="/privacidade">Privacidade</a></div>
         </details>
-        <details class="footer-group" open>
+        <details class="footer-group footer-mobile-group">
           <summary>Para profissionais</summary>
           <div class="footer-links"><a routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero prestar serviços</a><a routerLink="/entrar">Acessar painel</a></div>
         </details>

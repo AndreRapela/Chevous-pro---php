@@ -97,9 +97,13 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.site-footer', 'background'), '#9a3932');
     assert.equal(declaration('.site-footer', 'border-color'), '#9a3932');
     assert.equal(declaration('.site-footer .footer-group summary', 'color'), '#fff');
+    assert.equal(declaration('.site-footer .footer-group h2', 'color'), '#fff');
     assert.equal(declaration('.site-footer .footer-bottom', 'border-color'), 'rgba(255, 255, 255, .24)');
     const template = readFileSync(new URL('../src/app/layout/public-shell.component.ts', import.meta.url), 'utf8');
     assert.match(template, /class="btn btn-primary header-create-account" routerLink="\/cadastro"/);
+    assert.equal((template.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length, 3);
+    assert.equal((template.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3);
+    assert.doesNotMatch(template, /<details class="footer-group footer-mobile-group" open>/);
   });
   it('places two raised hero cards around a slimmer strip with five balanced service links', () => {
     assert.match(declaration('.desktop-hero-lower', 'grid-template-columns'), /minmax\(0, 1fr\)/);

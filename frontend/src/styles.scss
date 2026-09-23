@@ -205,8 +205,10 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .footer-grid > :is(div, .footer-group) { display: grid; align-content: start; gap: .55rem; }
 .footer-grid p { max-width: 19rem; margin: .2rem 0 0; font-size: .82rem; }
 .footer-group { min-width: 0; }
+.footer-group h2,
 .footer-group summary { margin: 0 0 .35rem; color: var(--ink-900); font-size: .82rem; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; list-style: none; cursor: default; }
 .footer-group summary::-webkit-details-marker { display: none; }
+.footer-desktop-group { display: none !important; }
 .footer-links { display: grid; gap: .55rem; }
 .footer-group:not([open]) .footer-links { display: grid; }
 .footer-grid a:not(.brand) { color: var(--ink-600); font-size: .82rem; }
@@ -1072,6 +1074,8 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .steps-grid, .benefits-grid { grid-template-columns: repeat(3, 1fr); }
   .footer-grid { grid-template-columns: 1.5fr repeat(3, 1fr); }
   .footer-grid > div:first-child { grid-column: auto; }
+  .footer-desktop-group { display: grid !important; }
+  .footer-mobile-group { display: none !important; }
   .form-grid { grid-template-columns: repeat(2, 1fr); }
   .form-grid .span-two { grid-column: span 2; }
   .provider-profile-fields { grid-template-columns: minmax(0, 1fr) 5rem 6rem; }
@@ -3005,6 +3009,7 @@ body .site-header .locale-trigger-value { font-size: .78rem !important; }
   background: #9a3932;
 }
 .site-footer :focus-visible { outline-color: #fff; }
+.site-footer .footer-group h2,
 .site-footer .footer-group summary { color: #fff; }
 .site-footer .footer-grid p,
 .site-footer .footer-grid a:not(.brand),

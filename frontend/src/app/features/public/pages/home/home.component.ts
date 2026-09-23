@@ -1,6 +1,5 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { forkJoin } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
 import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
@@ -126,12 +125,20 @@ export class HomeComponent implements OnInit {
 
   load(): void {
     this.loading.set(true); this.error.set('');
-    forkJoin({ categories: this.marketplace.categories(), services: this.marketplace.servicesPage({ perPage: 4 }), providers: this.marketplace.providersPage({ perPage: 3 }) }).subscribe({
-      next: ({ categories, services, providers }) => {
-        const popular = services.data.filter((item) => item.popular);
-        this.categories.set(categories); this.popularServices.set((popular.length ? popular : services.data).slice(0, 4)); this.providers.set(providers.data); this.loading.set(false);
-      },
+    this.marketplace.categories().subscribe({
+      next: (categories) => { this.categories.set(categories); this.loading.set(false); },
       error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
+    });
+    this.marketplace.servicesPage({ perPage: 4 }).subscribe({
+      next: (services) => {
+        const popular = services.data.filter((item) => item.popular);
+        this.popularServices.set((popular.length ? popular : services.data).slice(0, 4));
+      },
+      error: () => this.popularServices.set([])
+    });
+    this.marketplace.providersPage({ perPage: 3 }).subscribe({
+      next: (providers) => this.providers.set(providers.data),
+      error: () => this.providers.set([])
     });
   }
 
