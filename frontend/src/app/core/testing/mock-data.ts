@@ -129,6 +129,76 @@ export const MOCK_PROVIDERS: ProviderProfile[] = [
     qualities: ['Trabalho limpo', 'Planejado', 'Cuidadosa'], nextAvailability: 'Sex, 10:00',
     avatarUrl: '/images/perfil-pintora-helena-martins-640.jpg', state: 'PR', yearsExperience: 7,
     reviews: [{ id: 'r9', author: 'Natália', initials: 'NF', rating: 5, comment: 'Protegeu todos os móveis e o acabamento ficou excelente.', createdAt: '2026-08-15' }]
+  },
+  {
+    id: 'marina-castro', name: 'Marina Castro', initials: 'MC', headline: 'Organizadora de mudanças',
+    bio: 'Planejo a organização antes e depois da mudança para que cada ambiente fique funcional desde o primeiro dia.',
+    city: 'São Paulo', neighborhood: 'Perdizes', verified: true, rating: 4.90, reviewCount: 35, completedJobs: 72,
+    responseTime: 'Responde em até 30 min', priceFromCents: 18000, serviceIds: ['moving-help'],
+    qualities: ['Planejada', 'Organizada', 'Cuidadosa'], nextAvailability: 'Amanhã, 13:00', state: 'SP', yearsExperience: 5, reviews: []
+  },
+  {
+    id: 'felipe-rocha', name: 'Felipe Rocha', initials: 'FR', headline: 'Jardineiro residencial',
+    bio: 'Cuido de jardins, vasos e pequenas áreas verdes com poda, limpeza e manutenção periódica.',
+    city: 'Campinas', neighborhood: 'Cambuí', verified: true, rating: 4.87, reviewCount: 48, completedJobs: 89,
+    responseTime: 'Responde em até 1 h', priceFromCents: 16000, serviceIds: ['garden-care'],
+    qualities: ['Pontual', 'Confiável', 'Trabalho limpo'], nextAvailability: 'Qui, 09:30', state: 'SP', yearsExperience: 8, reviews: []
+  },
+  {
+    id: 'camila-azevedo', name: 'Camila Azevedo', initials: 'CA', headline: 'Especialista em lavanderia',
+    bio: 'Lavo, passo e organizo roupas respeitando as orientações de cada tecido e as preferências da família.',
+    city: 'Rio de Janeiro', neighborhood: 'Copacabana', verified: true, topProvider: true, rating: 4.96, reviewCount: 84, completedJobs: 153,
+    responseTime: 'Responde em até 15 min', priceFromCents: 9000, serviceIds: ['laundry-wash'],
+    qualities: ['Cuidadosa', 'Organizada', 'Muito elogiada'], nextAvailability: 'Hoje, 17:00', state: 'RJ', yearsExperience: 7, reviews: []
+  },
+  {
+    id: 'andre-martins', name: 'André Martins', initials: 'AM', headline: 'Ajudante de mudanças e montagem',
+    bio: 'Ajudo no carregamento, na proteção dos itens e na montagem dos móveis para uma mudança mais tranquila.',
+    city: 'Belo Horizonte', neighborhood: 'Funcionários', verified: true, rating: 4.89, reviewCount: 57, completedJobs: 101,
+    responseTime: 'Responde em até 30 min', priceFromCents: 18000, serviceIds: ['moving-help', 'repair-furniture'],
+    qualities: ['Ágil', 'Ferramentas próprias', 'Organizado'], nextAvailability: 'Amanhã, 08:00', state: 'MG', yearsExperience: 6, reviews: []
+  },
+  {
+    id: 'beatriz-gomes', name: 'Beatriz Gomes', initials: 'BG', headline: 'Cuidadora de idosos e pets',
+    bio: 'Ofereço companhia atenciosa, apoio à rotina e atualizações frequentes para toda a família.',
+    city: 'Curitiba', neighborhood: 'Centro Cívico', verified: true, rating: 4.97, reviewCount: 69, completedJobs: 124,
+    responseTime: 'Responde em até 10 min', priceFromCents: 10000, serviceIds: ['care-elder', 'care-pet'],
+    qualities: ['Paciente', 'Atenta', 'Envia atualizações'], nextAvailability: 'Hoje, 15:30', state: 'PR', yearsExperience: 9, reviews: []
+  },
+  {
+    id: 'thiago-costa', name: 'Thiago Costa', initials: 'TC', headline: 'Técnico de Wi-Fi residencial',
+    bio: 'Configuro roteadores, redes e dispositivos conectados para melhorar cobertura, estabilidade e segurança.',
+    city: 'São Paulo', neighborhood: 'Tatuapé', verified: true, rating: 4.92, reviewCount: 52, completedJobs: 98,
+    responseTime: 'Responde em até 20 min', priceFromCents: 13000, serviceIds: ['tech-wifi'],
+    qualities: ['Bom diagnóstico', 'Didático', 'Organizado'], nextAvailability: 'Amanhã, 10:00', state: 'SP', yearsExperience: 7, reviews: []
+  },
+  {
+    id: 'renata-barbosa', name: 'Renata Barbosa', initials: 'RB', headline: 'Profissional de limpeza pesada',
+    bio: 'Realizo limpeza detalhada, pós-mudança e cuidados periódicos com atenção aos produtos e superfícies.',
+    city: 'Santos', neighborhood: 'Gonzaga', verified: true, rating: 4.94, reviewCount: 76, completedJobs: 139,
+    responseTime: 'Responde em até 20 min', priceFromCents: 22000, serviceIds: ['clean-heavy', 'clean-post', 'clean-home'],
+    qualities: ['Cuidadosa', 'Pontual', 'Trabalho limpo'], nextAvailability: 'Qui, 11:00', state: 'SP', yearsExperience: 8, reviews: []
+  },
+  {
+    id: 'gustavo-freitas', name: 'Gustavo Freitas', initials: 'GF', headline: 'Técnico de reparos residenciais',
+    bio: 'Resolvo pequenos problemas elétricos e de equipamentos com diagnóstico claro e execução segura.',
+    city: 'Rio de Janeiro', neighborhood: 'Méier', verified: true, rating: 4.88, reviewCount: 44, completedJobs: 83,
+    responseTime: 'Responde em até 45 min', priceFromCents: 14500, serviceIds: ['repair-electric', 'repair-equipment'],
+    qualities: ['Confiável', 'Bom diagnóstico', 'Ferramentas próprias'], nextAvailability: 'Sex, 08:30', state: 'RJ', yearsExperience: 10, reviews: []
+  },
+  {
+    id: 'patricia-oliveira', name: 'Patrícia Oliveira', initials: 'PO', headline: 'Pintora e renovadora de ambientes',
+    bio: 'Faço preparação e pintura de paredes com proteção do mobiliário, acabamento uniforme e ambiente organizado.',
+    city: 'Campinas', neighborhood: 'Taquaral', verified: true, rating: 4.93, reviewCount: 63, completedJobs: 107,
+    responseTime: 'Responde em até 30 min', priceFromCents: 42000, serviceIds: ['paint-room'],
+    qualities: ['Planejada', 'Cuidadosa', 'Trabalho limpo'], nextAvailability: 'Amanhã, 14:00', state: 'SP', yearsExperience: 6, reviews: []
+  },
+  {
+    id: 'joao-pedro-alves', name: 'João Pedro Alves', initials: 'JA', headline: 'Montador e marceneiro',
+    bio: 'Monto, ajusto e reforço móveis residenciais, sempre conferindo alinhamento, estabilidade e acabamento.',
+    city: 'Belo Horizonte', neighborhood: 'Santa Efigênia', verified: true, rating: 4.91, reviewCount: 71, completedJobs: 132,
+    responseTime: 'Responde em até 25 min', priceFromCents: 11000, serviceIds: ['repair-furniture'],
+    qualities: ['Ferramentas próprias', 'Caprichoso', 'Organizado'], nextAvailability: 'Hoje, 18:00', state: 'MG', yearsExperience: 9, reviews: []
   }
 ];
 
