@@ -79,6 +79,11 @@ assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-gro
 assert.match(globalStyles, /\.footer-desktop-group\s*\{\s*display:\s*grid\s*!important;/s, 'Os links do rodapé devem continuar visíveis a partir do breakpoint de desktop.');
 const mockApi = await text('frontend/src/app/core/testing/mock-api.service.ts');
 assert.doesNotMatch(mockApi, /timer\(120\)/, 'O catálogo local não deve introduzir latência artificial.');
+const professionalsSource = await text('frontend/src/app/features/public/pages/professionals/professionals.component.ts');
+assert.match(professionalsSource, /readonly pageSize = 20;/, 'A vitrine deve exibir pelo menos vinte profissionais por página.');
+const mockDirectoryData = await text('frontend/src/app/core/testing/mock-data.ts');
+const providerBlock = mockDirectoryData.match(/export const MOCK_PROVIDERS: ProviderProfile\[\] = \[([\s\S]*?)\n\];\n\nconst cleaningService/)?.[1] ?? '';
+assert.ok((providerBlock.match(/^    id: /gm) ?? []).length >= 20, 'A base local deve oferecer pelo menos vinte profissionais.');
 assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat móvel deve respeitar o viewport dinâmico quando o teclado aparece.');
 assert.match(globalStyles, /\.catalog-results \.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/s, 'O catálogo deve manter informação de decisão em uma coluna no celular.');
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');
