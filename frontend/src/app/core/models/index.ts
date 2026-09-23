@@ -56,6 +56,7 @@ export interface Service {
   maximumQuantity?: number;
   addons?: ServiceAddon[];
   popular?: boolean;
+  isCustom?: boolean;
 }
 
 export interface ServiceAddon {
@@ -64,6 +65,44 @@ export interface ServiceAddon {
   description: string;
   priceCents: number;
   pricingType: 'fixed' | 'hourly' | 'quantity';
+}
+
+export interface Promotion {
+  id: string;
+  title: string;
+  subtitle: string;
+  ctaLabel: string;
+  ctaUrl: string;
+  imageUrl: string | null;
+  badgeText: string;
+  termsText: string;
+  backgroundColor: string;
+  textColor: string;
+  active?: boolean;
+  startsAt?: string | null;
+  endsAt?: string | null;
+  sortOrder?: number;
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  shortDescription: string;
+  priceCents: number;
+  compareAtPriceCents: number | null;
+  currency: CurrencyCode;
+  imageUrl: string | null;
+  purchaseUrl: string;
+  badgeText: string;
+  inventoryCount: number;
+  featured: boolean;
+  active?: boolean;
+  sortOrder?: number;
+}
+
+export interface HomeContent {
+  promotions: Promotion[];
 }
 
 export interface Review {
@@ -303,6 +342,7 @@ export interface ProviderService {
   catalogPriceCents: number;
   customPriceCents: number;
   active: boolean;
+  isCustom?: boolean;
 }
 
 export interface AvailabilityRule {

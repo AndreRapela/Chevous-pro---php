@@ -35,6 +35,7 @@ const NAVIGATION: Record<string, NavItem[]> = {
     { label: 'Clientes', short: 'Clientes', path: '/admin/clientes', icon: 'profile' },
     { label: 'Prestadores', short: 'Prestadores', path: '/admin/prestadores', icon: 'profile' },
     { label: 'Catálogo', short: 'Catálogo', path: '/admin/catalogo', icon: 'catalog' },
+    { label: 'Site e loja', short: 'Loja', path: '/admin/conteudo', icon: 'catalog' },
     { label: 'Moderação', short: 'Moderação', path: '/admin/suporte', icon: 'moderation' },
     { label: 'Configurações', short: 'Ajustes', path: '/admin/configuracoes', icon: 'settings' }
   ]

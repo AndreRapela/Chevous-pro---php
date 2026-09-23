@@ -15,7 +15,8 @@ export const MOCK_CATEGORIES: ServiceCategory[] = [
   { id: 'gardening', slug: 'jardinagem', name: 'Jardinagem', shortName: 'Jardim', description: 'Poda, manutenção e paisagismo.', symbol: 'JD', serviceCount: 7 },
   { id: 'moving', slug: 'mudancas', name: 'Mudanças', shortName: 'Mudanças', description: 'Carregamento, montagem e transporte.', symbol: 'MD', serviceCount: 5 },
   { id: 'care', slug: 'cuidados', name: 'Cuidados', shortName: 'Cuidados', description: 'Apoio para crianças, idosos e pets.', symbol: 'CD', serviceCount: 9 },
-  { id: 'technology', slug: 'tecnologia', name: 'Tecnologia', shortName: 'Tecnologia', description: 'Instalação e suporte em casa.', symbol: 'TI', serviceCount: 6 }
+  { id: 'technology', slug: 'tecnologia', name: 'Tecnologia', shortName: 'Tecnologia', description: 'Instalação e suporte em casa.', symbol: 'TI', serviceCount: 6 },
+  { id: 'other', slug: 'outros', name: 'Outros', shortName: 'Outros', description: 'Serviços personalizados oferecidos por profissionais.', symbol: 'OU', serviceCount: 0 }
 ];
 
 export const MOCK_SERVICES: Service[] = [

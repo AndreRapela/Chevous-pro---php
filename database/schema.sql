@@ -276,6 +276,9 @@ CREATE TABLE IF NOT EXISTS promotions (
     subtitle VARCHAR(300) NULL,
     cta_label VARCHAR(60) NULL,
     cta_url VARCHAR(255) NULL,
+    image_url VARCHAR(1024) NULL,
+    badge_text VARCHAR(80) NULL,
+    terms_text VARCHAR(300) NULL,
     background_color VARCHAR(20) NOT NULL DEFAULT '#08B86F',
     text_color VARCHAR(20) NOT NULL DEFAULT '#FFFFFF',
     active TINYINT(1) NOT NULL DEFAULT 1,
@@ -287,6 +290,30 @@ CREATE TABLE IF NOT EXISTS promotions (
     PRIMARY KEY (id),
     UNIQUE KEY uq_promotions_public_id (public_id),
     KEY idx_promotions_active_period (active, starts_at, ends_at, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS products (
+    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    name VARCHAR(160) NOT NULL,
+    slug VARCHAR(180) NOT NULL,
+    short_description VARCHAR(300) NULL,
+    price_cents BIGINT UNSIGNED NOT NULL,
+    compare_at_price_cents BIGINT UNSIGNED NULL,
+    currency CHAR(3) NOT NULL DEFAULT 'BRL',
+    image_url VARCHAR(1024) NULL,
+    purchase_url VARCHAR(1024) NOT NULL,
+    badge_text VARCHAR(80) NULL,
+    inventory_count INT UNSIGNED NOT NULL DEFAULT 0,
+    featured TINYINT(1) NOT NULL DEFAULT 0,
+    active TINYINT(1) NOT NULL DEFAULT 1,
+    sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_products_public_id (public_id),
+    UNIQUE KEY uq_products_slug (slug),
+    KEY idx_products_public_catalog (active, sort_order, featured, created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS app_settings (

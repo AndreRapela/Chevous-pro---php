@@ -180,12 +180,69 @@ final class ProviderController extends Controller
     {
         $statement = $this->db->prepare(
             'SELECT s.public_id AS id, s.name, s.slug, s.pricing_type AS pricingType,
-                    s.price_cents AS catalogPriceCents, ps.price_cents AS customPriceCents, ps.active
+                    s.price_cents AS catalogPriceCents, ps.price_cents AS customPriceCents, ps.active,
+                    (c.slug = \'outros\') AS isCustom
              FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
+             INNER JOIN service_categories c ON c.id = s.category_id
              WHERE ps.professional_id = :id ORDER BY s.name'
         );
         $statement->execute(['id' => $auth['id']]);
         return Response::data($statement->fetchAll());
+    }
+
+    public function createCustomService(Request $request, array $params, ?array $auth): Response
+    {
+        $data = Validator::validate($request->body, [
+            'name' => ['required', 'string', 'min:2', 'max:120'],
+            'priceCents' => ['required', 'integer', 'min:1000', 'max:10000000'],
+        ]);
+        $name = preg_replace('/\s+/u', ' ', trim((string) $data['name'])) ?? '';
+        if (mb_strlen($name) < 2) {
+            throw new ApiException(422, 'INVALID_SERVICE_NAME', 'Informe um nome com pelo menos 2 caracteres.');
+        }
+
+        $this->db->beginTransaction();
+        try {
+            $duplicate = $this->db->prepare('SELECT id FROM services WHERE name = :name LIMIT 1 FOR UPDATE');
+            $duplicate->execute(['name' => $name]);
+            if ($duplicate->fetchColumn()) {
+                throw new ApiException(409, 'SERVICE_NAME_EXISTS', 'Esse nome já pertence a um serviço. Selecione-o na lista.');
+            }
+            $category = $this->requireRow(
+                'SELECT id FROM service_categories WHERE slug = \'outros\' AND active = 1 LIMIT 1',
+                [],
+                'A categoria para serviços personalizados não está disponível.'
+            );
+            $publicId = Uuid::v4();
+            $baseSlug = $this->serviceSlug($name);
+            $slugStatement = $this->db->prepare('SELECT 1 FROM services WHERE slug = :slug LIMIT 1');
+            $slugStatement->execute(['slug' => $baseSlug]);
+            $slug = $slugStatement->fetchColumn() ? $baseSlug . '-' . substr($publicId, 0, 8) : $baseSlug;
+            $description = 'Serviço personalizado. Consulte o escopo e combine os detalhes com o profissional.';
+            $this->db->prepare(
+                'INSERT INTO services
+                    (public_id, category_id, name, slug, short_description, description, pricing_type, price_cents,
+                     unit_label, default_duration_minutes, minimum_quantity, maximum_quantity, active, featured, sort_order, created_at, updated_at)
+                 VALUES (:public_id, :category_id, :name, :slug, :short_description, :description, \'fixed\', :price,
+                         \'serviço\', 120, 1, 10000, 1, 0, 999, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+            )->execute([
+                'public_id' => $publicId, 'category_id' => $category['id'], 'name' => $name, 'slug' => $slug,
+                'short_description' => $description, 'description' => $description, 'price' => $data['priceCents'],
+            ]);
+            $serviceId = (int) $this->db->lastInsertId();
+            $this->db->prepare(
+                'INSERT INTO professional_services (professional_id, service_id, price_cents, active, created_at, updated_at)
+                 VALUES (:professional_id, :service_id, :price, 1, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+            )->execute(['professional_id' => $auth['id'], 'service_id' => $serviceId, 'price' => $data['priceCents']]);
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
+        }
+
+        return $this->providerServiceResponse($publicId, (int) $auth['id'], 201);
     }
 
     public function upsertService(Request $request, array $params, ?array $auth): Response
@@ -205,24 +262,22 @@ final class ProviderController extends Controller
             'price' => $data['priceCents'] ?? null,
             'active' => isset($data['active']) ? (int) (bool) $data['active'] : 1,
         ]);
-        $updated = $this->requireRow(
-            'SELECT s.public_id AS id, s.name, s.slug, s.pricing_type AS pricingType,
-                    s.price_cents AS catalogPriceCents, ps.price_cents AS customPriceCents, ps.active
-             FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
-             WHERE ps.professional_id = :professional_id AND s.id = :service_id',
-            ['professional_id' => $auth['id'], 'service_id' => $service['id']]
-        );
-        return Response::data($updated);
+        return $this->providerServiceResponse($params['serviceId'], (int) $auth['id']);
     }
 
     public function removeService(Request $request, array $params, ?array $auth): Response
     {
         $statement = $this->db->prepare(
-            'UPDATE professional_services ps INNER JOIN services s ON s.id = ps.service_id
-             SET ps.active = 0, ps.updated_at = UTC_TIMESTAMP()
+            'DELETE ps FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
              WHERE ps.professional_id = :professional_id AND s.public_id = :service_id'
         );
         $statement->execute(['professional_id' => $auth['id'], 'service_id' => $params['serviceId']]);
+        $this->db->prepare(
+            'UPDATE services s INNER JOIN service_categories c ON c.id = s.category_id
+             SET s.active = 0, s.updated_at = UTC_TIMESTAMP()
+             WHERE s.public_id = :service_id AND c.slug = \'outros\'
+               AND NOT EXISTS (SELECT 1 FROM professional_services ps WHERE ps.service_id = s.id)'
+        )->execute(['service_id' => $params['serviceId']]);
         return Response::noContent();
     }
 
@@ -529,5 +584,28 @@ final class ProviderController extends Controller
             ['id' => $publicId, 'professional_id' => $professionalId], 'Curso não encontrado.'
         );
         return Response::data($row, $status);
+    }
+
+    private function providerServiceResponse(string $publicId, int $professionalId, int $status = 200): Response
+    {
+        $row = $this->requireRow(
+            'SELECT s.public_id AS id, s.name, s.slug, s.pricing_type AS pricingType,
+                    s.price_cents AS catalogPriceCents, ps.price_cents AS customPriceCents, ps.active,
+                    (c.slug = \'outros\') AS isCustom
+             FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
+             INNER JOIN service_categories c ON c.id = s.category_id
+             WHERE ps.professional_id = :professional_id AND s.public_id = :service_id',
+            ['professional_id' => $professionalId, 'service_id' => $publicId],
+            'Serviço não encontrado.'
+        );
+        return Response::data($row, $status);
+    }
+
+    private function serviceSlug(string $value): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        $normalized = strtolower($ascii === false ? $value : $ascii);
+        $slug = preg_replace('/[^a-z0-9]+/', '-', $normalized) ?? '';
+        return trim($slug, '-') ?: 'servico';
     }
 }

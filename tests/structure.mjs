@@ -68,7 +68,7 @@ assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança de
 assert.match(homeHero, /profissional-limpeza-hero-887\.webp/, 'O banner deve usar a imagem original de fundo verde.');
 assert.doesNotMatch(homeHero, /hero-warm/, 'O banner não deve reintroduzir a variante marrom da imagem.');
 assert.equal((homeHero.match(/mobile-hero-orb mobile-hero-orb-/g) ?? []).length, 4, 'O herói móvel deve conter quatro círculos decorativos sutis.');
-assert.match(globalStyles, /animation-timeline:\s*scroll\(root block\)/, 'Os círculos do herói móvel devem responder à rolagem.');
+assert.match(globalStyles, /animation:\s*mobile-orb-float[^;]*infinite/, 'Os círculos do herói móvel devem flutuar continuamente.');
 assert.match(globalStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mobile-hero-orb\s*\{[^}]*animation:\s*none/s, 'A animação decorativa deve respeitar movimento reduzido.');
 assert.match(globalStyles, /cvp-home > \.home-deals\s*\{\s*order:\s*2;/, 'As ofertas devem aparecer logo após o herói no celular.');
 assert.match(globalStyles, /cvp-home > \.home-categories\s*\{\s*order:\s*3;/, 'Os serviços devem aparecer depois das ofertas no celular.');

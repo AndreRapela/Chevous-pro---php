@@ -71,6 +71,7 @@ Erro de validação:
 | GET | `/categories` | Categorias ativas. |
 | GET | `/services?category=&q=&page=&perPage=` | Catálogo paginado; categoria aceita UUID ou slug. |
 | GET | `/services/{idOrSlug}` | Detalhe e adicionais ativos do serviço. |
+| GET | `/products?q=&page=&perPage=` | Loja pública paginada; retorna somente produtos publicados. |
 | GET | `/professionals?service=&city=&state=&ratingMin=&sort=` | Busca pública paginada. |
 | GET | `/professionals/{id}` | Perfil público, vitrine profissional, experiências, cursos e serviços ofertados. |
 | GET | `/avatars/{id}` | Foto pública do perfil, quando o usuário tiver enviado uma. |
@@ -217,6 +218,7 @@ com conteúdo ou conversa diferente responde `409 IDEMPOTENCY_CONFLICT`.
 | GET/POST | `/provider/profile/courses` | Lista ou adiciona cursos do próprio perfil. |
 | PUT/DELETE | `/provider/profile/courses/{id}` | Atualiza ou remove curso próprio. |
 | GET | `/provider/services` | Lista ofertas do prestador. |
+| POST | `/provider/services` | Cria um serviço personalizado com nome inédito e já o adiciona ao perfil. |
 | PUT/DELETE | `/provider/services/{serviceId}` | Ativa, precifica ou remove oferta. |
 | GET/PUT | `/provider/availability` | Consulta/substitui regras semanais. |
 | GET | `/provider/jobs` | Lista trabalhos do prestador. |
@@ -242,7 +244,10 @@ Todas as rotas abaixo exigem papel `admin`:
 | POST | `/admin/professionals/{id}/review` | Aprova/rejeita/suspende perfil. |
 | POST/PATCH | `/admin/categories`, `/admin/categories/{id}` | Cria/atualiza categoria. |
 | POST/PATCH | `/admin/services`, `/admin/services/{id}` | Cria/atualiza serviço. |
-| GET/POST | `/admin/promotions` | Lista/cria promoção textual. |
+| GET/POST | `/admin/promotions` | Lista/cria publicidade da home, incluindo arte, cores, chamada e período de exibição. |
+| PATCH | `/admin/promotions/{id}` | Atualiza a campanha sem expor o outdoor inicial ao editor. |
+| GET/POST | `/admin/products` | Lista/cria produtos da loja. |
+| PATCH | `/admin/products/{id}` | Atualiza produto, estoque, preço, imagem, link de compra e publicação. |
 | GET | `/admin/bookings` | Alias administrativo da listagem de reservas. |
 | GET | `/admin/audit-logs` | Trilha administrativa paginada. |
 

@@ -3,16 +3,17 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { forkJoin, Observable } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProfessionalCourse, ProfessionalExperience, ProviderService, Service } from '../../../../core/models';
-import { AccountIdentityComponent, AccountSecurityComponent, PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
+import { AccountIdentityComponent, AccountSecurityComponent, PageHeaderComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { displayReferenceAmount, displayReferenceBound, referenceAmountToCents } from '../../../../core/localization/reference-currency.util';
 import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { coursePayload, experiencePayload } from '../../../../shared/utils/professional-record.util';
+import { cleanServiceName, CUSTOM_SERVICE_VALUE, serviceInitial, serviceNameExists } from '../../../../shared/utils/service-name.util';
 
 @Component({
   selector: 'cvp-provider-profile',
   standalone: true,
-  imports: [AccountIdentityComponent, AccountSecurityComponent, LocalizedMoneyPipe, PageHeaderComponent, SlicePipe, StatePanelComponent],
+  imports: [AccountIdentityComponent, AccountSecurityComponent, LocalizedMoneyPipe, PageHeaderComponent, ServiceIconComponent, SlicePipe, StatePanelComponent],
   template: `
     <section class="portal-page provider-operations-page provider-profile-page">
       <cvp-page-header eyebrow="Sua vitrine" title="Perfil profissional" description="Apresente experiência, formação e serviços para conquistar novos clientes." />
@@ -45,7 +46,35 @@ import { coursePayload, experiencePayload } from '../../../../shared/utils/profe
           <div class="inline-action-form credential-form"><h3>Adicionar curso</h3><div class="form-grid"><label>Curso ou certificado<input #courseTitle maxlength="160" placeholder="Ex.: NR-10 Segurança em instalações"></label><label>Instituição<input #courseInstitution maxlength="160" placeholder="Nome da instituição"></label><label>Conclusão <span class="optional">opcional</span><input #courseCompleted type="date"></label><label>Link do certificado <span class="optional">opcional</span><input #courseUrl type="url" maxlength="500" placeholder="https://"></label></div><div class="card-actions"><button class="btn btn-secondary btn-small" type="button" [disabled]="acting()" (click)="addCourse(courseTitle.value, courseInstitution.value, courseCompleted.value, courseUrl.value)">Adicionar curso</button></div></div>
         </section>
 
-        <section class="portal-card settings-form provider-settings-form service-management-card"><div class="settings-section-heading"><div><span class="eyebrow">Catálogo</span><h2>Serviços oferecidos</h2></div><small>Defina preço e disponibilidade</small></div><div class="inline-action-form provider-add-service"><label>Novo serviço<select #newService><option value="">Selecione</option>@for (service of availableServices(); track service.id) { <option [value]="service.id">{{ service.name }}</option> }</select></label><label>Preço ({{ localization.currency() }})<input #newPrice type="number" [min]="minimumDisplayPrice()" [max]="maximumDisplayPrice()" step="0.01"></label><button class="btn btn-secondary btn-small" type="button" [disabled]="acting() || !newService.value" (click)="addService(newService.value, newPrice.value)">Adicionar serviço</button></div><div class="toggle-list provider-service-list">@for (service of services(); track service.id) { <div class="toggle-row provider-service-row"><span><strong>{{ service.name }}</strong><small>Catálogo: {{ service.catalogPriceCents / 100 | appMoney:'BRL' }}</small></span><label class="service-price-control"><span class="sr-only">Preço de {{ service.name }}</span><input #price type="number" [min]="minimumDisplayPrice()" [max]="maximumDisplayPrice()" step="0.01" [value]="displayPrice(service.customPriceCents)"></label><label class="service-toggle-control"><span class="sr-only">Ativar {{ service.name }}</span><input #active type="checkbox" [checked]="service.active"></label><div class="card-actions"><button class="btn btn-primary btn-small" type="button" [disabled]="acting()" (click)="updateService(service, price.value, active.checked)">Salvar</button><button class="text-button" type="button" [disabled]="acting()" (click)="removeService(service)">Remover</button></div></div> } @empty { <p class="muted">Adicione ao menos um serviço para enviar o perfil para análise.</p> }</div></section>
+        <section class="portal-card settings-form provider-settings-form service-management-card">
+          <div class="settings-section-heading"><div><span class="eyebrow">Catálogo</span><h2>Serviços oferecidos</h2></div><small>Defina preço e disponibilidade</small></div>
+          <div class="inline-action-form provider-add-service">
+            <label>Novo serviço
+              <select [value]="selectedServiceId()" (change)="selectService($any($event.target).value)">
+                <option value="">Selecione uma opção</option>
+                @for (service of catalog(); track service.id) { <option [value]="service.id" [disabled]="hasService(service.id)">{{ service.name }}{{ hasService(service.id) ? ' — já adicionado' : '' }}</option> }
+                <option [value]="customServiceValue">Outro serviço</option>
+              </select>
+            </label>
+            @if (customServiceMode()) {
+              <label class="custom-service-name">Nome do novo serviço
+                <span class="custom-service-name-field"><span class="custom-service-preview" aria-hidden="true">{{ serviceInitial(customServiceName()) }}</span><input maxlength="120" [value]="customServiceName()" (input)="customServiceName.set($any($event.target).value)" placeholder="Ex.: Limpeza de aquário" autocomplete="off"></span>
+                @if (customServiceNameExists()) { <small class="field-error">Esse nome já existe. Selecione o serviço correspondente na lista.</small> }
+                @else { <small>A imagem será criada com a primeira letra do nome.</small> }
+              </label>
+            }
+            <label class="provider-new-service-price">Preço ({{ localization.currency() }})<input #newPrice type="number" [min]="minimumDisplayPrice()" [max]="maximumDisplayPrice()" step="0.01"></label>
+            <button class="btn btn-secondary btn-small" type="button" [disabled]="acting() || !canAddSelectedService()" (click)="addSelectedService(newPrice.value)">Adicionar serviço</button>
+          </div>
+          <div class="toggle-list provider-service-list">@for (service of services(); track service.id) {
+            <div class="toggle-row provider-service-row">
+              <span class="provider-service-identity"><span class="provider-service-avatar" [class.provider-service-avatar-initial]="service.isCustom" aria-hidden="true">@if (service.isCustom) { {{ serviceInitial(service.name) }} } @else { <cvp-service-icon [serviceSlug]="service.slug" /> }</span><span class="provider-service-copy"><strong>{{ service.name }}</strong><small>Catálogo: {{ service.catalogPriceCents / 100 | appMoney:'BRL' }}</small></span></span>
+              <label class="service-price-control"><span class="sr-only">Preço de {{ service.name }}</span><input #price type="number" [min]="minimumDisplayPrice()" [max]="maximumDisplayPrice()" step="0.01" [value]="displayPrice(service.customPriceCents)"></label>
+              <label class="service-toggle-control"><span class="sr-only">Ativar {{ service.name }}</span><input #active type="checkbox" [checked]="service.active"></label>
+              <div class="card-actions"><button class="btn btn-primary btn-small" type="button" [disabled]="acting()" (click)="updateService(service, price.value, active.checked)">Salvar</button><button class="text-button" type="button" [disabled]="acting()" (click)="removeService(service)">Remover</button></div>
+            </div>
+          } @empty { <p class="muted">Adicione ao menos um serviço para enviar o perfil para análise.</p> }</div>
+        </section>
         <cvp-account-security />
       }
     </section>
@@ -65,6 +94,9 @@ export class ProviderProfileComponent implements OnInit {
   readonly loadError = signal('');
   readonly actionError = signal('');
   readonly success = signal('');
+  readonly customServiceValue = CUSTOM_SERVICE_VALUE;
+  readonly selectedServiceId = signal('');
+  readonly customServiceName = signal('');
 
   ngOnInit(): void { this.load(); }
   load(): void {
@@ -92,10 +124,33 @@ export class ProviderProfileComponent implements OnInit {
     const catalog = this.catalog().find((service) => service.id === id);
     const priceCents = price.trim() ? this.toBaseCents(price) : (catalog?.priceFromCents ?? 0);
     if (!catalog || !this.validPrice(priceCents)) { this.actionError.set(this.priceRangeError('Selecione um serviço. Preço mínimo:')); return; }
-    this.perform(this.marketplace.updateProviderService(id, { priceCents, active: true }), (updated) => { this.services.update((items) => [...items.filter((item) => item.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name))); this.success.set('Serviço adicionado.'); });
+    this.perform(this.marketplace.updateProviderService(id, { priceCents, active: true }), (updated) => { this.services.update((items) => [...items.filter((item) => item.id !== updated.id), updated].sort((a, b) => a.name.localeCompare(b.name))); this.selectedServiceId?.set(''); this.customServiceName?.set(''); this.success.set('Serviço adicionado.'); });
+  }
+  selectService(id: string): void { this.selectedServiceId.set(id); if (id !== this.customServiceValue) this.customServiceName.set(''); }
+  customServiceMode(): boolean { return this.selectedServiceId() === this.customServiceValue; }
+  customServiceNameExists(): boolean { return serviceNameExists(this.customServiceName(), [...this.catalog(), ...this.services()]); }
+  canAddSelectedService(): boolean {
+    const id = this.selectedServiceId();
+    if (id === this.customServiceValue) return cleanServiceName(this.customServiceName()).length >= 2 && !this.customServiceNameExists();
+    return Boolean(id) && !this.hasService(id);
+  }
+  addSelectedService(price: string): void {
+    if (this.customServiceMode()) { this.addCustomService(price); return; }
+    this.addService(this.selectedServiceId(), price);
+  }
+  addCustomService(price: string): void {
+    if (this.acting()) return;
+    const name = cleanServiceName(this.customServiceName());
+    const priceCents = this.toBaseCents(price);
+    if (name.length < 2) { this.actionError.set('Informe um nome com pelo menos 2 caracteres.'); return; }
+    if (this.customServiceNameExists()) { this.actionError.set('Esse nome já existe. Selecione o serviço correspondente na lista.'); return; }
+    if (!this.validPrice(priceCents)) { this.actionError.set(this.priceRangeError('Preço mínimo:')); return; }
+    this.perform(this.marketplace.createCustomProviderService({ name, priceCents }), (created) => { this.services.update((items) => [...items, created].sort((a, b) => a.name.localeCompare(b.name))); this.resetServiceDraft(); this.success.set('Serviço personalizado adicionado.'); });
   }
   removeService(service: ProviderService): void { this.perform(this.marketplace.removeProviderService(service.id), () => { this.services.update((items) => items.filter((item) => item.id !== service.id)); this.success.set('Serviço removido.'); }); }
   availableServices(): Service[] { const ids = new Set(this.services().map((service) => service.id)); return this.catalog().filter((service) => !ids.has(service.id)); }
+  hasService(id: string): boolean { return this.services().some((service) => service.id === id); }
+  serviceInitial(name: string): string { return serviceInitial(name); }
   verificationStatus(): string { return String(this.profile()['verificationStatus'] ?? 'pending'); }
   verificationTitle(): string { return ({ approved: 'Perfil aprovado', pending: 'Perfil em análise', rejected: 'Perfil rejeitado', suspended: 'Perfil suspenso' } as Record<string, string>)[this.verificationStatus()] ?? 'Perfil em análise'; }
   verificationDescription(): string { return this.verificationStatus() === 'approved' ? 'Habilitado para receber oportunidades na plataforma.' : this.verificationStatus() === 'pending' ? 'Complete serviços e agenda enquanto aguarda a análise.' : String(this.profile()['verificationNotes'] ?? 'Entre em contato com o suporte para revisar a situação.'); }
@@ -109,4 +164,5 @@ export class ProviderProfileComponent implements OnInit {
   profileCompleteness(): number { const profile = this.profile(); const fields = ['headline', 'bio', 'baseCity']; const filled = fields.filter((field) => String(profile[field] ?? '').trim()).length + (this.services().length ? 1 : 0) + (this.experiences().length ? 1 : 0) + (this.courses().length ? 1 : 0); return Math.round(filled / 6 * 100); }
   private perform<T>(request: Observable<T>, next: (value: T) => void): void { if (this.acting()) return; this.acting.set(true); this.actionError.set(''); request.subscribe({ next: (value) => { next(value); this.acting.set(false); }, error: (failure: Error) => { this.actionError.set(failure.message); this.acting.set(false); } }); }
   private toBaseCents(value: string): number { return referenceAmountToCents(value, this.localization.currency(), 'BRL'); }
+  private resetServiceDraft(): void { this.selectedServiceId.set(''); this.customServiceName.set(''); }
 }

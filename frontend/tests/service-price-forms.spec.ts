@@ -34,6 +34,7 @@ function profileFixture(currency: 'EUR' | 'USD', pending = false) {
   harness.acting = Object.assign(() => busy, { set: (value: boolean) => { busy = value; } });
   harness.actionError = { set: (value: string) => { error = value; } };
   harness.success = { set: () => undefined };
+  harness.resetServiceDraft = () => undefined;
   harness.services = Object.assign(() => services, { update: (change: (items: ProviderService[]) => ProviderService[]) => { services = change(services); } });
   harness.catalog = () => [{ id: 'service-new', name: 'Laundry', priceFromCents: 14400 }];
   harness.localization = { currency: () => currency, translate: (text: string) => text, formatMoney: (amount: number) => `${currency} ${amount.toFixed(2)}` };
@@ -164,7 +165,7 @@ describe('admin catalog price form contract', () => {
 
 describe('marketplace provider service response contract', () => {
   it('normalizes both list and update responses without replacing null prices with zero', async () => {
-    const Harness = compileMethods('../src/app/core/data-access/marketplace.service.ts', ['providerServices', 'updateProviderService'], { map, normalizeProviderServicePrices });
+    const Harness = compileMethods('../src/app/core/data-access/marketplace.service.ts', ['providerServices', 'updateProviderService', 'providerServiceModel', 'boolean'], { map, normalizeProviderServicePrices });
     const harness = new Harness();
     const response = { ...service, catalogPriceCents: '14400', customPriceCents: null };
     harness.api = { get: () => of([response]), put: () => of(response) };
