@@ -323,6 +323,13 @@ assert.deepEqual(imageFiles, [
   'frontend/public/images/garconete-cadastro-v1-640.webp',
   'frontend/public/images/garconete-cadastro-warm-1086.jpg',
   'frontend/public/images/garconete-cadastro-warm-640.jpg',
+  'frontend/public/images/perfil-eletricista-rafael-nunes-640.jpg',
+  'frontend/public/images/perfil-fotografo-diego-amaral-640.jpg',
+  'frontend/public/images/perfil-limpeza-ana-clara-640.jpg',
+  'frontend/public/images/perfil-montador-lucas-mendes-640.jpg',
+  'frontend/public/images/perfil-pintora-helena-martins-640.jpg',
+  'frontend/public/images/perfil-redes-eduardo-santos-640.jpg',
+  'frontend/public/images/perfil-tecnico-bruno-almeida-640.jpg',
   'frontend/public/images/profissional-limpeza-hero-480.webp',
   'frontend/public/images/profissional-limpeza-hero-887.webp',
   'frontend/public/images/profissional-limpeza-hero-warm-480.jpg',
@@ -333,6 +340,16 @@ assert.deepEqual(imageFiles, [
 for (const image of imageFiles) {
   assert.ok((await readFile(join(root, image))).byteLength < 100_000, `${image} deve permanecer otimizada abaixo de 100 KB.`);
 }
+
+const mockData = await text('frontend/src/app/core/testing/mock-data.ts');
+const profilePhotos = imageFiles
+  .filter((path) => path.includes('/perfil-'))
+  .map((path) => `/${path.replace('frontend/public/', '')}`);
+for (const photo of profilePhotos) {
+  assert.equal(mockData.split(`avatarUrl: '${photo}'`).length - 1, 1, `${photo} deve pertencer a exatamente um perfil demonstrativo.`);
+}
+assert.match(mockData, /id: 'repair-equipment'[\s\S]*serviceIds: \['repair-equipment'\]/, 'O perfil técnico deve oferecer manutenção de equipamentos.');
+assert.match(mockData, /id: 'tech-photo'[\s\S]*serviceIds: \['tech-photo'\]/, 'O perfil de fotógrafo deve oferecer fotografia residencial e de eventos.');
 
 const projectFiles = [
   ...(await files('frontend/src')).filter((path) => /\.(?:ts|scss|html)$/.test(path)),
