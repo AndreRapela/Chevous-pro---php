@@ -176,22 +176,22 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .locale-trigger-value { font-size: .82rem; font-weight: 850; letter-spacing: .045em; line-height: 1; white-space: nowrap; }
 .locale-trigger-chevron { width: .72rem; height: .72rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s ease; }
 .locale-trigger.open .locale-trigger-chevron { transform: rotate(180deg); }
-.locale-popover { position: absolute; z-index: 130; top: calc(100% + .55rem); right: 0; width: min(18.5rem, calc(100vw - 1rem)); padding: .75rem; border: 1px solid var(--ink-200); border-radius: 1rem; background: #fff; box-shadow: var(--shadow-md); }
+.locale-popover { position: absolute; z-index: 130; top: calc(100% + .45rem); right: 0; width: min(16rem, calc(100vw - 1rem)); padding: .6rem; border: 1px solid var(--ink-200); border-radius: .85rem; background: #fff; box-shadow: var(--shadow-md); }
 .locale-popover::before { content: ''; position: absolute; top: -.35rem; right: 1rem; width: .65rem; height: .65rem; border: 1px solid var(--ink-200); border-right: 0; border-bottom: 0; background: #fff; transform: rotate(45deg); }
-.locale-popover-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; padding: .05rem .05rem .65rem; border-bottom: 1px solid var(--ink-100); }
+.locale-popover-header { display: flex; align-items: center; justify-content: space-between; gap: .55rem; padding: 0 0 .48rem; border-bottom: 1px solid var(--ink-100); }
 .locale-popover-header > div { display: grid; gap: .08rem; }
 .locale-popover-header span { color: var(--brand-700); font-size: .82rem; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
 .locale-popover-header strong { color: var(--ink-900); font-size: .88rem; }
 .locale-close { width: 2rem; height: 2rem; display: grid; place-items: center; padding: 0; border: 0; border-radius: .58rem; color: var(--ink-500); background: var(--surface-soft); cursor: pointer; }
 .locale-close:hover { color: var(--ink-900); background: var(--ink-100); }
 .locale-close svg { width: .8rem; height: .8rem; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
-.locale-setting { display: grid; gap: .38rem; padding-top: .65rem; }
+.locale-setting { display: grid; gap: .3rem; padding-top: .48rem; }
 .locale-setting-label { color: var(--ink-500); font-size: .82rem; font-weight: 800; letter-spacing: .055em; text-transform: uppercase; }
-.locale-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
-.locale-option { min-width: 0; min-height: 3rem; display: flex; align-items: center; gap: .48rem; padding: .48rem .55rem; border: 1px solid var(--ink-200); border-radius: .68rem; color: var(--ink-700); background: #fff; font-size: .82rem; font-weight: 750; text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease, color .16s ease; }
+.locale-option-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .32rem; }
+.locale-option { min-width: 0; min-height: 2.65rem; display: flex; align-items: center; gap: .38rem; padding: .36rem .44rem; border: 1px solid var(--ink-200); border-radius: .62rem; color: var(--ink-700); background: #fff; font-size: .82rem; font-weight: 750; text-align: left; cursor: pointer; transition: border-color .16s ease, background .16s ease, color .16s ease; }
 .locale-option:hover { border-color: var(--brand-200); background: var(--brand-50); }
 .locale-option.active { color: var(--brand-900); border-color: var(--brand-400); background: var(--brand-50); box-shadow: inset 0 0 0 1px var(--brand-400); }
-.locale-code { width: 1.62rem; height: 1.62rem; flex: 0 0 auto; display: grid; place-items: center; border-radius: .5rem; color: var(--ink-600); background: var(--surface-soft); font-size: .82rem; font-weight: 900; letter-spacing: .02em; }
+.locale-code { width: 1.45rem; height: 1.45rem; flex: 0 0 auto; display: grid; place-items: center; border-radius: .44rem; color: var(--ink-600); background: var(--surface-soft); font-size: .82rem; font-weight: 900; letter-spacing: .02em; }
 .locale-option.active .locale-code { color: #fff; background: var(--brand-700); }
 .menu-button { width: 2.75rem; height: 2.75rem; display: grid; place-content: center; gap: .27rem; border: 0; border-radius: .65rem; background: var(--surface-soft); }
 .menu-button span { display: block; width: 1.15rem; height: 2px; border-radius: 2px; background: var(--ink-900); }
@@ -1587,17 +1587,17 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
 @media (max-width: 41.99rem) {
   .locale-trigger { min-height: 2.25rem; padding: .38rem .5rem; }
   .locale-trigger-value { font-size: .82rem; }
-  .locale-popover { position: fixed; top: calc(var(--header-height) + .35rem); right: .5rem; width: min(16.75rem, calc(100vw - 1rem)); padding: .58rem; border-radius: .85rem; }
+  .locale-popover { position: fixed; top: calc(var(--header-height) + .3rem); right: .5rem; width: min(14.5rem, calc(100vw - 1rem)); padding: .45rem; border-radius: .72rem; }
   .locale-popover::before { display: none; }
-  .locale-popover-header { padding-bottom: .48rem; }
+  .locale-popover-header { padding-bottom: .36rem; }
   .locale-popover-header span { font-size: .82rem; }
-  .locale-popover-header strong { font-size: .82rem; }
-  .locale-close { width: 1.75rem; height: 1.75rem; border-radius: .5rem; }
-  .locale-setting { gap: .28rem; padding-top: .48rem; }
+  .locale-popover-header strong { display: none; }
+  .locale-close { width: 1.65rem; height: 1.65rem; border-radius: .45rem; }
+  .locale-setting { gap: .24rem; padding-top: .38rem; }
   .locale-setting-label { font-size: .82rem; }
-  .locale-option-grid { gap: .3rem; }
-  .locale-option { min-height: 2.55rem; gap: .36rem; padding: .34rem .4rem; border-radius: .58rem; font-size: .82rem; }
-  .locale-code { width: 1.45rem; height: 1.45rem; border-radius: .42rem; font-size: .82rem; }
+  .locale-option-grid { gap: .25rem; }
+  .locale-option { min-height: 2.35rem; gap: .3rem; padding: .28rem .34rem; border-radius: .52rem; font-size: .82rem; }
+  .locale-code { width: 1.32rem; height: 1.32rem; border-radius: .38rem; font-size: .82rem; }
   .portal-header { padding-inline: .65rem; }
   .portal-header .locale-trigger { width: 2.75rem; min-width: 2.75rem; min-height: 2.75rem; justify-content: center; padding: 0; }
   .portal-header .locale-trigger-value, .portal-header .locale-trigger-chevron { display: none; }

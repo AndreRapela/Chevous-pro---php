@@ -79,6 +79,8 @@ assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-gro
 assert.match(globalStyles, /\.footer-desktop-group\s*\{\s*display:\s*grid\s*!important;/s, 'Os links do rodapé devem continuar visíveis a partir do breakpoint de desktop.');
 const mockApi = await text('frontend/src/app/core/testing/mock-api.service.ts');
 assert.doesNotMatch(mockApi, /timer\(120\)/, 'O catálogo local não deve introduzir latência artificial.');
+assert.match(globalStyles, /\.locale-popover \{ position: fixed;[^}]*width: min\(14\.5rem,/s, 'O seletor móvel de idioma e moeda deve permanecer compacto.');
+assert.match(globalStyles, /\.locale-popover-header strong \{ display: none; \}/, 'O seletor móvel não deve repetir o subtítulo no cabeçalho compacto.');
 const professionalsSource = await text('frontend/src/app/features/public/pages/professionals/professionals.component.ts');
 assert.match(professionalsSource, /readonly pageSize = 20;/, 'A vitrine deve exibir pelo menos vinte profissionais por página.');
 const mockDirectoryData = await text('frontend/src/app/core/testing/mock-data.ts');
