@@ -24,7 +24,7 @@ export class MockApiService {
     { id: 'notification-2', type: 'welcome', title: 'Bem-vindo à ChezVoust', message: 'Seu perfil está pronto para reservar serviços.', data: null, readAt: '2026-08-18T09:00:00-03:00', createdAt: '2026-08-18T08:45:00-03:00' }
   ];
   private openRequestsState: Row[] = [{ id: 'request-1', scheduledStart: '2026-08-21T09:30:00-03:00', durationMinutes: 240, quantity: 1, areaSqm: 82, suggestedSubtotalCents: 14400, serviceName: 'Limpeza residencial', city: 'São Paulo', state: 'SP', createdAt: '2026-08-19T10:00:00-03:00', currency: 'BRL' }];
-  private conversationsState: Conversation[] = [{ id: 'conversation-1', bookingId: 'bk-1001', bookingStatus: 'confirmed', serviceName: 'Limpeza residencial', contactName: 'Ana Clara Souza', contactId: 'ana-clara', contactAvatarUrl: '/images/garconete-cadastro-warm-640.jpg', updatedAt: '2026-08-19T10:42:00-03:00', lastMessage: 'Perfect! I will arrive a few minutes early.', unreadCount: 1 }];
+  private conversationsState: Conversation[] = [{ id: 'conversation-1', bookingId: 'bk-1001', bookingStatus: 'confirmed', serviceName: 'Limpeza residencial', contactName: 'Ana Clara Souza', contactId: 'ana-clara', contactAvatarUrl: '/images/garconete-cadastro-v1-640.webp', updatedAt: '2026-08-19T10:42:00-03:00', lastMessage: 'Perfect! I will arrive a few minutes early.', unreadCount: 1 }];
   private chatState: Record<string, ChatMessage[]> = { 'conversation-1': [{ id: 'chat-1', sequence: 1, senderId: 'provider-1', senderName: 'Ana Clara Souza', body: 'Perfect! I will arrive a few minutes early.', messageType: 'text', createdAt: '2026-08-19T10:42:00-03:00' }] };
   private commentsState: Record<string, ProfessionalComment[]> = {
     'ana-clara': [
@@ -99,7 +99,7 @@ export class MockApiService {
       return this.notFound('CEP não encontrado. Confira os números ou preencha o endereço manualmente.');
     }
     if (method === 'PATCH' && path === 'me') { const value = body as Partial<User>; this.activeUser = { ...this.currentUser(), ...value }; return this.ok(this.activeUser); }
-    if (method === 'POST' && path === 'me/avatar') { this.activeUser = { ...this.currentUser(), avatarUrl: '/images/garconete-cadastro-warm-640.jpg' }; return this.ok(this.activeUser); }
+    if (method === 'POST' && path === 'me/avatar') { this.activeUser = { ...this.currentUser(), avatarUrl: '/images/garconete-cadastro-v1-640.webp' }; return this.ok(this.activeUser); }
     if (method === 'GET' && path === 'me/addresses') return this.ok(this.addresses);
     if (method === 'POST' && path === 'me/addresses') { const address = { ...(body as Row), id: `addr-${Date.now()}` }; this.addresses.push(address); return this.ok(address); }
     const address = path.match(/^me\/addresses\/([^/]+)$/); if (method === 'PUT' && address) { const value = { ...(body as Row), id: address[1] }; this.addresses = this.addresses.map((item) => item['id'] === address[1] ? value : item); return this.ok(value); } if (method === 'DELETE' && address) { this.addresses = this.addresses.filter((item) => item['id'] !== address[1]); return this.ok(undefined); }

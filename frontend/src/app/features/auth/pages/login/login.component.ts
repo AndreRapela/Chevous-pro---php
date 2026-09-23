@@ -16,8 +16,8 @@ import { environment } from '../../../../../environments/environment';
       eyebrow="Bem-vindo de volta"
       heroTitle="Sua casa e seus serviços em um só lugar."
       heroDescription="Acompanhe reservas, converse com profissionais e organize seus serviços com tranquilidade."
-      imageSrc="/images/eletricista-login-warm-640.jpg"
-      imageSrcset="/images/eletricista-login-warm-640.jpg 640w, /images/eletricista-login-warm-1280.jpg 1280w"
+      imageSrc="/images/eletricista-login-v1-640.webp"
+      imageSrcset="/images/eletricista-login-v1-640.webp 640w, /images/eletricista-login-v1-1280.webp 1280w"
       imageAlt="Eletricista residencial sorrindo com alicate e multímetro"
     >
       <a class="back-link" routerLink="/"><span aria-hidden="true">←</span> Voltar ao início</a>

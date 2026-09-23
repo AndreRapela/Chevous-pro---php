@@ -65,6 +65,8 @@ const serviceCard = homeHero.match(/<nav class="desktop-service-strip"[^>]*>([\s
 assert.equal((serviceCard.match(/<a /g) ?? []).length, 5, 'O card deve conter apenas os cinco atalhos de serviço.');
 assert.match(homeHero, /desktop-booking-preview/, 'A prévia compacta deve ser renderizada no banner.');
 assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança deve ser renderizado no banner.');
+assert.match(homeHero, /profissional-limpeza-hero-887\.webp/, 'O banner deve usar a imagem original de fundo verde.');
+assert.doesNotMatch(homeHero, /hero-warm/, 'O banner não deve reintroduzir a variante marrom da imagem.');
 assert.match(homeHero, /desktop-hero-lower[\s\S]*desktop-promo-card[\s\S]*desktop-service-strip[\s\S]*desktop-booking-preview/, 'Os cards devem manter a ordem visual da referência.');
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
@@ -107,8 +109,10 @@ assert.match(staticHostingRules, /Header always set Cache-Control "public, max-a
 const brandComponent = await text('frontend/src/app/shared/components/brand/brand.component.ts');
 const brandLogo = await text('frontend/public/pro-logo.svg');
 assert.doesNotMatch(brandComponent, /brand-name/, 'A marca não deve recompor o nome fora do SVG oficial.');
-assert.match(brandComponent, /pro-logo\.svg\?v=20260922/, 'A marca nova deve invalidar a versão anterior no navegador.');
+assert.match(brandComponent, /pro-logo\.svg\?v=20260923-green/, 'A marca verde deve invalidar a versão anterior no navegador.');
 assert.match(brandLogo, /viewBox="0 0 220 138"/, 'A marca deve preservar a proporção vertical da referência enviada.');
+assert.match(brandLogo, /fill="#006b4d"/, 'A marca deve usar o verde original da identidade visual.');
+assert.match(documentSource, /name="theme-color" content="#006b4d"/, 'A cor do navegador deve acompanhar a identidade verde.');
 assert.match(brandLogo, />Chez vous pro<\/text>/, 'A assinatura deve aparecer centralizada abaixo de Pro.');
 assert.equal((brandLogo.match(/<use href="#slit"/g) ?? []).length, 5, 'O obturador deve conter seis lâminas, incluindo a forma-base.');
 const seoService = await text('frontend/src/app/core/seo/seo.service.ts');
