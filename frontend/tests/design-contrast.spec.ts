@@ -101,20 +101,20 @@ describe('warm accents on a single neutral-blue theme', () => {
     const template = readFileSync(new URL('../src/app/layout/public-shell.component.ts', import.meta.url), 'utf8');
     assert.match(template, /class="btn btn-primary header-create-account" routerLink="\/cadastro"/);
   });
-  it('places two raised hero cards around a slimmer strip with four balanced service links', () => {
+  it('places two raised hero cards around a slimmer strip with five balanced service links', () => {
     assert.match(declaration('.desktop-hero-lower', 'grid-template-columns'), /minmax\(0, 1fr\)/);
     assert.equal(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
     assert.equal(declaration('.desktop-hero-lower', 'min-height'), '5.5rem');
     assert.equal(declaration('.desktop-hero-lower', 'padding'), '.25rem .4rem');
-    assert.equal(declaration('.desktop-hero-lower', '--promo-offset'), 'clamp(2.75rem, 4vw, 3.5rem)');
-    assert.equal(declaration('.desktop-hero-lower', '--services-offset'), 'clamp(8.25rem, 12.5vw, 9.5rem)');
-    assert.equal(declaration('.desktop-service-links', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
+    assert.equal(declaration('.desktop-hero-lower', '--promo-offset'), 'clamp(1.5rem, 2.3vw, 2rem)');
+    assert.equal(declaration('.desktop-hero-lower', '--services-offset'), 'clamp(6.25rem, 9vw, 7rem)');
+    assert.equal(declaration('.desktop-service-links', 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))');
     assert.equal(declaration('.desktop-service-strip', 'border'), '0');
     assert.equal(declaration('.desktop-service-strip a', 'min-height'), '2.5rem');
     assert.equal(declaration('.desktop-service-strip a', 'font-weight'), '750');
     assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
     assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
-    assert.equal(declaration('.desktop-promo-card', 'bottom'), '-2.25rem');
+    assert.equal(declaration('.desktop-promo-card', 'bottom'), '-1.5rem');
     assert.equal(declaration('.desktop-promo-card', 'left'), 'var(--promo-offset)');
     assert.equal(declaration('.desktop-service-strip', 'padding'), '0 .1rem 0 var(--services-offset)');
     assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-2.25rem');
@@ -125,6 +125,8 @@ describe('warm accents on a single neutral-blue theme', () => {
     assert.equal(declaration('.desktop-hero-tag', 'background'), 'rgba(255,255,255,.84)');
     assert.equal(declaration('.desktop-service-strip a:hover', 'background'), 'var(--brand-100)');
     assert.equal(declaration('.desktop-service-strip a:focus-visible', 'box-shadow'), 'inset 0 0 0 1px var(--brand-200)');
+    const heroTemplate = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.ts', import.meta.url), 'utf8');
+    assert.match(heroTemplate, /q: 'jardim'[\s\S]*category="gardening"[\s\S]*Jardim/);
   });
   it('gives the desktop professional feed its own accessible scroll area', () => {
     assert.equal(declaration('cvp-provider-detail .detail-main', 'overflow-y'), 'auto');
