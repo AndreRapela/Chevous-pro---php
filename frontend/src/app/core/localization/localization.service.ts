@@ -977,6 +977,8 @@ const TRANSLATIONS: TranslationEntry[] = [
   { pt: 'Duração estimada', en: 'Estimated duration', fr: 'Durée estimée' },
   { pt: 'Quantidade de profissionais/unidades', en: 'Number of professionals/units', fr: 'Nombre de professionnels/unités' },
   { pt: 'Quantidade', en: 'Quantity', fr: 'Quantité' },
+  { pt: 'Unidades do serviço', en: 'Service units', fr: 'Unités du service' },
+  { pt: 'Escolha quantas unidades deste serviço deseja agendar.', en: 'Choose how many units of this service you would like to book.', fr: 'Choisissez le nombre d’unités de ce service à réserver.' },
   { pt: 'Preço por serviço', en: 'Price per service', fr: 'Prix par service' },
   { pt: 'Adicionais', en: 'Add-ons', fr: 'Options' },
   { pt: 'Opcional', en: 'Optional', fr: 'Facultatif' },

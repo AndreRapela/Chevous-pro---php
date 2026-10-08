@@ -16,9 +16,19 @@ import { homeSizeRange } from '../../utils/booking-home-size.util';
       }
       @if (service.pricingType === 'hourly') {
         <label for="booking-duration">Duração estimada<select id="booking-duration" formControlName="durationMinutes" (change)="quoteRequested.emit()"><option [value]="60">1 hora</option><option [value]="120">2 horas</option><option [value]="180">3 horas</option><option [value]="240">4 horas</option><option [value]="360">6 horas</option><option [value]="480">8 horas</option></select></label>
-        <label for="booking-quantity">Quantidade de profissionais/unidades<input id="booking-quantity" type="number" [min]="service.minimumQuantity || 1" [max]="service.maximumQuantity || 100" formControlName="quantity" (change)="quoteRequested.emit()"></label>
-      } @else if (!areaPricing && (service.maximumQuantity || 1) > 1) {
-        <label for="booking-quantity">Quantidade<input id="booking-quantity" type="number" [min]="service.minimumQuantity || 1" [max]="service.maximumQuantity || 100" formControlName="quantity" (change)="quoteRequested.emit()"></label>
+      }
+      @if (!areaPricing && (service.pricingType === 'hourly' || (service.maximumQuantity || 1) > 1)) {
+        <div class="booking-quantity-card" role="group" aria-labelledby="booking-quantity-label" aria-describedby="booking-quantity-hint">
+          <div class="booking-quantity-copy">
+            <strong id="booking-quantity-label">Unidades do serviço</strong>
+            <p id="booking-quantity-hint">Escolha quantas unidades deste serviço deseja agendar.</p>
+          </div>
+          <div class="booking-quantity-counter">
+            <button class="quantity-decrease" type="button" aria-label="Diminuir quantidade" aria-controls="booking-quantity" [disabled]="form.controls.quantity.disabled || form.controls.quantity.value <= quantityMinimum" (click)="updateQuantity(-1)"><span aria-hidden="true">−</span></button>
+            <output id="booking-quantity" aria-live="polite" aria-atomic="true"><strong>{{ form.controls.quantity.value }}</strong><span>{{ form.controls.quantity.value === 1 ? 'unidade' : 'unidades' }}</span></output>
+            <button class="quantity-increase" type="button" aria-label="Aumentar quantidade" aria-controls="booking-quantity" [disabled]="form.controls.quantity.disabled || form.controls.quantity.value >= quantityMaximum" (click)="updateQuantity(1)"><span aria-hidden="true">+</span></button>
+          </div>
+        </div>
       } @else if (!areaPricing) {
         <div class="privacy-note"><span aria-hidden="true">✓</span><div><strong>Preço por serviço</strong><p>O valor cobre uma unidade deste serviço. Você revisará o cálculo antes de confirmar.</p></div></div>
       }
@@ -39,6 +49,20 @@ export class BookingDetailsStepComponent {
 
   get sizeRange() { return homeSizeRange(this.service); }
   get areaPricing(): boolean { return this.service.pricingType === 'area' || this.service.unit === 'm²'; }
+  get quantityMinimum(): number { return Math.max(1, this.service.minimumQuantity || 1); }
+  get quantityMaximum(): number { return Math.max(this.quantityMinimum, this.service.maximumQuantity || 10000); }
+
+  updateQuantity(change: -1 | 1): void {
+    const control = this.form.controls.quantity;
+    if (control.disabled) return;
+    const current = Number.isSafeInteger(control.value) ? control.value : this.quantityMinimum;
+    const next = Math.max(this.quantityMinimum, Math.min(this.quantityMaximum, current + change));
+    if (next === control.value) return;
+    control.setValue(next);
+    control.markAsDirty();
+    control.markAsTouched();
+    this.quoteRequested.emit();
+  }
 
   selected(id: string): boolean { return this.form.controls.addonIds.value.includes(id); }
 
