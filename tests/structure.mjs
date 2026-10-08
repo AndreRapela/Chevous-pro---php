@@ -106,6 +106,13 @@ assert.ok((providerBlock.match(/^    id: /gm) ?? []).length >= 20, 'A base local
 assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat móvel deve respeitar o viewport dinâmico quando o teclado aparece.');
 const publicServiceCard = await text('frontend/src/app/shared/components/service-card/service-card.component.ts');
 const publicServiceDetail = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.ts');
+const serviceDetailStyles = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.scss');
+assert.match(publicServiceDetail, /class="service-detail-copy"/, 'O detalhe deve separar a área de texto verde da foto circular.');
+assert.equal((publicServiceDetail.match(/class="service-hero-orb service-hero-orb-/g) ?? []).length, 4, 'A foto do detalhe deve receber quatro bolinhas, como na Home.');
+assert.match(publicServiceDetail, /@if \(!item\.isCustom\)\s*\{\s*<span class="service-hero-orb/, 'Serviços personalizados devem preservar o visual de iniciais sem decoração de foto.');
+assert.match(serviceDetailStyles, /\.service-detail-copy\s*\{[^}]*background:\s*var\(--brand-900\)/s, 'O texto do detalhe deve ter o fundo verde da Home.');
+assert.match(serviceDetailStyles, /animation:\s*home-orb-float/, 'As bolinhas devem reutilizar a animação da Home.');
+assert.match(serviceDetailStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.service-hero-orb\s*\{[^}]*animation:\s*none/s, 'A decoração deve respeitar movimento reduzido.');
 assert.doesNotMatch(publicServiceCard, /priceFromCents|A partir de/, 'Cards de serviço não devem mostrar um preço genérico.');
 assert.doesNotMatch(publicServiceDetail, /priceFromCents|A partir de/, 'O detalhe do serviço deve deixar o valor para cada profissional.');
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');

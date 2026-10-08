@@ -17,7 +17,28 @@ import { serviceInitial } from '../../../../shared/utils/service-name.util';
     @if (loading()) { <div class="container section"><cvp-state-panel kind="loading" /></div> }
     @else if (error()) { <div class="container section"><cvp-state-panel kind="error" title="Serviço indisponível" [message]="error()" (retry)="load()" /></div> }
     @else if (service(); as item) {
-      <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Ver profissionais</a><span><strong>Valor definido por cada profissional</strong></span></div></div><div class="service-visual" [class.custom-service-visual]="item.isCustom" aria-hidden="true">@if (item.isCustom) { <span>{{ serviceInitial(item.name) }}</span> } @else { <img [src]="heroImage(item)" alt="" /> }</div></div></section>
+      <section class="service-detail-hero">
+        <div class="container service-detail-grid">
+          <div class="service-detail-copy">
+            <span class="kicker">Agendamento simples e seguro</span>
+            <h1>{{ item.name }}</h1>
+            <p>{{ item.description }}</p>
+            <div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Ver profissionais</a><span><strong>Valor definido por cada profissional</strong></span></div>
+          </div>
+          <div class="service-detail-art" aria-hidden="true">
+            <div class="service-visual" [class.custom-service-visual]="item.isCustom">
+              @if (item.isCustom) { <span>{{ serviceInitial(item.name) }}</span> }
+              @else { <img [src]="heroImage(item)" alt="" /> }
+            </div>
+            @if (!item.isCustom) {
+              <span class="service-hero-orb service-hero-orb-mint"></span>
+              <span class="service-hero-orb service-hero-orb-coral"></span>
+              <span class="service-hero-orb service-hero-orb-amber"></span>
+              <span class="service-hero-orb service-hero-orb-small"></span>
+            }
+          </div>
+        </div>
+      </section>
       <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>{{ localization.translate('Profissionais para') }} {{ localization.translate(item.name).toLocaleLowerCase(localization.locale()) }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
     }
   `,

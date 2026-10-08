@@ -1,7 +1,33 @@
 :host { display: block; }
 
+.service-detail-copy {
+  min-width: 0;
+  padding: clamp(1.35rem, 3vw, 2.5rem);
+  border-radius: 1.5rem;
+  color: #fff;
+  background: var(--brand-900);
+}
+.service-detail-copy h1 { margin-top: 0; color: #fff; }
+.service-detail-copy p { color: var(--brand-100); }
+.service-detail-copy .kicker { margin-bottom: 1rem; border-color: rgba(255, 255, 255, .25); color: #fff; background: rgba(255, 255, 255, .1); }
+.service-detail-copy .hero-actions { gap: .85rem; }
+.service-detail-copy .hero-actions > span { color: var(--brand-100); font-size: .85rem; }
+.service-detail-copy .btn-primary { border-color: #fff; color: var(--brand-900); background: #fff; box-shadow: none; }
+.service-detail-copy .btn-primary:hover { border-color: var(--brand-100); background: var(--brand-100); }
+.service-detail-copy .btn-primary:focus-visible { outline-color: #fff; }
+
+.service-detail-art {
+  --portrait-size: clamp(14rem, 32vw, 20rem);
+  position: relative;
+  width: min(100%, calc(var(--portrait-size) + 2.5rem));
+  min-width: 0;
+  justify-self: center;
+  padding: 1.25rem;
+  isolation: isolate;
+}
+
 .service-visual:not(.custom-service-visual) {
-  width: clamp(14rem, 32vw, 20rem);
+  width: 100%;
   max-width: 100%;
   min-height: 0;
   aspect-ratio: 1;
@@ -20,6 +46,33 @@
   object-position: 50% 8%;
 }
 
+.service-hero-orb {
+  --orb-drift-x: .2rem;
+  --orb-drift-y: .28rem;
+  --orb-duration: 15s;
+  --orb-delay: -5s;
+  position: absolute;
+  z-index: 1;
+  display: block;
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: home-orb-float var(--orb-duration) ease-in-out var(--orb-delay) infinite;
+}
+.service-hero-orb-mint { top: 7%; left: 4%; width: 16%; background: var(--brand-100); }
+.service-hero-orb-coral { --orb-duration: 16s; --orb-drift-x: -.25rem; --orb-drift-y: .32rem; top: 5%; right: 1%; width: 23%; background: var(--coral-500); }
+.service-hero-orb-amber { --orb-duration: 17s; --orb-drift-x: .18rem; --orb-drift-y: -.28rem; top: 56%; left: 1%; width: 20%; background: var(--amber-500); }
+.service-hero-orb-small { --orb-duration: 13s; --orb-drift-x: -.16rem; --orb-drift-y: -.22rem; top: 60%; right: 5%; width: 9%; background: var(--coral-500); }
+
 @media (min-width: 48rem) {
   .service-detail-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+}
+
+@media (max-width: 47.99rem) {
+  .service-detail-copy { border-radius: 1.1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .service-hero-orb { animation: none; translate: 0 0; }
 }
