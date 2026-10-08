@@ -87,8 +87,9 @@ assert.match(globalStyles, /--public-bottom-nav-height:\s*calc\(4\.4rem \+ env\(
 assert.match(globalStyles, /\.mobile-sticky-action\s*\{[^}]*var\(--public-bottom-nav-height\)/s, 'O CTA fixo do perfil deve ficar acima da navegação inferior.');
 assert.match(globalStyles, /body:has\(cvp-provider-detail\) \.site-footer\s*\{[^}]*--mobile-sticky-action-height/s, 'O rodapé do perfil deve reservar espaço para CTA e navegação fixos.');
 const publicShell = await text('frontend/src/app/layout/public-shell.component.ts');
-assert.match(publicShell, /<main[^>]*>[\s\S]*<cvp-home-hero[\s\S]*<router-outlet/s, 'Todas as páginas públicas devem começar com o mesmo outdoor da página inicial.');
-assert.doesNotMatch(homePage, /<cvp-home-hero/, 'O outdoor compartilhado não deve ser duplicado dentro da página inicial.');
+assert.doesNotMatch(publicShell, /<cvp-home-hero/, 'O banner da Home não deve reaparecer nos detalhes, perfis ou agendamento.');
+assert.match(homePage, /<cvp-home-hero[^>]*>[\s\S]*<section class="section home-section home-deals"/s, 'O banner principal deve aparecer só na Home, antes da oferta da loja.');
+assert.equal((homePage.match(/<cvp-home-hero\b/g) ?? []).length, 1, 'A Home deve renderizar um único banner principal.');
 assert.equal((publicShell.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length, 3, 'Os grupos móveis do rodapé devem iniciar recolhidos.');
 assert.equal((publicShell.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3, 'O desktop deve manter os três grupos de links visíveis.');
 assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-group" open>/, 'O rodapé móvel não deve ocupar a tela com todos os grupos abertos.');

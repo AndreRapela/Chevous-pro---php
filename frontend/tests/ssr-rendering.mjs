@@ -10,7 +10,8 @@ const api = createServer((request, response) => {
   const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
   assert.equal(request.method, 'GET', 'SSR fixtures must never receive a write.');
   const categories = [{ id: 'category-test', slug: 'cleaning', name: 'Cleaning', description: 'Home cleaning.', serviceCount: 0 }];
-  const data = path === '/api/v1/categories' ? categories : [];
+  const service = { id: 'clean-home', categoryId: 'cleaning', slug: 'limpeza-residencial', name: 'Limpeza residencial', description: 'Limpeza completa adaptada ao tamanho da sua casa.', unit: 'serviço', pricingType: 'fixed', priceFromCents: 12000, durationMinutes: 240 };
+  const data = path === '/api/v1/categories' ? categories : path === '/api/v1/services/limpeza-residencial' ? service : [];
   response.writeHead(200, { 'content-type': 'application/json' });
   response.end(JSON.stringify({ data, meta: { page: 1, perPage: 3, total: 0, lastPage: 1 } }));
 });
@@ -56,6 +57,7 @@ try {
   assert.equal(home.status, 200, 'Home SSR deve responder 200.');
   assertHomeServiceCard(homeHtml);
   assertHomeProviderCta(homeHtml);
+  assert.equal((homeHtml.match(/<cvp-home-hero\b/g) ?? []).length, 1, 'Only the Home route must render its main banner, exactly once.');
   for (const fragment of [
     'ng-server-context="ssr"',
     'id="chezvoust-structured-data"',
@@ -82,6 +84,20 @@ try {
   assert.equal(catalog.status, 200, 'Catálogo SSR deve responder 200.');
   assert.ok(catalogHtml.includes('<title>Home services | Pro</title>'));
   assert.ok(catalogHtml.includes('<link rel="canonical" href="https://chezvoust.test/servicos">'));
+  assert.ok(!catalogHtml.includes('<cvp-home-hero'), 'The catalog must not repeat the Home banner.');
+
+  const detail = await request('/servicos/limpeza-residencial');
+  const detailHtml = await detail.text();
+  assert.equal(detail.status, 200);
+  assert.ok(!detailHtml.includes('<cvp-home-hero'), 'Service details must not repeat the Home banner.');
+  assert.ok(detailHtml.includes('Home cleaning'), 'The service fixture must render its actual page, not a loading or error state.');
+  assert.match(detailHtml, /<img[^>]*src="\/images\/profissional-limpeza-hero-887\.webp"/, 'Service details must retain the professional portrait.');
+
+  for (const path of ['/profissionais', '/produtos', '/ajuda']) {
+    const page = await request(path);
+    assert.equal(page.status, 200);
+    assert.ok(!(await page.text()).includes('<cvp-home-hero'), `${path} must not repeat the Home banner.`);
+  }
 
   const category = await request('/servicos/categoria/cleaning');
   const categoryHtml = await category.text();
@@ -111,7 +127,7 @@ try {
   });
   assert.equal(poisonedHost, 421, 'SSR deve rejeitar hosts que não pertencem à aplicação.');
 
-  console.log('PASS SSR: English rendering, dynamic category/search metadata, current brand, noindex and 404.');
+  console.log('PASS SSR: Home-only banner, service portrait, English rendering, dynamic category/search metadata, current brand, noindex and 404.');
 } finally {
   server.kill();
   await once(server, 'exit');
