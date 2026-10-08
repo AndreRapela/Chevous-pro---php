@@ -92,6 +92,8 @@ try {
   assert.ok(!detailHtml.includes('<cvp-home-hero'), 'Service details must not repeat the Home banner.');
   assert.ok(detailHtml.includes('Home cleaning'), 'The service fixture must render its actual page, not a loading or error state.');
   assert.match(detailHtml, /<img[^>]*src="\/images\/profissional-limpeza-hero-887\.webp"/, 'Service details must retain the professional portrait.');
+  assert.ok(detailHtml.includes('service-detail-copy'), 'Service details must include their own green copy panel.');
+  assert.equal((detailHtml.match(/class="service-hero-orb service-hero-orb-/g) ?? []).length, 4, 'Service details must render the four Home-style decorations without repeating the Home banner.');
 
   for (const path of ['/profissionais', '/produtos', '/ajuda']) {
     const page = await request(path);
