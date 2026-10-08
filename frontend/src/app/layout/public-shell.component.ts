@@ -1,13 +1,14 @@
 import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
 import { BrandComponent } from '../shared/components';
 import { LocaleControlsComponent } from '../shared/localization/locale-controls.component';
+import { HomeHeroComponent } from '../features/public/components/home-hero/home-hero.component';
 
 @Component({
   selector: 'cvp-public-shell',
   standalone: true,
-  imports: [BrandComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [BrandComponent, HomeHeroComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
     <header class="site-header">
@@ -49,7 +50,10 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
         </nav>
       }
     </header>
-    <main id="conteudo-principal" tabindex="-1"><router-outlet /></main>
+    <main id="conteudo-principal" tabindex="-1">
+      <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
+      <router-outlet />
+    </main>
     <footer class="site-footer">
       <div class="container footer-grid">
         <div><cvp-brand /><p>Cuidado profissional para sua casa, do seu jeito.</p></div>
@@ -91,9 +95,16 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
 })
 export class PublicShellComponent {
   readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
   readonly menuOpen = signal(false);
+  heroQuery = '';
 
   closeMenu(): void { this.menuOpen.set(false); }
+
+  searchServices(): void {
+    const query = this.heroQuery.trim();
+    void this.router.navigate(['/servicos'], { queryParams: query ? { q: query } : {} });
+  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void { this.closeMenu(); }

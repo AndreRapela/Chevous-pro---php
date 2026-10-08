@@ -1,0 +1,164 @@
+:host { display: block; }
+
+@media (min-width: 64rem) {
+  .desktop-hero-lower {
+    --services-offset: 2.5rem;
+    min-height: 8rem;
+    padding: .625rem .4rem;
+  }
+
+  .desktop-service-strip { gap: .5rem; }
+  .desktop-service-strip > .eyebrow { font-size: .875rem; }
+  .desktop-service-links { gap: .5rem; }
+
+  .desktop-service-strip a {
+    min-height: 5rem;
+    flex-direction: column;
+    justify-content: center;
+    gap: .35rem;
+    padding: .4rem .25rem;
+    font-size: 1rem;
+    line-height: 1.35;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .desktop-service-strip b {
+    --service-icon-size: 1.9rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: .85rem;
+  }
+}
+
+@media (min-width: 48rem) and (max-width: 63.999rem) {
+  .hero-section { background: #f3fbf7; }
+  .hero-banner {
+    --tablet-portrait: clamp(15rem, 30vw, 18rem);
+    --tablet-portrait-center: calc(75% + .3125rem);
+    min-height: 18.5rem;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 1.25rem;
+    padding-block: .5rem;
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .hero-banner-photo {
+    position: relative;
+    z-index: 1;
+    grid-column: 2;
+    grid-row: 1;
+    justify-self: center;
+    width: var(--tablet-portrait);
+    height: auto;
+    min-height: 0;
+    aspect-ratio: 1;
+    overflow: hidden;
+    border: 0;
+    border-radius: 50%;
+    background: var(--brand-600);
+  }
+
+  .hero-banner-image {
+    position: absolute;
+    inset: -.2rem 0 auto;
+    width: 100%;
+    height: 141%;
+    object-fit: cover;
+    object-position: 50% 8%;
+  }
+
+  .hero-banner-copy {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    max-width: 26rem;
+    min-height: 0;
+    gap: .7rem;
+    padding: 0;
+    color: var(--ink-900);
+    background: transparent;
+  }
+
+  .hero-banner-heading {
+    width: 100%;
+    display: grid;
+    justify-items: start;
+    gap: .55rem;
+    padding: 1rem 1.15rem;
+    border-radius: 1.1rem;
+    background: var(--brand-900);
+  }
+
+  .hero-banner h1 { margin: 0; color: #fff; font-size: clamp(1.5rem, 3.1vw, 1.85rem); line-height: 1.12; }
+  .hero-banner p { max-width: 25rem; margin: 0; color: var(--ink-700); }
+  .hero-banner-cta { margin-top: 0; padding-inline: 1rem; border-color: var(--brand-700); border-radius: 999px; color: #fff; background: var(--brand-700); }
+  .hero-banner-cta:hover { background: var(--brand-800); }
+  .hero-banner-cta:focus-visible { outline-color: var(--control-focus); }
+
+  .mobile-hero-orb {
+    --orb-duration: 15s;
+    --orb-delay: -5s;
+    position: absolute;
+    z-index: 2;
+    display: block;
+    border: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: home-orb-float var(--orb-duration) ease-in-out var(--orb-delay) infinite;
+    will-change: translate;
+  }
+
+  .mobile-hero-orb-mint {
+    --orb-drift-x: .2rem;
+    --orb-drift-y: .28rem;
+    top: .1rem;
+    left: calc(var(--tablet-portrait-center) - var(--tablet-portrait) / 2 - 1.2rem);
+    width: 3.25rem;
+    height: 3.25rem;
+    background: var(--brand-100);
+  }
+
+  .mobile-hero-orb-coral {
+    --orb-duration: 16s;
+    --orb-drift-x: -.25rem;
+    --orb-drift-y: .32rem;
+    top: .25rem;
+    left: calc(var(--tablet-portrait-center) + var(--tablet-portrait) / 2 - 1.75rem);
+    width: 4.25rem;
+    height: 4.25rem;
+    background: var(--coral-500);
+  }
+
+  .mobile-hero-orb-amber {
+    --orb-duration: 17s;
+    --orb-drift-x: .18rem;
+    --orb-drift-y: -.28rem;
+    top: 50%;
+    left: calc(var(--tablet-portrait-center) - var(--tablet-portrait) / 2 - 1.3rem);
+    width: 4.15rem;
+    height: 4.15rem;
+    background: var(--amber-500);
+  }
+
+  .mobile-hero-orb-small {
+    --orb-duration: 13s;
+    --orb-drift-x: -.16rem;
+    --orb-drift-y: -.22rem;
+    top: 60%;
+    left: calc(var(--tablet-portrait-center) + var(--tablet-portrait) / 2 - .85rem);
+    width: 1.85rem;
+    height: 1.85rem;
+    background: var(--coral-500);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-hero-orb { animation: none; translate: 0 0; }
+  }
+}

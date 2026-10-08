@@ -155,10 +155,10 @@ describe('original green brand palette', () => {
   });
   it('harmonizes portrait decorations with the restored green surfaces', () => {
     assert.equal(declaration('.desktop-hero-visual::before', 'background'), 'linear-gradient(145deg, var(--brand-600), var(--brand-700))');
-    assert.equal(declaration('.desktop-hero-visual::after', 'background'), 'var(--brand-400)');
-    assert.equal(declaration('.desktop-hero-orb', 'border-color'), 'var(--brand-200)');
-    assert.equal(declaration('.desktop-hero-orb.orb-mint', 'background'), 'var(--brand-700)');
-    assert.equal(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--brand-200)');
+    assert.equal(declaration('.desktop-hero-visual::after', 'background'), 'var(--amber-500)');
+    assert.equal(declaration('.desktop-hero-orb', 'border'), '0');
+    assert.equal(declaration('.desktop-hero-orb.orb-mint', 'background'), 'var(--brand-100)');
+    assert.equal(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--coral-500)');
     assert.equal(variables.get('--page-background'), '#edf6f1');
   });
   it('uses reading-size professional benefits and a larger invitation button without a fixed card height', () => {
@@ -187,7 +187,6 @@ describe('original green brand palette', () => {
     assert.ok(source.includes('.page-hero.catalog-hero { padding-block: 1.9rem 2.1rem; }'));
   });
   it('shows home categories as compact illustrated tiles with labels only', () => {
-    assert.equal(declaration('.home-categories .category-grid', 'grid-template-columns'), 'repeat(8, minmax(0, 1fr))');
     assert.equal(declaration('.home-categories .category-grid', 'background'), 'transparent');
     assert.equal(declaration('.home-categories .category-grid', 'border'), '0');
     assert.equal(declaration('.home-categories .category-grid', 'box-shadow'), 'none');
@@ -211,40 +210,52 @@ describe('original green brand palette', () => {
   it('adds a responsive product campaign with admin-controlled artwork', () => {
     assert.equal(declaration('.home-discount-banner', 'display'), 'grid');
     assert.equal(declaration('.home-discount-banner', 'min-height'), '11.75rem');
-    assert.ok(source.includes('min-height: 13.5rem;'));
+    assert.ok(source.includes('min-height: 12rem;'));
     assert.equal(declaration('.home-discount-banner', 'overflow'), 'hidden');
     assert.equal(declaration('.home-discount-copy h3', 'color'), 'var(--promo-text, #fff)');
     assert.equal(declaration('.home-discount-cta', 'background'), '#fff');
     assert.equal(declaration('.home-discount-art img', 'position'), 'absolute');
     const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
     assert.match(template, /<section class="section home-section home-deals"/);
+    assert.match(template, /<a class="home-discount-banner"[^>]*\[attr\.href\]="promotion\(\)\.ctaUrl"/);
+    assert.match(template, /<span class="btn home-discount-cta">/);
+    assert.ok(!template.includes('<a class="btn home-discount-cta"'));
     assert.match(template, /\[src\]="promotion\(\)\.imageUrl"/);
     assert.match(template, /<h3>\{\{ promotion\(\)\.title \}\}<\/h3>/);
     assert.match(template, /ctaUrl/);
   });
   it('matches the compact mobile reference without changing the desktop hero', () => {
-    assert.equal(declaration('cvp-home .hero-banner', 'border-radius'), '0');
-    assert.equal(declaration('cvp-home .hero-banner-copy', 'display'), 'none');
-    assert.equal(declaration('cvp-home .home-discount-banner', 'min-height'), '7.15rem');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'grid-template-columns'), 'repeat(4, minmax(0, 1fr))');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'grid-auto-rows'), '4.55rem');
+    assert.equal(declaration('cvp-home-hero .hero-banner', 'border-radius'), '0');
+    assert.equal(declaration('cvp-home-hero .hero-banner-copy', 'display'), 'none');
+    assert.equal(declaration('cvp-home .home-discount-banner', 'min-height'), '8.4rem');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'display'), 'flex');
     assert.equal(declaration('body cvp-home .home-categories .category-grid', 'align-items'), 'stretch');
-    assert.equal(declaration('body cvp-home .home-categories .category-card', 'height'), '100%');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'overflow-x'), 'auto');
+    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'scroll-snap-type'), 'x mandatory');
+    assert.equal(declaration('body cvp-home .home-categories .category-card', 'height'), '4.55rem');
+    assert.equal(declaration('body cvp-home .home-categories .category-card', 'flex'), '0 0 calc((100% - 1.5rem) / 4)');
     assert.equal(declaration('body cvp-home .home-categories .category-card', 'flex-direction'), 'column');
     assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n) .category-symbol', 'flex-basis'), '2.2rem');
-    assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n + 5)', 'display'), 'none');
-    assert.match(source, /cvp-home \.mobile-hero-orb\s*\{[^}]*animation:\s*mobile-orb-float[^;]*infinite/s);
+    assert.equal(declaration('cvp-home .home-categories .mobile-scroll-hint', 'display'), 'flex');
+    assert.ok(!source.includes('body cvp-home .home-categories .category-card:nth-child(n + 5) { display: none; }'));
+    assert.match(source, /cvp-home-hero \.mobile-hero-orb\s*\{[^}]*animation:\s*home-orb-float[^;]*infinite/s);
   });
   it('keeps the lower mobile home rails compact', () => {
     assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'flex'), '0 0 11.75rem');
     assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'min-width'), '0');
-    assert.equal(declaration('body cvp-home .home-popular .service-card', 'min-height'), '7.6rem');
-    assert.equal(declaration('body cvp-home .home-popular .service-card p', 'display'), 'none');
-    assert.equal(declaration('body cvp-home .home-popular .service-card .text-link', 'display'), 'none');
-    assert.equal(declaration('body cvp-home .home-providers cvp-provider-card', 'flex'), '0 0 13.75rem');
-    assert.equal(declaration('body cvp-home .home-providers .provider-card', 'min-height'), '8.7rem');
+    assert.equal(declaration('body cvp-home .home-providers cvp-provider-card', 'flex'), '0 0 calc((100% - .55rem) / 2)');
+    assert.equal(declaration('body cvp-home .home-providers .provider-card', 'min-height'), '10rem');
+    assert.equal(declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'), 'column');
+    assert.equal(declaration('body cvp-home .home-providers .provider-name-line', 'justify-items'), 'center');
     assert.equal(declaration('body cvp-home .home-providers .provider-card .chip-row', 'display'), 'none');
     assert.equal(declaration('body cvp-home .home-providers .availability', 'display'), 'none');
+  });
+  it('balances the tablet hero and uses profile-first professional cards', () => {
+    const tabletStyles = source.slice(source.indexOf('@media (min-width: 48rem) and (max-width: 63.999rem)'));
+    const tabletHero = tabletStyles.slice(0, tabletStyles.indexOf('cvp-home .home-providers'));
+    assert.match(tabletHero, /cvp-home-hero \.hero-stack \.hero-mobile-action\s*\{\s*display:\s*none;\s*\}/);
+    assert.equal(declaration('body cvp-home .home-providers .provider-grid', 'grid-template-columns'), 'repeat(3, minmax(0, 1fr))');
+    assert.equal(declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'), 'column');
   });
   it('uses one compact mobile booking action and removes the home steps section', () => {
     assert.equal(declaration('.hero-mobile-action', 'display'), 'flex');
@@ -256,12 +267,13 @@ describe('original green brand palette', () => {
     assert.ok(!hero.includes('id="home-search"'));
     assert.ok(!home.includes('class="section home-section home-steps"'));
   });
-  it('gives catalog cards a clear visual hierarchy and distinct action', () => {
-    assert.equal(declaration('.catalog-results .service-card', 'background'), '#fff');
-    assert.equal(declaration('.catalog-results .service-card::before', 'height'), '.22rem');
-    assert.equal(declaration('.catalog-results .service-card .card-footer', 'border-top-color'), 'var(--ink-200)');
-    assert.equal(declaration('.catalog-results .service-card .text-link', 'border-radius'), '999px');
-    assert.equal(declaration('.catalog-results .service-card .text-link', 'min-height'), '2.5rem');
+  it('does not cover the mobile booking action with the public bottom navigation', () => {
+    assert.equal(declaration('body:has(cvp-booking-wizard .booking-mobile-action-bar) .public-bottom-nav', 'display'), 'none');
+  });
+  it('keeps service cards free of a fixed price', () => {
+    const card = readFileSync(new URL('../src/app/shared/components/service-card/service-card.component.ts', import.meta.url), 'utf8');
+    assert.ok(!card.includes('priceFromCents'));
+    assert.ok(!card.includes('A partir de'));
   });
   it('organizes professional identity and booking in a compact lateral rail', () => {
     assert.equal(declaration('cvp-provider-detail .section-tight', 'padding'), '1rem 0 2rem');

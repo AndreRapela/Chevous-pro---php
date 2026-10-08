@@ -9,7 +9,8 @@ Esta pasta existe somente para a etapa final de qualidade da entrega.
 - `security_sessions_flow.ps1`: listagem e revogação de dispositivos, sessão atual, refresh restrito a cookie e renovação concorrente de abas.
 - `booking_flow.ps1`: fluxo HTTP completo de conta, disponibilidade, reservas, propostas, execução, avaliação, notificações e administração.
 - `structure.mjs`: contratos de rotas, schema, idempotência, sessão, disponibilidade, segurança e ativos autorizados.
-- `frontend/tests/*.spec.ts`: testes unitários nativos do Node das regras reutilizadas pela agenda, com cobertura V8.
+- `architecture.mjs`: direção de dependências, limites de tamanho, lazy loading/noindex do checkout e proibição de persistir dados financeiros no front.
+- `frontend/tests/*.spec.ts`: testes unitários nativos do Node das regras reutilizadas pela agenda, checkout, localização, SEO e componentes críticos.
 - `compose_smoke.ps1`: serviços Docker, endpoint de saúde e login dos três papéis.
 - `outbox_flow.ps1`: limite de tentativas, diagnóstico e remoção do payload
   sensível de eventos irrecuperáveis.
@@ -34,6 +35,11 @@ npm run lint
 npm run test:coverage
 npm run build
 ```
+
+O gate `test:coverage` exige 100% apenas para os utilitários puros explicitamente
+listados em `test:coverage:utils`. Ele não representa cobertura integral do Angular
+ou dos controladores PHP; esses caminhos são complementados pelos testes de
+contrato, SSR e fluxos HTTP/Compose descritos acima.
 
 Para executar contra um projeto Compose isolado ou portas alternativas, defina
 `CVP_API_URL` (por exemplo, `http://localhost:18080/api/v1`) e `CVP_WEB_URL`

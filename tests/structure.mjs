@@ -68,13 +68,13 @@ assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança de
 assert.match(homeHero, /profissional-limpeza-hero-887\.webp/, 'O banner deve usar a imagem original de fundo verde.');
 assert.doesNotMatch(homeHero, /hero-warm/, 'O banner não deve reintroduzir a variante marrom da imagem.');
 assert.equal((homeHero.match(/mobile-hero-orb mobile-hero-orb-/g) ?? []).length, 4, 'O herói móvel deve conter quatro círculos decorativos sutis.');
-assert.match(globalStyles, /animation:\s*mobile-orb-float[^;]*infinite/, 'Os círculos do herói móvel devem flutuar continuamente.');
+assert.match(globalStyles, /animation:\s*home-orb-float[^;]*infinite/, 'Os círculos do herói móvel devem flutuar continuamente.');
 assert.match(globalStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.mobile-hero-orb\s*\{[^}]*animation:\s*none/s, 'A animação decorativa deve respeitar movimento reduzido.');
 assert.match(globalStyles, /cvp-home > \.home-deals\s*\{\s*order:\s*2;/, 'As ofertas devem aparecer logo após o herói no celular.');
 assert.match(globalStyles, /cvp-home > \.home-categories\s*\{\s*order:\s*3;/, 'Os serviços devem aparecer depois das ofertas no celular.');
-assert.match(globalStyles, /body cvp-home \.home-categories \.category-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/s, 'A home móvel deve mostrar quatro serviços compactos por linha.');
+assert.match(globalStyles, /body cvp-home \.home-categories \.category-grid\s*\{[^}]*display:\s*flex;[^}]*overflow-x:\s*auto;[^}]*scroll-snap-type:\s*x mandatory;/s, 'A home móvel deve permitir deslizar horizontalmente por todos os serviços.');
+assert.match(globalStyles, /body cvp-home \.home-categories \.category-card\s*\{[^}]*flex:\s*0 0 calc\(\(100% - 1\.5rem\) \/ 4\);/s, 'A home móvel deve manter quatro serviços compactos visíveis por vez.');
 assert.match(globalStyles, /body cvp-home \.home-popular cvp-service-card\s*\{[^}]*flex:\s*0 0 11\.75rem;/s, 'Os serviços populares não devem ocupar quase toda a largura do celular.');
-assert.match(globalStyles, /body cvp-home \.home-popular \.service-card p\s*\{\s*display:\s*none;/s, 'A vitrine móvel deve omitir descrições longas nos cards compactos.');
 assert.match(globalStyles, /body cvp-home \.home-providers cvp-provider-card\s*\{[^}]*flex:\s*0 0 13\.75rem;/s, 'Os profissionais recomendados devem permanecer compactos no carrossel móvel.');
 assert.match(globalStyles, /body cvp-home \.home-providers \.availability\s*\{\s*display:\s*none;/s, 'O card profissional da home móvel deve priorizar identidade, avaliação, preço e perfil.');
 const homePage = await text('frontend/src/app/features/public/pages/home/home.component.ts');
@@ -87,6 +87,8 @@ assert.match(globalStyles, /--public-bottom-nav-height:\s*calc\(4\.4rem \+ env\(
 assert.match(globalStyles, /\.mobile-sticky-action\s*\{[^}]*var\(--public-bottom-nav-height\)/s, 'O CTA fixo do perfil deve ficar acima da navegação inferior.');
 assert.match(globalStyles, /body:has\(cvp-provider-detail\) \.site-footer\s*\{[^}]*--mobile-sticky-action-height/s, 'O rodapé do perfil deve reservar espaço para CTA e navegação fixos.');
 const publicShell = await text('frontend/src/app/layout/public-shell.component.ts');
+assert.match(publicShell, /<main[^>]*>[\s\S]*<cvp-home-hero[\s\S]*<router-outlet/s, 'Todas as páginas públicas devem começar com o mesmo outdoor da página inicial.');
+assert.doesNotMatch(homePage, /<cvp-home-hero/, 'O outdoor compartilhado não deve ser duplicado dentro da página inicial.');
 assert.equal((publicShell.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length, 3, 'Os grupos móveis do rodapé devem iniciar recolhidos.');
 assert.equal((publicShell.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3, 'O desktop deve manter os três grupos de links visíveis.');
 assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-group" open>/, 'O rodapé móvel não deve ocupar a tela com todos os grupos abertos.');
@@ -101,7 +103,10 @@ const mockDirectoryData = await text('frontend/src/app/core/testing/mock-data.ts
 const providerBlock = mockDirectoryData.match(/export const MOCK_PROVIDERS: ProviderProfile\[\] = \[([\s\S]*?)\n\];\n\nconst cleaningService/)?.[1] ?? '';
 assert.ok((providerBlock.match(/^    id: /gm) ?? []).length >= 20, 'A base local deve oferecer pelo menos vinte profissionais.');
 assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat móvel deve respeitar o viewport dinâmico quando o teclado aparece.');
-assert.match(globalStyles, /\.catalog-results \.catalog-grid\s*\{\s*grid-template-columns:\s*1fr/s, 'O catálogo deve manter informação de decisão em uma coluna no celular.');
+const publicServiceCard = await text('frontend/src/app/shared/components/service-card/service-card.component.ts');
+const publicServiceDetail = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.ts');
+assert.doesNotMatch(publicServiceCard, /priceFromCents|A partir de/, 'Cards de serviço não devem mostrar um preço genérico.');
+assert.doesNotMatch(publicServiceDetail, /priceFromCents|A partir de/, 'O detalhe do serviço deve deixar o valor para cada profissional.');
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');
 
 const bookingWizard = await text('frontend/src/app/features/booking/pages/booking-wizard/booking-wizard.component.ts');

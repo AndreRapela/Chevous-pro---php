@@ -5,7 +5,6 @@ import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from '
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ProviderProfile, Service } from '../../../../core/models';
 import { ProviderCardComponent, StatePanelComponent } from '../../../../shared/components';
-import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { SeoService } from '../../../../core/seo/seo.service';
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { serviceInitial } from '../../../../shared/utils/service-name.util';
@@ -13,12 +12,12 @@ import { serviceInitial } from '../../../../shared/utils/service-name.util';
 @Component({
   selector: 'cvp-service-detail',
   standalone: true,
-  imports: [LocalizedMoneyPipe, ProviderCardComponent, RouterLink, StatePanelComponent],
+  imports: [ProviderCardComponent, RouterLink, StatePanelComponent],
   template: `
     @if (loading()) { <div class="container section"><cvp-state-panel kind="loading" /></div> }
     @else if (error()) { <div class="container section"><cvp-state-panel kind="error" title="Serviço indisponível" [message]="error()" (retry)="load()" /></div> }
     @else if (service(); as item) {
-      <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Agendar agora</a><span>A partir de <strong>{{ item.priceFromCents / 100 | appMoney:'BRL':0 }}</strong></span></div></div><div class="service-visual" [class.custom-service-visual]="item.isCustom" aria-hidden="true">@if (item.isCustom) { <span>{{ serviceInitial(item.name) }}</span> } @else { <img [src]="heroImage(item)" alt="" /> }</div></div></section>
+      <section class="service-detail-hero"><div class="container service-detail-grid"><div><span class="kicker">Agendamento simples e seguro</span><h1>{{ item.name }}</h1><p>{{ item.description }}</p><div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Ver profissionais</a><span><strong>Valor definido por cada profissional</strong></span></div></div><div class="service-visual" [class.custom-service-visual]="item.isCustom" aria-hidden="true">@if (item.isCustom) { <span>{{ serviceInitial(item.name) }}</span> } @else { <img [src]="heroImage(item)" alt="" /> }</div></div></section>
       <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>{{ localization.translate('Profissionais para') }} {{ localization.translate(item.name).toLocaleLowerCase(localization.locale()) }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
     }
   `,

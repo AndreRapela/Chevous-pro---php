@@ -1,13 +1,14 @@
 import { DOCUMENT } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { FormBuilder, Validators } from '@angular/forms';
+import { FormBuilder } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, Subject, catchError, combineLatest, distinctUntilChanged, forkJoin, map, of, switchMap } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { Address, Booking, BookingDraft, BookingQuote, ProviderProfile, Service } from '../../../../core/models';
 import { StatePanelComponent } from '../../../../shared/components';
+import { LocalizedMoneyPipe, LocalizedNumberPipe } from '../../../../shared/localization/localized-format.pipe';
 import { formatPostalCode } from '../../../../shared/utils/postal-code.util';
 import { BookingAddressStepComponent } from '../../components/booking-address-step/booking-address-step.component';
 import { BookingConfirmationComponent } from '../../components/booking-confirmation/booking-confirmation.component';
@@ -18,7 +19,7 @@ import { BookingProviderStepComponent } from '../../components/booking-provider-
 import { BookingReviewStepComponent } from '../../components/booking-review-step/booking-review-step.component';
 import { BookingScheduleStepComponent } from '../../components/booking-schedule-step/booking-schedule-step.component';
 import { BookingDraftStorageService } from '../../data-access/booking-draft-storage.service';
-import { createBookingForm } from '../../models/booking-form.model';
+import { configureBookingFormForService, createBookingForm } from '../../models/booking-form.model';
 import { mergeAvailableSlots, providerIdsForSlot } from '../../utils/availability.util';
 
 interface QuoteRequest {
@@ -37,34 +38,57 @@ interface QuoteRequest {
     BookingProviderStepComponent,
     BookingReviewStepComponent,
     BookingScheduleStepComponent,
+    LocalizedMoneyPipe,
+    LocalizedNumberPipe,
     RouterLink,
     StatePanelComponent
   ],
   template: `
     <section class="booking-page">
-      <div class="container booking-topbar"><a class="back-link" [routerLink]="step() ? null : '/servicos'" (click)="step() ? previous() : null"><span aria-hidden="true">←</span> {{ step() ? 'Voltar' : 'Serviços' }}</a><span>Reserva segura</span></div>
+      <div class="container booking-topbar">@if (step()) { <button class="back-link" type="button" (click)="previous()"><span aria-hidden="true">←</span> Voltar</button> } @else { <a class="back-link" routerLink="/servicos"><span aria-hidden="true">←</span> Serviços</a> }<span>Reserva segura</span></div>
       @if (loading()) {
         <div class="container narrow section"><cvp-state-panel kind="loading" message="Preparando seu agendamento." /></div>
       } @else if (loadError()) {
         <div class="container narrow section"><cvp-state-panel kind="error" title="Não foi possível iniciar a reserva" [message]="loadError()" (retry)="load()" /></div>
       } @else if (service(); as selectedService) {
-        @if (step() < 5) {
+        @if (step() < 4) {
           <div class="container booking-layout">
             <cvp-booking-price-summary [service]="selectedService" [homeSize]="form.controls.homeSize.value" [quote]="quote()" [loading]="quoteLoading()" [marketplace]="isMarketplace()" />
+            <section class="booking-profile-banner" [attr.aria-label]="bookingProvider() ? 'Perfil profissional do agendamento' : 'Serviço do agendamento'">
+              @if (bookingProvider(); as person) {
+                <div class="booking-profile-copy">
+                  <span class="eyebrow">{{ bookingProviderIsSuggestion() ? 'Profissional recomendado' : 'Profissional selecionado' }}</span>
+                  <h1>{{ person.name }}</h1><p>{{ person.headline }}</p><span class="booking-profile-rating"><span aria-hidden="true">★</span> {{ person.rating | appNumber:2:2 }} · {{ person.reviewCount }} avaliações</span>
+                  <div class="booking-profile-service"><span class="service-symbol" aria-hidden="true">{{ selectedService.symbol }}</span><strong>{{ selectedService.name }}</strong><a routerLink="/servicos">Trocar serviço</a></div>
+                </div>
+                <span class="booking-profile-avatar">@if (person.avatarUrl) { <img [src]="person.avatarUrl" [alt]="person.name" loading="lazy"> } @else { <span aria-hidden="true">{{ person.initials }}</span> }</span>
+              } @else {
+                <div class="booking-profile-copy"><span class="eyebrow">Serviço do agendamento</span><h1>{{ selectedService.name }}</h1><p>{{ selectedService.description }}</p><a class="text-link" routerLink="/servicos">Trocar serviço</a></div>
+                <span class="booking-profile-service-symbol" aria-hidden="true">{{ selectedService.symbol }}</span>
+              }
+            </section>
             <div class="booking-main">
-              <cvp-booking-progress [step]="step()" [progress]="progress()" [label]="step() === 4 && isMarketplace() ? 'Revisão' : stepLabels[step()]" />
+              <cvp-booking-progress [step]="displayStep()" [totalSteps]="totalSteps()" [progress]="progress()" [label]="stepLabels[step()]" />
               <form (submit)="next(); $event.preventDefault()" novalidate>
-                @if (submitError()) { <div class="alert alert-error" role="alert"><strong>Não foi possível continuar.</strong><span>{{ submitError() }}</span></div> }
+                @if (submitError() || (step() > 0 && availabilityError())) { <div class="alert alert-error" role="alert"><strong>Não foi possível continuar.</strong><span>{{ submitError() || availabilityError() }}</span></div> }
                 @switch (step()) {
-                  @case (0) { <cvp-booking-details-step [form]="form" [service]="selectedService" (quoteRequested)="refreshQuote()" /> }
+                  @case (0) {
+                    <div class="booking-details-schedule">
+                      <cvp-booking-details-step [form]="form" [service]="selectedService" (quoteRequested)="refreshQuote()" />
+                      <cvp-booking-schedule-step [form]="form" [minDate]="minDate" [times]="times()" [loading]="availabilityLoading()" [availabilityError]="availabilityError()" [hasProfessionals]="allProviders().length > 0" [providerSelected]="!!preferredProviderId()" (dateChanged)="dateChanged()" />
+                    </div>
+                  }
                   @case (1) { <cvp-booking-address-step [form]="form" [addresses]="addresses()" /> }
-                  @case (2) { <cvp-booking-schedule-step [form]="form" [minDate]="minDate" [times]="times()" [loading]="availabilityLoading()" [availabilityError]="availabilityError()" [hasProfessionals]="allProviders().length > 0" (dateChanged)="dateChanged()" /> }
-                  @case (3) { <cvp-booking-provider-step [form]="form" [providers]="providers()" (quoteRequested)="refreshQuote()" /> }
-                  @case (4) { <cvp-booking-review-step [form]="form" [service]="selectedService" [provider]="selectedProvider()" /> }
+                  @case (2) { <cvp-booking-provider-step [form]="form" [providers]="providers()" (quoteRequested)="refreshQuote()" /> }
+                  @case (3) { <cvp-booking-review-step [form]="form" [service]="selectedService" [provider]="selectedProvider()" /> }
                 }
-                <div class="wizard-actions"><button class="btn btn-secondary" type="button" (click)="previous()" [disabled]="step() === 0">Voltar</button><button class="btn btn-primary" type="submit" [disabled]="submitting() || quoteLoading() || availabilityLoading()">{{ availabilityLoading() ? 'Consultando agendas…' : submitting() ? 'Confirmando...' : step() === 4 ? (isMarketplace() ? 'Publicar solicitação' : 'Confirmar reserva') : 'Continuar' }} <span aria-hidden="true">→</span></button></div>
+                <div class="wizard-actions"><button class="btn btn-secondary" type="button" (click)="previous()" [disabled]="step() === 0">Voltar</button><button class="btn btn-primary" type="submit" [disabled]="submitting() || quoteLoading() || availabilityLoading()">{{ primaryActionLabel() }} <span aria-hidden="true">→</span></button></div>
               </form>
             </div>
+          </div>
+          <div class="booking-mobile-action-bar" role="region" aria-label="Resumo e próxima etapa">
+            <div class="booking-mobile-total"><small>{{ quoteLoading() ? 'Calculando valor…' : 'Estimativa' }}</small>@if (quote(); as currentQuote) { <strong>{{ currentQuote.totalCents / 100 | appMoney:currentQuote.currency }}</strong> } @else { <strong>—</strong> }</div>
+            <button class="btn btn-primary" type="button" [disabled]="submitting() || quoteLoading() || availabilityLoading()" (click)="next()">{{ primaryActionLabel() }} <span aria-hidden="true">→</span></button>
           </div>
         } @else if (confirmedBooking(); as booking) {
           <cvp-booking-confirmation [booking]="booking" />
@@ -72,6 +96,7 @@ interface QuoteRequest {
       }
     </section>
   `,
+  styleUrl: './booking-wizard.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class BookingWizardComponent implements OnInit {
@@ -89,7 +114,7 @@ export class BookingWizardComponent implements OnInit {
   private availabilityRevision = 0;
   private readonly availabilityByProvider = new Map<string, string[]>();
 
-  readonly stepLabels = ['Detalhes', 'Endereço', 'Agenda', 'Profissional', 'Revisão'];
+  readonly stepLabels = ['Detalhes e agenda', 'Endereço', 'Profissional', 'Revisão'];
   readonly times = signal<string[]>([]);
   readonly minDate = this.localDateToday();
   readonly form = createBookingForm(this.fb);
@@ -97,6 +122,7 @@ export class BookingWizardComponent implements OnInit {
   readonly addresses = signal<Address[]>([]);
   readonly providers = signal<ProviderProfile[]>([]);
   readonly allProviders = signal<ProviderProfile[]>([]);
+  readonly preferredProviderId = signal('');
   readonly availabilityLoading = signal(false);
   readonly availabilityError = signal('');
   readonly step = signal(0);
@@ -107,7 +133,9 @@ export class BookingWizardComponent implements OnInit {
   readonly quote = signal<BookingQuote | null>(null);
   readonly quoteLoading = signal(false);
   readonly confirmedBooking = signal<Booking | null>(null);
-  readonly progress = computed(() => ((this.step() + 1) / 5) * 100);
+  readonly totalSteps = computed(() => this.preferredProviderId() ? 3 : 4);
+  readonly displayStep = computed(() => this.preferredProviderId() && this.step() >= 3 ? this.step() - 1 : this.step());
+  readonly progress = computed(() => ((this.displayStep() + 1) / this.totalSteps()) * 100);
 
   ngOnInit(): void {
     this.bindQuoteRequests();
@@ -121,13 +149,13 @@ export class BookingWizardComponent implements OnInit {
   next(): void {
     this.submitError.set('');
     if (!this.validateStep()) return;
-    if (this.step() === 2) {
-      this.advanceToProviders();
+    if (this.step() === 1) {
+      this.advanceAfterAddress();
       return;
     }
-    if (this.step() < 4) {
+    if (this.step() < 3) {
       this.step.update((value) => value + 1);
-      if (this.step() === 4) this.refreshQuote();
+      if (this.step() === 3) this.refreshQuote();
       this.persist();
       this.focusHeading();
       return;
@@ -137,13 +165,31 @@ export class BookingWizardComponent implements OnInit {
 
   previous(): void {
     if (this.step() <= 0) return;
-    this.step.update((value) => value - 1);
+    this.step.update((value) => this.preferredProviderId() && value === 3 ? 1 : value - 1);
     this.persist();
     this.focusHeading();
   }
 
   selectedProvider(): ProviderProfile | undefined {
-    return this.providers().find((person) => person.id === this.form.controls.providerId.value);
+    return this.allProviders().find((person) => person.id === this.form.controls.providerId.value);
+  }
+
+  bookingProvider(): ProviderProfile | undefined {
+    if (this.isMarketplace()) return undefined;
+    const selected = this.selectedProvider();
+    if (selected) return selected;
+    return [...this.allProviders()].sort((left, right) => Number(right.topProvider) - Number(left.topProvider) || right.rating - left.rating || right.reviewCount - left.reviewCount)[0];
+  }
+
+  bookingProviderIsSuggestion(): boolean {
+    return !!this.bookingProvider() && !this.selectedProvider();
+  }
+
+  primaryActionLabel(): string {
+    if (this.availabilityLoading()) return 'Consultando agendas…';
+    if (this.submitting()) return 'Confirmando...';
+    if (this.step() === 3) return this.isMarketplace() ? 'Publicar solicitação' : 'Confirmar reserva';
+    return 'Continuar';
   }
 
   isMarketplace(): boolean { return this.form.controls.providerId.value === '__marketplace__'; }
@@ -154,7 +200,7 @@ export class BookingWizardComponent implements OnInit {
 
   dateChanged(): void {
     this.form.controls.time.setValue('');
-    this.form.controls.providerId.setValue('');
+    this.form.controls.providerId.setValue(this.preferredProviderId());
     this.availabilityKey = '';
     this.loadAvailability(false);
   }
@@ -190,14 +236,15 @@ export class BookingWizardComponent implements OnInit {
       }
       this.resetForm();
       this.service.set(result.service);
-      this.configureServiceControls(result.service);
+      configureBookingFormForService(this.form, result.service);
       this.allProviders.set(result.providers);
       this.providers.set(result.providers);
       this.addresses.set(result.addresses);
-      if (result.preferredProviderId && result.providers.some((person) => person.id === result.preferredProviderId)) {
-        this.form.controls.providerId.setValue(result.preferredProviderId);
-      }
       this.restoreDraft(result.service.id);
+      if (!this.applyPreferredProvider(result.preferredProviderId)) {
+        this.loading.set(false);
+        return;
+      }
       const preferredAddress = result.addresses.find((address) => !!address.isDefault) ?? result.addresses[0];
       if (preferredAddress && !this.form.controls.address.controls.postalCode.value) this.applySavedAddress(preferredAddress);
       if (this.form.controls.date.value) this.loadAvailability(false);
@@ -227,11 +274,23 @@ export class BookingWizardComponent implements OnInit {
     this.quoteRequests.next({ draft: this.buildDraft() });
   }
 
+  private applyPreferredProvider(providerId: string): boolean {
+    if (!providerId) return true;
+    if (!this.allProviders().some((person) => person.id === providerId)) {
+      this.loadError.set('O profissional escolhido não está disponível para este serviço. Volte ao perfil e escolha outro serviço.');
+      return false;
+    }
+    this.preferredProviderId.set(providerId);
+    this.form.controls.providerId.setValue(providerId);
+    this.form.controls.terms.setValue(false);
+    this.step.set(0);
+    return true;
+  }
+
   private validateStep(): boolean {
     const groups = [
-      [this.form.controls.homeSize, this.form.controls.quantity, this.form.controls.durationMinutes, this.form.controls.notes],
+      [this.form.controls.homeSize, this.form.controls.quantity, this.form.controls.durationMinutes, this.form.controls.notes, this.form.controls.date, this.form.controls.time],
       Object.values(this.form.controls.address.controls),
-      [this.form.controls.date, this.form.controls.time],
       [this.form.controls.providerId],
       [this.form.controls.terms]
     ];
@@ -247,7 +306,7 @@ export class BookingWizardComponent implements OnInit {
     this.marketplace.confirmBooking(this.buildDraft(), this.bookingKey).subscribe({
       next: (result) => {
         this.confirmedBooking.set(result.booking);
-        this.step.set(5);
+        this.step.set(4);
         this.submitting.set(false);
         this.draftStorage.clear();
         this.focusHeading();
@@ -256,7 +315,7 @@ export class BookingWizardComponent implements OnInit {
     });
   }
 
-  private advanceToProviders(): void {
+  private advanceAfterAddress(): void {
     const key = this.currentAvailabilityKey();
     if (key !== this.availabilityKey) {
       this.loadAvailability(true);
@@ -274,16 +333,17 @@ export class BookingWizardComponent implements OnInit {
       this.availabilityLoading.set(false);
       return;
     }
-    if (!this.allProviders().length) {
+    const candidates = this.preferredProviderId() ? this.allProviders().filter((provider) => provider.id === this.preferredProviderId()) : this.allProviders();
+    if (!candidates.length) {
       this.times.set([]);
       this.providers.set([]);
       this.availabilityLoading.set(false);
-      if (advance) this.openProviderStep();
+      if (advance) this.openSelectionOrReview();
       return;
     }
     this.availabilityLoading.set(true);
     this.availabilityError.set('');
-    const requests = this.allProviders().map((provider) => this.marketplace.publicProviderAvailability(provider.id, {
+    const requests = candidates.map((provider) => this.marketplace.publicProviderAvailability(provider.id, {
       date,
       durationMinutes: this.form.controls.durationMinutes.value
     }).pipe(
@@ -321,13 +381,24 @@ export class BookingWizardComponent implements OnInit {
     const availableIds = providerIdsForSlot(results, time);
     const available = this.allProviders().filter((provider) => availableIds.has(provider.id));
     this.providers.set(available);
+    if (this.preferredProviderId()) {
+      if (!availableIds.has(this.preferredProviderId())) {
+        this.submitError.set('O profissional escolhido não está disponível nesse horário. Escolha outro horário.');
+        this.step.set(0);
+        this.focusHeading();
+        return;
+      }
+      if (advance) this.openSelectionOrReview();
+      return;
+    }
     if (this.form.controls.providerId.value !== '__marketplace__' && !available.some((provider) => provider.id === this.form.controls.providerId.value)) this.form.controls.providerId.setValue('');
     if (!advance) return;
-    this.openProviderStep();
+    this.openSelectionOrReview();
   }
 
-  private openProviderStep(): void {
-    this.step.set(3);
+  private openSelectionOrReview(): void {
+    this.step.set(this.preferredProviderId() ? 3 : 2);
+    if (this.step() === 3) this.refreshQuote();
     this.persist();
     this.focusHeading();
   }
@@ -345,7 +416,8 @@ export class BookingWizardComponent implements OnInit {
     const stored = this.draftStorage.load(serviceId);
     if (!stored) return;
     this.form.patchValue(stored.value);
-    this.step.set(Math.min(4, Math.max(0, stored.step)));
+    const restoredStep = stored.step >= 4 ? 3 : stored.step === 3 ? 2 : 0;
+    this.step.set(restoredStep);
   }
 
   private resetForm(): void {
@@ -362,6 +434,7 @@ export class BookingWizardComponent implements OnInit {
       terms: false
     });
     this.step.set(0);
+    this.preferredProviderId.set('');
     this.quote.set(null);
     this.confirmedBooking.set(null);
     this.times.set([]);
@@ -369,25 +442,6 @@ export class BookingWizardComponent implements OnInit {
     this.availabilityRevision++;
     this.availabilityKey = '';
     this.bookingKey = this.marketplace.newIdempotencyKey('booking');
-  }
-
-  private configureServiceControls(service: Service): void {
-    const minimum = Math.max(1, service.minimumQuantity || 1);
-    const maximum = Math.max(minimum, service.maximumQuantity || 10000);
-    if (service.pricingType === 'area' || service.unit === 'm²') {
-      this.form.controls.homeSize.setValidators([Validators.required, Validators.min(minimum), Validators.max(maximum)]);
-      this.form.controls.homeSize.setValue(Math.min(maximum, Math.max(minimum, 80)));
-      this.form.controls.quantity.setValidators([Validators.required, Validators.min(1), Validators.max(10000)]);
-      this.form.controls.quantity.setValue(1);
-    } else {
-      this.form.controls.homeSize.setValidators([Validators.required, Validators.min(1), Validators.max(10000)]);
-      this.form.controls.quantity.setValidators([Validators.required, Validators.min(minimum), Validators.max(maximum)]);
-      this.form.controls.quantity.setValue(minimum);
-    }
-    this.form.controls.durationMinutes.setValue(Math.min(1440, Math.max(30, service.durationMinutes)));
-    this.form.controls.homeSize.updateValueAndValidity();
-    this.form.controls.quantity.updateValueAndValidity();
-    this.form.controls.durationMinutes.updateValueAndValidity();
   }
 
   private applySavedAddress(address: Address): void {
@@ -404,7 +458,7 @@ export class BookingWizardComponent implements OnInit {
 
   private focusHeading(): void {
     setTimeout(() => {
-      const heading = this.document.querySelector<HTMLElement>('.wizard-step h1, .confirmation-page h1');
+      const heading = this.document.querySelector<HTMLElement>('.wizard-step h1, .wizard-step h2, .confirmation-page h1');
       if (!heading) return;
       heading.focus({ preventScroll: true });
       heading.scrollIntoView({ behavior: 'auto', block: 'start' });

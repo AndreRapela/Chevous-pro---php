@@ -62,6 +62,9 @@ for (const [language, currency] of [['en', 'EUR'], ['fr', 'USD']]) {
   assert.equal(new PreferenceHarness(language).readCurrency(), currency);
 }
 for (const [phrase, english, french] of [
+  ['Etapa 1 de 3', 'Step 1 of 3', 'Étape 1 sur 3'],
+  ['Step 3 of 3', 'Step 3 of 3', 'Étape 3 sur 3'],
+  ['Etapa 2 de 4', 'Step 2 of 4', 'Étape 2 sur 4'],
   ['Mostrando 1–12 de 24 profissionais', 'Showing 1–12 of 24 professionals', 'Affichage de 1 à 12 sur 24 professionnels'],
   ['Showing 1–12 of 24 professionals', 'Showing 1–12 of 24 professionals', 'Affichage de 1 à 12 sur 24 professionnels'],
   ['Mostrando 6 de 18 registros · página 1 de 3', 'Showing 6 of 18 results · page 1 of 3', 'Affichage de 6 sur 18 résultats · page 1 sur 3'],
@@ -71,7 +74,12 @@ for (const [phrase, english, french] of [
   ['Confirmar conclusão', 'Confirm completion', 'Confirmer la fin du service'],
   ['Note', 'Note', 'Observation'],
   ['Rating', 'Rating', 'Note'],
-  ['Veja experiência, serviços e avaliações de reservas.', 'View experience, services and booking reviews.', 'Consultez l’expérience, les services et les avis des réservations.']
+  ['Veja experiência, serviços e avaliações de reservas.', 'View experience, services and booking reviews.', 'Consultez l’expérience, les services et les avis des réservations.'],
+  ['Produtos para cuidar melhor da sua casa', 'Products to take better care of your home', 'Des produits pour mieux prendre soin de votre maison'],
+  ['Novidades na loja', 'New in store', 'Nouveautés en boutique'],
+  ['Preços e disponibilidade podem mudar sem aviso prévio.', 'Prices and availability are subject to change without notice.', 'Les prix et la disponibilité peuvent changer sans préavis.'],
+  ['Kit de lavanderia essencial', 'Essential laundry kit', 'Kit de lessive essentiel'],
+  ['Uma seleção versátil para a manutenção semanal dos ambientes.', 'A versatile selection for weekly home cleaning.', 'Une sélection polyvalente pour l’entretien hebdomadaire de la maison.']
 ]) {
   assert.equal(translators.en.translate(phrase), english);
   assert.equal(translators.fr.translate(phrase), french);
@@ -99,7 +107,7 @@ function inspectTemplate(nodes, file, skip = false) {
     if (!protectedContent) {
       if (node instanceof TmplAstText) check(node.value, file);
       if (node instanceof TmplAstBoundText) {
-        const composed = node.value.ast?.strings?.join('1') ?? '';
+        const composed = (node.value.ast?.strings?.join('1') ?? '').trim();
         const matchingPatterns = patterns.filter(pattern => pattern.regex.test(composed));
         if (matchingPatterns.length) {
           for (const language of ['en', 'fr']) {
@@ -149,6 +157,13 @@ for (const file of files(app).filter(file => file.endsWith('.component.ts') || f
       assert.equal(parsed.errors, null, `Template parse failed: ${file}`);
       templates++;
       inspectTemplate(parsed.nodes, file);
+    }
+    if (ts.isPropertyAssignment(node) && node.name.getText(component) === 'templateUrl' && ts.isStringLiteral(node.initializer)) {
+      const templateFile = join(dirname(file), node.initializer.text);
+      const parsed = parseTemplate(readFileSync(templateFile, 'utf8'), templateFile);
+      assert.equal(parsed.errors, null, `Template parse failed: ${templateFile}`);
+      templates++;
+      inspectTemplate(parsed.nodes, templateFile);
     }
     if (ts.isPropertyAssignment(node) && interfaceProperties.has(node.name.getText(component))) {
       if (ts.isStringLiteral(node.initializer)) check(node.initializer.text, file);

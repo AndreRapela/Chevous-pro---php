@@ -10,6 +10,12 @@ import { PublicShellComponent } from './layout/public-shell.component';
 
 export const routes: Routes = [
   {
+    path: 'pagamento/:slug',
+    title: 'Pagamento | ChezVoust Pro',
+    data: { seo: { title: 'Pagamento | ChezVoust Pro', description: 'Finalize seu pedido com segurança.', noindex: true } },
+    loadComponent: () => import('./features/checkout/pages/payment/payment.component').then((m) => m.PaymentComponent)
+  },
+  {
     path: '',
     component: PublicShellComponent,
     children: publicRoutes
