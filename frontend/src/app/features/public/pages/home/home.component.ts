@@ -1,19 +1,37 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { Router, RouterLink } from '@angular/router';
+import { RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Promotion, ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
 import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
-import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
 import { SeoService } from '../../../../core/seo/seo.service';
 
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
+  imports: [HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
   template: `
-    <cvp-home-hero [(query)]="query" (searchRequested)="search()" />
+    <section class="section home-section home-deals" aria-labelledby="discounts-title">
+      <div class="container">
+        <div class="home-deals-heading">
+          <span class="eyebrow">Loja ChezVoust</span>
+          <h2 id="discounts-title">Produtos e ofertas especiais</h2>
+        </div>
+        <a class="home-discount-banner" [attr.href]="promotion().ctaUrl" [attr.aria-label]="'Abrir oferta: ' + promotion().title" [style.--promo-bg]="promotion().backgroundColor" [style.--promo-text]="promotion().textColor">
+          <div class="home-discount-copy">
+            <span class="home-discount-pill">{{ promotion().badgeText }}</span>
+            <h3>{{ promotion().title }}</h3>
+            <p>{{ promotion().subtitle }}</p>
+            <span class="btn home-discount-cta">{{ promotion().ctaLabel }} <span aria-hidden="true">→</span></span>
+          </div>
+          <div class="home-discount-art" aria-hidden="true">
+            @if (promotion().imageUrl) { <img [src]="promotion().imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
+          </div>
+        </a>
+        @if (promotion().termsText) { <p class="home-discount-terms">{{ promotion().termsText }}</p> }
+      </div>
+    </section>
 
     <section class="section home-section home-categories" aria-labelledby="categorias-title">
       <div class="container">
@@ -30,27 +48,6 @@ import { SeoService } from '../../../../core/seo/seo.service';
           </div>
           <p class="mobile-scroll-hint" aria-hidden="true">Deslize para ver mais <span>→</span></p>
         }
-      </div>
-    </section>
-
-    <section class="section home-section home-deals" aria-labelledby="discounts-title">
-      <div class="container">
-        <div class="home-deals-heading">
-          <span class="eyebrow">Loja ChezVoust</span>
-          <h2 id="discounts-title">Produtos e ofertas especiais</h2>
-        </div>
-        <article class="home-discount-banner" data-cvp-no-localize [style.--promo-bg]="promotion().backgroundColor" [style.--promo-text]="promotion().textColor">
-          <div class="home-discount-copy">
-            <span class="home-discount-pill">{{ promotion().badgeText }}</span>
-            <h3>{{ promotion().title }}</h3>
-            <p>{{ promotion().subtitle }}</p>
-            <a class="btn home-discount-cta" [attr.href]="promotion().ctaUrl">{{ promotion().ctaLabel }} <span aria-hidden="true">→</span></a>
-          </div>
-          <div class="home-discount-art" aria-hidden="true">
-            @if (promotion().imageUrl) { <img [src]="promotion().imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
-          </div>
-        </article>
-        @if (promotion().termsText) { <p class="home-discount-terms">{{ promotion().termsText }}</p> }
       </div>
     </section>
 
@@ -89,11 +86,11 @@ import { SeoService } from '../../../../core/seo/seo.service';
       </div>
     </section>
   `,
+  styleUrl: './home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class HomeComponent implements OnInit {
   private readonly marketplace = inject(MarketplaceService);
-  private readonly router = inject(Router);
   private readonly seo = inject(SeoService);
   readonly categories = signal<ServiceCategory[]>([]);
   readonly popularServices = signal<Service[]>([]);
@@ -105,7 +102,6 @@ export class HomeComponent implements OnInit {
   });
   readonly loading = signal(true);
   readonly error = signal('');
-  query = '';
   readonly categoryPath = categoryPublicPath;
 
   ngOnInit(): void {
@@ -148,9 +144,5 @@ export class HomeComponent implements OnInit {
       next: (providers) => this.providers.set(providers.data),
       error: () => this.providers.set([])
     });
-  }
-
-  search(): void {
-    void this.router.navigate(['/servicos'], { queryParams: this.query.trim() ? { q: this.query.trim() } : {} });
   }
 }

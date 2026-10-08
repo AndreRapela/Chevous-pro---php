@@ -1,0 +1,51 @@
+.booking-schedule-step { gap: .8rem; padding-top: 1.2rem; border-top: 1px solid var(--ink-100); }
+.booking-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: .75rem; }
+.booking-section-heading > div { min-width: 0; }
+.booking-section-heading .eyebrow { margin-bottom: .15rem; color: var(--brand-700); font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
+.booking-section-heading h2 { margin: 0; color: var(--ink-900); font-size: clamp(1.08rem, 2.2vw, 1.35rem); line-height: 1.2; }
+.booking-section-heading p { margin: .2rem 0 0; color: var(--ink-600); font-size: .82rem; }
+.booking-selected-date { flex: 0 0 auto; max-width: 11rem; padding: .35rem .55rem; border-radius: 999px; color: var(--brand-800); background: var(--brand-50); font-size: .72rem; font-weight: 800; text-align: center; }
+.booking-calendar { padding: .8rem; border: 1px solid var(--ink-100); border-radius: .95rem; background: #fff; }
+.booking-calendar-header { display: flex; align-items: center; justify-content: space-between; gap: .75rem; margin-bottom: .6rem; }
+.booking-calendar-header strong { color: var(--ink-900); font-size: .9rem; text-transform: capitalize; }
+.booking-calendar-header > div { display: flex; gap: .35rem; }
+.calendar-nav { width: 2.05rem; height: 2.05rem; display: grid; place-items: center; border: 1px solid var(--ink-100); border-radius: 50%; color: var(--brand-800); background: #fff; font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.calendar-nav:hover:not(:disabled) { border-color: var(--brand-300); background: var(--brand-50); }
+.calendar-nav:disabled { color: var(--ink-300); cursor: not-allowed; }
+.booking-calendar-weekdays,
+.booking-calendar-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); justify-items: center; }
+.booking-calendar-weekdays { margin-bottom: .18rem; color: var(--ink-500); font-size: .68rem; font-weight: 750; text-align: center; }
+.booking-calendar-weekdays span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.booking-calendar-days { row-gap: .18rem; }
+.calendar-day,
+.calendar-day-placeholder { width: min(100%, 2.35rem); aspect-ratio: 1; display: grid; place-items: center; border: 1px solid transparent; border-radius: 50%; }
+.calendar-day { color: var(--ink-800); background: transparent; font: inherit; font-size: .78rem; cursor: pointer; }
+.calendar-day:hover:not(:disabled) { border-color: var(--brand-300); background: var(--brand-50); }
+.calendar-day.selected { color: #fff; border-color: var(--brand-700); background: var(--brand-700); box-shadow: 0 3px 8px rgba(0, 101, 75, .18); }
+.calendar-day:disabled { color: var(--ink-300); cursor: not-allowed; }
+.calendar-day:focus-visible,
+.calendar-nav:focus-visible { outline: 3px solid color-mix(in srgb, var(--brand-600) 34%, transparent); outline-offset: 2px; }
+.booking-times { min-width: 0; padding: 0; margin: 0; border: 0; }
+.booking-times legend { margin-bottom: .45rem; color: var(--ink-900); font-size: .88rem; font-weight: 800; }
+.booking-times > .muted { margin: 0; font-size: .82rem; }
+.booking-times .time-grid { display: flex; gap: .45rem; overflow-x: auto; padding: .15rem .1rem .45rem; scrollbar-width: thin; }
+.booking-times .time-option { min-width: 5.4rem; min-height: 2.55rem; flex: 0 0 auto; border-radius: 999px; font-size: .78rem; font-weight: 750; }
+.booking-times .time-option.selected { color: #fff; background: var(--brand-700); }
+.booking-times .notice-card { padding: .7rem; margin-top: .25rem; }
+.booking-times .notice-card > span { width: 1.6rem; height: 1.6rem; flex-basis: 1.6rem; }
+
+@media (max-width: 47.99rem) {
+  .booking-section-heading { align-items: flex-start; }
+  .booking-section-heading p { font-size: .76rem; line-height: 1.35; }
+  .booking-selected-date { max-width: 8rem; padding: .3rem .45rem; font-size: .66rem; }
+  .booking-calendar { padding: .62rem; }
+  .calendar-day,
+  .calendar-day-placeholder { width: min(100%, 2.15rem); }
+  .booking-calendar-weekdays { font-size: .62rem; }
+}
+
+@media (max-width: 26rem) {
+  .booking-calendar { padding: .5rem; }
+  .calendar-day,
+  .calendar-day-placeholder { width: min(100%, 1.95rem); }
+}

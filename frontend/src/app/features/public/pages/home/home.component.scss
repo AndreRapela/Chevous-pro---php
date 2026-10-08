@@ -1,0 +1,55 @@
+@media (min-width: 48rem) {
+  .home-discount-banner,
+  .home-discount-art { min-height: 14rem; }
+
+  .home-discount-copy { gap: .4rem; padding: 1.15rem clamp(1.1rem, 2.4vw, 2rem); }
+  .home-discount-copy h3 { font-size: clamp(1.5rem, 2.7vw, 2.3rem); }
+  .home-discount-copy p { font-size: .875rem !important; }
+  .home-discount-cta { min-height: 2.45rem; padding: .45rem .875rem; font-size: .8125rem; }
+  .home-discount-art img { width: min(25rem, 124%); }
+
+  .home-categories .category-grid {
+    --category-gap: 1rem;
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: var(--category-gap);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: .4rem .25rem .6rem 0;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+    touch-action: pan-x pan-y;
+    cursor: grab;
+  }
+
+  .home-categories .category-grid::-webkit-scrollbar { display: none; }
+  .home-categories .category-grid.is-dragging { scroll-snap-type: none; cursor: grabbing; user-select: none; }
+  .home-categories .category-grid:focus-visible { outline: 3px solid var(--control-focus); outline-offset: 4px; }
+
+  .home-categories .category-card {
+    flex: 0 0 calc((100% - 3 * var(--category-gap)) / 4);
+    min-width: 0;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    -webkit-user-drag: none;
+  }
+
+  .home-categories .mobile-scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: .35rem;
+    margin: .15rem 0 0;
+    color: var(--brand-800);
+    font-size: .82rem;
+    font-weight: 750;
+  }
+}
+
+@media (min-width: 64rem) {
+  .home-categories .category-card { flex-basis: calc((100% - 4 * var(--category-gap)) / 5); }
+}

@@ -26,6 +26,7 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'redefinir-senha', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'verificar-email', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'agendar/:serviceId', renderMode: RenderMode.Client, headers: privateHeaders },
+  { path: 'pagamento/:slug', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'conta/**', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'prestador/**', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'admin/**', renderMode: RenderMode.Client, headers: privateHeaders },

@@ -6,21 +6,41 @@ type ServiceIconName = 'cleaning' | 'laundry' | 'repairs' | 'painting' | 'assemb
   selector: 'cvp-service-icon',
   standalone: true,
   template: `
-    <svg class="service-icon" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+    <svg class="service-icon" [class.service-icon-illustration]="variant === 'illustration'" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
       @switch (iconName()) {
         @case ('cleaning') {
+          @if (variant === 'illustration') {
+            <ellipse cx="12" cy="21" rx="8" ry="1.2" fill="#d9eadc" />
+            <path d="m10.2 2.1 1.65-.35 2.45 10.9-1.65.35Z" fill="#62c791" stroke="#087e66" stroke-width=".75" />
+            <path d="m7.3 12.9 9.05-2.05 3.3 7.8c-3.35 2.75-7.5 3.65-11.9 2.6l-.45-8.35Z" fill="#f5d65a" stroke="#087e66" stroke-width=".9" />
+            <path d="m7.7 15 9.45-2.15" stroke="#2fa86f" stroke-width="2" />
+            <path d="m10.7 17 .15 3.7m2.55-4.2.65 3.65m1.95-4.35 1.15 3.4" stroke="#bb9625" stroke-width=".7" />
+          } @else {
           <ellipse cx="11.5" cy="20.1" rx="7.8" ry="1.35" fill="#ccebdd" />
           <path d="M5.7 11.2h7.8l-.8 7.8H6.5l-.8-7.8Z" fill="#fff" stroke="#087e66" stroke-width="1.25" />
           <path d="M7 11.2c.25-2.2 1.25-3.3 2.65-3.3s2.4 1.1 2.65 3.3" stroke="#087e66" stroke-width="1.15" />
           <path d="m16.5 4.1 1.15.35-3.7 11.6-1.15-.35Z" fill="#f2b632" />
           <path d="m12.9 14.8 4.15 1.3-.7 3.1-5.3-1.65 1.85-2.75Z" fill="#38b779" stroke="#087e66" stroke-width=".85" />
           <path d="M7.9 14.1h3.4" stroke="#63cfa0" stroke-width="1.05" />
+          }
         }
         @case ('laundry') {
+          @if (variant === 'illustration') {
+            <ellipse cx="12" cy="21" rx="8" ry="1.2" fill="#d9eadc" />
+            <rect x="5" y="3" width="14" height="17.5" rx="1.6" fill="#fff7ca" stroke="#087e66" stroke-width=".95" />
+            <path d="M5.5 7.2h13" stroke="#b9d5bd" stroke-width=".75" />
+            <rect x="7" y="4.8" width="4.2" height="1" rx=".35" fill="#73bd91" />
+            <circle cx="16.3" cy="5.3" r=".7" fill="#42b978" />
+            <circle cx="12" cy="13.4" r="4.6" fill="#87cfaa" stroke="#087e66" stroke-width="1.1" />
+            <circle cx="12" cy="13.4" r="3.25" fill="#316776" />
+            <path d="M9.1 13.5c1.7-2.2 2.4 2 5.8-.4a3 3 0 0 1-5.8.4Z" fill="#b4e0d3" />
+            <path d="M9.8 11.1a2.8 2.8 0 0 1 2.9-.5" stroke="#fff" stroke-width=".8" />
+          } @else {
           <ellipse cx="12" cy="20.1" rx="7.25" ry="1.35" fill="#ccebdd" />
           <path d="m8.15 5.1 2.15-1.35c.8.95 2.6.95 3.4 0l2.15 1.35 3.05 2.7-2.3 2.65-1.65-1.1v9.05h-5.9V9.35l-1.65 1.1L5.1 7.8l3.05-2.7Z" fill="#45c67e" stroke="#087e66" stroke-width="1.05" />
           <path d="M10.25 4.1c.3 1.9 3.2 1.9 3.5 0" stroke="#fff" stroke-width="1.1" />
           <path d="M10.45 14.9h3.1" stroke="#f2cf45" stroke-width="1.2" />
+          }
         }
         @case ('repairs') {
           <ellipse cx="12" cy="20.2" rx="7.4" ry="1.3" fill="#ccebdd" />
@@ -78,12 +98,14 @@ type ServiceIconName = 'cleaning' | 'laundry' | 'repairs' | 'painting' | 'assemb
       }
     </svg>
   `,
+  styles: `.service-icon.service-icon-illustration { width: 2.75rem; height: 2.75rem; }`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ServiceIconComponent {
   @Input() category = '';
   @Input() serviceSlug = '';
   @Input() icon = '';
+  @Input() variant: 'compact' | 'illustration' = 'compact';
 
   iconName(): ServiceIconName {
     const value = `${this.icon} ${this.category} ${this.serviceSlug}`.toLocaleLowerCase('pt-BR');

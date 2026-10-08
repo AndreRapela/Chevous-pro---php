@@ -22,7 +22,7 @@ import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
         <button type="button" class="chip" [class.active]="!category()" (click)="selectCategory('')">Todos</button>
         @for (item of categories(); track item.id) { <button type="button" class="chip" [class.active]="category() === item.id" (click)="selectCategory(item.id)">{{ item.shortName }}</button> }
       </div>
-      <div class="results-heading"><h2>{{ total() }} serviços disponíveis</h2><span>Preço inicial, sujeito aos detalhes da solicitação</span></div>
+      <div class="results-heading"><h2>{{ total() }} serviços disponíveis</h2><span>Escolha um serviço para comparar os profissionais disponíveis</span></div>
       @if (loading()) { <cvp-state-panel kind="loading" /> }
       @else if (error()) { <cvp-state-panel kind="error" title="O catálogo não carregou" [message]="error()" (retry)="load()" /> }
       @else if (!services().length) { <cvp-state-panel kind="empty" title="Nenhum serviço encontrado" message="Tente outro termo ou remova um dos filtros." /> }
@@ -41,6 +41,7 @@ import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
       }
     </div></section>
   `,
+  styleUrl: './catalog.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class CatalogComponent implements OnInit {

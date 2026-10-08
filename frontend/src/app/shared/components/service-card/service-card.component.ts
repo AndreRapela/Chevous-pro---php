@@ -1,31 +1,27 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Service } from '../../../core/models';
-import { LocalizedMoneyPipe } from '../../localization/localized-format.pipe';
 import { ServiceIconComponent } from '../service-icon/service-icon.component';
 import { serviceInitial } from '../../utils/service-name.util';
 
 @Component({
   selector: 'cvp-service-card',
   standalone: true,
-  imports: [LocalizedMoneyPipe, RouterLink, ServiceIconComponent],
+  imports: [RouterLink, ServiceIconComponent],
   template: `
-    <article class="service-card">
-      <span class="service-symbol" [class.service-symbol-initial]="service.isCustom" aria-hidden="true">
+    <article class="service-tile">
+      <span class="service-tile-illustration" [class.service-tile-initial]="service.isCustom" aria-hidden="true">
         @if (service.isCustom) { <span>{{ initial() }}</span> }
-        @else { <cvp-service-icon [category]="service.categoryId" [serviceSlug]="service.slug" /> }
+        @else { <cvp-service-icon [category]="service.categoryId" [serviceSlug]="service.slug" variant="illustration" /> }
       </span>
-      <div class="service-card-copy">
-        @if (service.popular) { <div class="eyebrow">Mais pedido</div> }
-        <h3><a [routerLink]="['/servicos', service.slug]">{{ service.name }}</a></h3>
-        <p>{{ service.description || 'Consulte o escopo e combine os detalhes com o profissional.' }}</p>
-        <div class="card-footer">
-          <span>A partir de <strong>{{ service.priceFromCents / 100 | appMoney:'BRL':0 }}</strong></span>
-          <a class="text-link" [routerLink]="['/servicos', service.slug]" [attr.aria-label]="'Ver detalhes de ' + service.name">Ver detalhes <span aria-hidden="true">→</span></a>
-        </div>
+      <div class="service-tile-copy">
+        <h3 class="service-tile-title"><a [routerLink]="['/servicos', service.slug]">{{ service.name }}</a></h3>
+        <p class="service-tile-description">{{ service.description || 'Consulte o escopo e combine os detalhes com o profissional.' }}</p>
+        <a class="service-tile-action" [routerLink]="['/servicos', service.slug]" [attr.aria-label]="'Ver detalhes de ' + service.name">Ver detalhes <span aria-hidden="true">→</span></a>
       </div>
     </article>
   `,
+  styleUrl: './service-card.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ServiceCardComponent {

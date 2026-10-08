@@ -1,0 +1,91 @@
+<header class="checkout-header">
+  <div class="checkout-header-inner">
+    <cvp-brand />
+    <span class="secure-checkout"><span aria-hidden="true">✓</span> Ambiente de demonstração</span>
+    <a routerLink="/produtos">Voltar à loja</a>
+  </div>
+</header>
+
+<main class="payment-page">
+  @if (loading()) {
+    <cvp-state-panel kind="loading" message="Preparando o checkout." />
+  } @else if (error()) {
+    <cvp-state-panel kind="error" title="Pagamento indisponível" [message]="error()" (retry)="load()" />
+  } @else if (completed(); as done) {
+    @if (done && product(); as item) {
+      <section class="payment-success" aria-live="polite">
+        <div class="success-icon" aria-hidden="true">✓</div>
+        <span class="eyebrow">Pedido {{ orderCode() }}</span>
+        <h1 tabindex="-1">Pedido concluído!</h1>
+        <p>O checkout visual foi concluído. Nenhuma cobrança real foi efetuada e nenhum dado bancário foi armazenado.</p>
+        <div class="success-summary">
+          <span>{{ item.name }}</span>
+          <strong>{{ totalCents() / 100 | appMoney:item.currency }}</strong>
+        </div>
+        <div class="success-actions">
+          <a class="btn btn-primary" routerLink="/produtos">Continuar comprando</a>
+          <a class="btn btn-secondary" routerLink="/">Voltar ao início</a>
+        </div>
+      </section>
+    }
+  } @else if (product(); as item) {
+    <div class="checkout-intro">
+      <div><span class="eyebrow">Checkout seguro</span><h1>Finalize seu pedido</h1><p>Revise a entrega e escolha como deseja pagar.</p></div>
+      <div class="demo-notice" role="note"><strong>Apenas demonstração</strong><span>Esta interface não realiza cobranças nem envia dados financeiros.</span></div>
+    </div>
+
+    <form class="checkout-layout" (ngSubmit)="submit()" novalidate>
+      <div class="checkout-main">
+        <section class="checkout-card" aria-labelledby="delivery-title">
+          <div class="section-number" aria-hidden="true">1</div>
+          <div class="checkout-card-content">
+            <div class="checkout-card-heading"><div><span class="eyebrow">Entrega</span><h2 id="delivery-title">Seus dados</h2></div><span>Campos obrigatórios</span></div>
+            <div class="checkout-fields" [formGroup]="deliveryForm">
+              <label class="field-wide">Nome completo<input formControlName="name" autocomplete="name" maxlength="100" placeholder="Como aparece no documento">@if (deliveryForm.controls.name.touched && deliveryForm.controls.name.invalid) { <small class="field-error">Informe seu nome completo.</small> }</label>
+              <label class="field-wide">E-mail<input type="email" formControlName="email" autocomplete="email" maxlength="160" placeholder="voce@exemplo.com">@if (deliveryForm.controls.email.touched && deliveryForm.controls.email.invalid) { <small class="field-error">Informe um e-mail válido.</small> }</label>
+              <label>CEP<input formControlName="postalCode" autocomplete="postal-code" inputmode="numeric" maxlength="9" placeholder="00000-000">@if (deliveryForm.controls.postalCode.touched && deliveryForm.controls.postalCode.invalid) { <small class="field-error">Informe um CEP válido.</small> }</label>
+              <label class="field-grow">Endereço<input formControlName="street" autocomplete="address-line1" maxlength="150" placeholder="Rua ou avenida">@if (deliveryForm.controls.street.touched && deliveryForm.controls.street.invalid) { <small class="field-error">Informe o endereço.</small> }</label>
+              <label>Número<input formControlName="number" autocomplete="address-line2" maxlength="20" placeholder="123">@if (deliveryForm.controls.number.touched && deliveryForm.controls.number.invalid) { <small class="field-error">Informe o número.</small> }</label>
+              <label class="field-grow">Complemento<input formControlName="complement" maxlength="80" placeholder="Opcional"></label>
+              <label class="field-grow">Cidade<input formControlName="city" autocomplete="address-level2" maxlength="100">@if (deliveryForm.controls.city.touched && deliveryForm.controls.city.invalid) { <small class="field-error">Informe a cidade.</small> }</label>
+              <label>UF<input formControlName="state" autocomplete="address-level1" maxlength="2" placeholder="SP" (input)="deliveryForm.controls.state.setValue(deliveryForm.controls.state.value.toUpperCase())">@if (deliveryForm.controls.state.touched && deliveryForm.controls.state.invalid) { <small class="field-error">Use a sigla com 2 letras.</small> }</label>
+            </div>
+          </div>
+        </section>
+
+        <section class="checkout-card" aria-labelledby="payment-title">
+          <div class="section-number" aria-hidden="true">2</div>
+          <div class="checkout-card-content">
+            <div class="checkout-card-heading"><div><span class="eyebrow">Pagamento</span><h2 id="payment-title">Escolha uma forma</h2></div></div>
+            <div class="payment-methods" role="radiogroup" aria-label="Forma de pagamento">
+              <button type="button" role="radio" [attr.aria-checked]="method() === 'card'" [class.active]="method() === 'card'" (click)="selectMethod('card')"><span class="method-icon" aria-hidden="true">▭</span><span><strong>Cartão</strong><small>Crédito em 1x</small></span><i></i></button>
+              <button type="button" role="radio" [attr.aria-checked]="method() === 'pix'" [class.active]="method() === 'pix'" (click)="selectMethod('pix')"><span class="method-icon pix-icon" aria-hidden="true">◇</span><span><strong>Pix</strong><small>Aprovação simulada</small></span><i></i></button>
+            </div>
+            @if (method() === 'card') {
+              <div class="checkout-fields card-fields" [formGroup]="cardForm">
+                <label class="field-wide">Nome impresso no cartão<input data-cvp-no-localize formControlName="holder" autocomplete="cc-name" maxlength="100" placeholder="NOME COMPLETO">@if (cardForm.controls.holder.touched && cardForm.controls.holder.invalid) { <small class="field-error">Informe o titular do cartão.</small> }</label>
+                <label class="field-wide card-number-field">Número do cartão<span class="card-brand" [attr.data-brand]="detectedBrand()">{{ detectedBrand() === 'generic' ? 'CARD' : detectedBrand().toUpperCase() }}</span><input data-cvp-no-localize formControlName="number" autocomplete="cc-number" inputmode="numeric" maxlength="23" placeholder="0000 0000 0000 0000" (input)="cardNumberInput($event)">@if (cardForm.controls.number.touched && cardForm.controls.number.invalid) { <small class="field-error">Informe um número de cartão válido.</small> }</label>
+                <label>Validade<input data-cvp-no-localize formControlName="expiry" autocomplete="cc-exp" inputmode="numeric" maxlength="5" placeholder="MM/AA" (input)="expiryInput($event)">@if (cardForm.controls.expiry.touched && cardForm.controls.expiry.invalid) { <small class="field-error">Informe uma validade futura.</small> }</label>
+                <label>CVV<input data-cvp-no-localize type="password" formControlName="cvv" autocomplete="cc-csc" inputmode="numeric" maxlength="4" placeholder="•••" (input)="cvvInput($event)">@if (cardForm.controls.cvv.touched && cardForm.controls.cvv.invalid) { <small class="field-error">Use 3 ou 4 números.</small> }</label>
+              </div>
+            } @else {
+              <div class="pix-preview"><span class="pix-mark" aria-hidden="true">◇</span><div><strong>Pix demonstrativo</strong><p>Ao finalizar, o pedido será confirmado imediatamente nesta interface. Nenhuma chave ou transação real será criada.</p></div></div>
+            }
+          </div>
+        </section>
+      </div>
+
+      <aside class="order-summary">
+        <span class="eyebrow">Seu pedido</span><h2>Resumo</h2>
+        <div class="summary-product">
+          <div class="summary-media">@if (item.imageUrl) { <img [src]="item.imageUrl" [alt]="item.name" width="96" height="96"> } @else { <span aria-hidden="true">⌂</span> }</div>
+          <div><strong>{{ item.name }}</strong><small>{{ item.shortDescription }}</small></div>
+        </div>
+        <div class="quantity-row"><span>Quantidade</span><div class="quantity-control"><button type="button" aria-label="Diminuir quantidade" [disabled]="quantity() === 1" (click)="updateQuantity(-1)">−</button><strong aria-live="polite">{{ quantity() }}</strong><button type="button" aria-label="Aumentar quantidade" [disabled]="quantity() >= item.inventoryCount || quantity() >= 10" (click)="updateQuantity(1)">+</button></div></div>
+        <dl class="summary-values"><div><dt>Subtotal</dt><dd>{{ totalCents() / 100 | appMoney:item.currency }}</dd></div><div><dt>Entrega</dt><dd>Grátis</dd></div><div class="summary-total"><dt>Total</dt><dd>{{ totalCents() / 100 | appMoney:item.currency }}</dd></div></dl>
+        <button class="btn btn-primary btn-block payment-submit" type="submit" [disabled]="processing()">{{ processing() ? 'Finalizando…' : 'Finalizar pedido' }}</button>
+        <p class="privacy-note"><span aria-hidden="true">✓</span> Dados usados somente nesta tela e descartados ao sair.</p>
+      </aside>
+    </form>
+  }
+</main>

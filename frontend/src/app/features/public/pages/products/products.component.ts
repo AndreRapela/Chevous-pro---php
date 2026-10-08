@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Product } from '../../../../core/models';
 import { StatePanelComponent } from '../../../../shared/components';
@@ -9,7 +10,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
 @Component({
   selector: 'cvp-products',
   standalone: true,
-  imports: [FormsModule, LocalizedMoneyPipe, StatePanelComponent],
+  imports: [FormsModule, LocalizedMoneyPipe, RouterLink, StatePanelComponent],
   template: `
     <section class="page-hero store-hero">
       <div class="container store-hero-inner">
@@ -33,24 +34,24 @@ import { SeoService } from '../../../../core/seo/seo.service';
             @for (product of products(); track product.id) {
               <article class="product-card" [class.product-featured]="product.featured">
                 <div class="product-media">
-                  @if (product.imageUrl) { <img data-cvp-no-localize [src]="product.imageUrl" [alt]="product.name" width="720" height="480" loading="lazy" decoding="async"> }
+                  @if (product.imageUrl) { <img [src]="product.imageUrl" [alt]="product.name" width="720" height="480" loading="lazy" decoding="async"> }
                   @else { <span class="product-placeholder" aria-hidden="true">⌂</span> }
-                  @if (product.badgeText) { <span class="product-badge" data-cvp-no-localize>{{ product.badgeText }}</span> }
+                  @if (product.badgeText) { <span class="product-badge">{{ product.badgeText }}</span> }
                 </div>
                 <div class="product-copy">
-                  <h2 data-cvp-no-localize>{{ product.name }}</h2>
-                  <p data-cvp-no-localize>{{ product.shortDescription }}</p>
+                  <h2>{{ product.name }}</h2>
+                  <p>{{ product.shortDescription }}</p>
                   <div class="product-price">
                     @if (product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents) { <del>{{ product.compareAtPriceCents / 100 | appMoney:product.currency }}</del> }
                     <strong>{{ product.priceCents / 100 | appMoney:product.currency }}</strong>
                   </div>
                   <div class="product-stock" [class.out-of-stock]="product.inventoryCount < 1"><span aria-hidden="true"></span>{{ product.inventoryCount > 0 ? 'Disponível para compra' : 'Temporariamente indisponível' }}</div>
-                  <a class="btn btn-primary product-buy" [class.disabled]="product.inventoryCount < 1" [attr.aria-disabled]="product.inventoryCount < 1" [attr.tabindex]="product.inventoryCount < 1 ? -1 : null" [attr.href]="product.inventoryCount > 0 ? product.purchaseUrl : null" [attr.rel]="external(product.purchaseUrl) ? 'noopener noreferrer' : null">Comprar agora <span aria-hidden="true">→</span></a>
+                  <a class="btn btn-primary product-buy" [class.disabled]="product.inventoryCount < 1" [attr.aria-disabled]="product.inventoryCount < 1" [attr.tabindex]="product.inventoryCount < 1 ? -1 : null" [routerLink]="product.inventoryCount > 0 ? ['/pagamento', product.slug] : null">Comprar agora <span aria-hidden="true">→</span></a>
                 </div>
               </article>
             }
           </div>
-          <p class="store-disclaimer">A compra é concluída no endereço indicado em cada produto. Valores, frete e disponibilidade são confirmados antes da finalização.</p>
+          <p class="store-disclaimer">O checkout atual é uma demonstração visual: nenhuma cobrança é processada e nenhum dado bancário é armazenado.</p>
         }
       </div>
     </section>
@@ -77,6 +78,4 @@ export class ProductsComponent implements OnInit {
       error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
     });
   }
-
-  external(url: string): boolean { return /^https:\/\//i.test(url); }
 }
