@@ -103,7 +103,7 @@
   .hero-banner-cta:focus-visible { outline-color: var(--control-focus); }
 
   .mobile-hero-orb {
-    --orb-duration: 15s;
+    --orb-duration: var(--hero-orb-duration-coral);
     --orb-delay: -5s;
     position: absolute;
     z-index: 2;
@@ -116,17 +116,18 @@
   }
 
   .mobile-hero-orb-mint {
+    --orb-duration: var(--hero-orb-duration-mint);
     --orb-drift-x: .2rem;
     --orb-drift-y: .28rem;
     top: .1rem;
     left: calc(var(--tablet-portrait-center) - var(--tablet-portrait) / 2 - 1.2rem);
     width: 3.25rem;
     height: 3.25rem;
-    background: var(--brand-100);
+    background: var(--hero-orb-mint-color);
   }
 
   .mobile-hero-orb-coral {
-    --orb-duration: 16s;
+    --orb-duration: var(--hero-orb-duration-coral);
     --orb-drift-x: -.25rem;
     --orb-drift-y: .32rem;
     top: .25rem;
@@ -137,7 +138,7 @@
   }
 
   .mobile-hero-orb-amber {
-    --orb-duration: 17s;
+    --orb-duration: var(--hero-orb-duration-amber);
     --orb-drift-x: .18rem;
     --orb-drift-y: -.28rem;
     top: 50%;
@@ -148,7 +149,7 @@
   }
 
   .mobile-hero-orb-small {
-    --orb-duration: 13s;
+    --orb-duration: var(--hero-orb-duration-small);
     --orb-drift-x: -.16rem;
     --orb-drift-y: -.22rem;
     top: 60%;

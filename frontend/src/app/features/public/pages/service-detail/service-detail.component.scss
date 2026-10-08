@@ -49,7 +49,7 @@
 .service-hero-orb {
   --orb-drift-x: .2rem;
   --orb-drift-y: .28rem;
-  --orb-duration: 15s;
+  --orb-duration: var(--hero-orb-duration-mint);
   --orb-delay: -5s;
   position: absolute;
   z-index: 1;
@@ -60,10 +60,10 @@
   pointer-events: none;
   animation: home-orb-float var(--orb-duration) ease-in-out var(--orb-delay) infinite;
 }
-.service-hero-orb-mint { top: 7%; left: 4%; width: 16%; background: var(--brand-100); }
-.service-hero-orb-coral { --orb-duration: 16s; --orb-drift-x: -.25rem; --orb-drift-y: .32rem; top: 5%; right: 1%; width: 23%; background: var(--coral-500); }
-.service-hero-orb-amber { --orb-duration: 17s; --orb-drift-x: .18rem; --orb-drift-y: -.28rem; top: 56%; left: 1%; width: 20%; background: var(--amber-500); }
-.service-hero-orb-small { --orb-duration: 13s; --orb-drift-x: -.16rem; --orb-drift-y: -.22rem; top: 60%; right: 5%; width: 9%; background: var(--coral-500); }
+.service-hero-orb-mint { top: 7%; left: 4%; width: 16%; background: var(--hero-orb-mint-color); }
+.service-hero-orb-coral { --orb-duration: var(--hero-orb-duration-coral); --orb-drift-x: -.25rem; --orb-drift-y: .32rem; top: 5%; right: 1%; width: 23%; background: var(--coral-500); }
+.service-hero-orb-amber { --orb-duration: var(--hero-orb-duration-amber); --orb-drift-x: .18rem; --orb-drift-y: -.28rem; top: 56%; left: 1%; width: 20%; background: var(--amber-500); }
+.service-hero-orb-small { --orb-duration: var(--hero-orb-duration-small); --orb-drift-x: -.16rem; --orb-drift-y: -.22rem; top: 60%; right: 5%; width: 9%; background: var(--coral-500); }
 
 @media (min-width: 48rem) {
   .service-detail-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
