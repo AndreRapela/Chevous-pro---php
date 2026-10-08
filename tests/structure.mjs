@@ -111,6 +111,13 @@ assert.doesNotMatch(publicServiceDetail, /priceFromCents|A partir de/, 'O detalh
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');
 
 const bookingWizard = await text('frontend/src/app/features/booking/pages/booking-wizard/booking-wizard.component.ts');
+const bookingDetails = await text('frontend/src/app/features/booking/components/booking-details-step/booking-details-step.component.ts');
+assert.doesNotMatch(bookingDetails, /type="number"/, 'A quantidade do agendamento deve ser ajustada com contador, sem digitação avulsa.');
+assert.match(bookingDetails, /role="group" aria-labelledby="booking-quantity-label" aria-describedby="booking-quantity-hint"/, 'O contador deve ter nome e explicação acessíveis.');
+assert.match(bookingDetails, /<output id="booking-quantity" aria-live="polite" aria-atomic="true">/, 'Mudanças de quantidade devem ser anunciadas por leitores de tela.');
+for (const direction of ['decrease', 'increase']) {
+  assert.match(bookingDetails, new RegExp(`class="quantity-${direction}" type="button"[^>]*\\[disabled\\]`), 'Os botões do contador não devem enviar o formulário e devem respeitar os limites.');
+}
 assert.ok(
   bookingWizard.indexOf('<cvp-booking-price-summary') < bookingWizard.indexOf('<div class="booking-main">'),
   'No celular, o resumo de referência deve aparecer antes do formulário e da ação de continuar.'

@@ -32,6 +32,13 @@ const Harness = new Function('computed', 'catchError', 'combineLatest', 'distinc
   () => (source: unknown) => source, configureBookingFormForService, mergeAvailableSlots, providerIdsForSlot
 );
 
+const detailsSource = sourceFile('../src/app/features/booking/components/booking-details-step/booking-details-step.component.ts');
+const detailsClass = detailsSource.statements.find((node): node is ts.ClassDeclaration => ts.isClassDeclaration(node) && node.name?.text === 'BookingDetailsStepComponent');
+assert.ok(detailsClass);
+const detailsMembers = detailsClass.members.filter((node) => ts.isMethodDeclaration(node) || ts.isGetAccessorDeclaration(node));
+const detailsJs = ts.transpileModule(`class DetailsHarness { ${detailsMembers.map((node) => node.getText(detailsSource)).join('\n')} }`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
+const DetailsHarness = new Function('homeSizeRange', `${detailsJs}; return DetailsHarness;`)(homeSizeRange);
+
 function state<T>(initial: T) {
   let value = initial;
   return Object.assign(() => value, { set: (next: T) => { value = next; }, update: (change: (current: T) => T) => { value = change(value); } });
@@ -237,5 +244,80 @@ describe('home size without changing service pricing', () => {
     assert.equal(homeSizeRange({ ...service, categoryId: 'laundry', slug: 'lavagem-roupas' }), null);
     assert.equal(homeSizeRange({ ...service, categoryId: 'care', slug: 'cuidador-idosos', pricingType: 'hourly' }), null);
     assert.deepEqual(homeSizeRange({ ...service, pricingType: 'area', minimumQuantity: 100, maximumQuantity: 50 }), { minimum: 100, maximum: 100 });
+  });
+});
+
+describe('booking quantity counter', () => {
+  function counter(selectedService: Service = service) {
+    const form = createBookingForm(new FormBuilder());
+    configureBookingFormForService(form, selectedService);
+    let quoteRequests = 0;
+    const harness = Object.assign(new DetailsHarness(), {
+      form, service: selectedService, quoteRequested: { emit: () => { quoteRequests++; } }
+    }) as { form: BookingForm; quantityMinimum: number; quantityMaximum: number; updateQuantity(change: -1 | 1): void };
+    return { harness, requests: () => quoteRequests };
+  }
+
+  it('changes one unit at a time and requests a new estimate without changing other details', () => {
+    const { harness, requests } = counter();
+    harness.form.controls.homeSize.setValue(125);
+    harness.form.controls.addonIds.setValue(['addon-fridge']);
+    harness.updateQuantity(1);
+    assert.equal(harness.form.controls.quantity.value, 2);
+    assert.equal(harness.form.controls.quantity.valid, true);
+    assert.equal(harness.form.controls.quantity.dirty, true);
+    assert.equal(harness.form.controls.quantity.touched, true);
+    assert.equal(requests(), 1);
+    harness.updateQuantity(-1);
+    assert.equal(harness.form.controls.quantity.value, 1);
+    assert.equal(requests(), 2);
+    assert.equal(harness.form.controls.homeSize.value, 125);
+    assert.deepEqual(harness.form.controls.addonIds.value, ['addon-fridge']);
+  });
+
+  it('respects service bounds and does not request quotes for clicks at a limit', () => {
+    const { harness, requests } = counter({ ...service, minimumQuantity: 3, maximumQuantity: 4 });
+    assert.equal(harness.quantityMinimum, 3);
+    assert.equal(harness.quantityMaximum, 4);
+    harness.updateQuantity(-1);
+    assert.equal(harness.form.controls.quantity.value, 3);
+    assert.equal(requests(), 0);
+    harness.updateQuantity(1);
+    harness.updateQuantity(1);
+    assert.equal(harness.form.controls.quantity.value, 4);
+    assert.equal(requests(), 1);
+  });
+
+  it('uses the same default bounds as the form and handles an inverted maximum', () => {
+    const defaults = counter({ ...service, minimumQuantity: undefined, maximumQuantity: undefined }).harness;
+    assert.equal(defaults.quantityMinimum, 1);
+    assert.equal(defaults.quantityMaximum, 10000);
+    defaults.form.controls.quantity.setValue(9999);
+    defaults.updateQuantity(1);
+    defaults.updateQuantity(1);
+    assert.equal(defaults.form.controls.quantity.value, 10000);
+    assert.equal(defaults.form.controls.quantity.valid, true);
+    const { harness, requests } = counter({ ...service, minimumQuantity: 3, maximumQuantity: 2 });
+    harness.updateQuantity(1);
+    assert.equal(harness.form.controls.quantity.value, 3);
+    assert.equal(requests(), 0);
+  });
+
+  it('does not change a disabled control or request an estimate', () => {
+    const { harness, requests } = counter();
+    harness.form.controls.quantity.disable();
+    harness.updateQuantity(1);
+    assert.equal(harness.form.controls.quantity.value, 1);
+    assert.equal(requests(), 0);
+  });
+
+  it('recovers invalid restored values to whole units within the service bounds', () => {
+    for (const invalid of [NaN, 1.5, -5, 100]) {
+      const { harness } = counter();
+      harness.form.controls.quantity.setValue(invalid);
+      harness.updateQuantity(1);
+      assert.equal(Number.isSafeInteger(harness.form.controls.quantity.value), true);
+      assert.equal(harness.form.controls.quantity.valid, true);
+    }
   });
 });

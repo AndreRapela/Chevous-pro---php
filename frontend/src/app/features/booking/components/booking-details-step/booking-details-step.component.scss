@@ -14,8 +14,41 @@
 .booking-details-step input.range::-moz-range-track { height: .25rem; border-radius: 999px; background: var(--brand-200); }
 .booking-details-step input.range::-moz-range-thumb { width: .72rem; height: .72rem; border: 3px solid #fff; border-radius: 50%; background: var(--brand-600); box-shadow: 0 0 0 1px var(--brand-600); }
 
+.booking-quantity-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--brand-100);
+  border-radius: 1rem;
+  background: linear-gradient(115deg, #f6fbf8, #edf8f2);
+}
+.booking-quantity-copy { min-width: 0; }
+.booking-quantity-copy > strong { color: var(--ink-900); font-size: .9rem; }
+.booking-quantity-copy p { max-width: 23rem; margin: .25rem 0 0; color: var(--ink-600); font-size: .8rem; line-height: 1.45; }
+.booking-quantity-counter { flex: 0 0 auto; display: grid; grid-template-columns: 2.75rem minmax(4.5rem, auto) 2.75rem; align-items: center; gap: .35rem; padding: .35rem; border: 1px solid var(--brand-100); border-radius: 999px; background: #fff; box-shadow: 0 3px 10px rgba(15, 54, 40, .05); }
+.booking-quantity-counter button { display: grid; place-items: center; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; border-radius: 50%; font-size: 1.45rem; font-weight: 600; line-height: 1; transition: background-color .18s ease, transform .18s ease; }
+.booking-quantity-counter .quantity-decrease { color: var(--brand-800); background: var(--brand-50); }
+.booking-quantity-counter .quantity-increase { color: #fff; background: var(--brand-700); }
+.booking-quantity-counter button:not(:disabled):hover { transform: translateY(-1px); }
+.booking-quantity-counter .quantity-decrease:not(:disabled):hover { background: var(--brand-100); }
+.booking-quantity-counter .quantity-increase:not(:disabled):hover { background: var(--brand-800); }
+.booking-quantity-counter button:focus-visible { outline: 3px solid var(--brand-500); outline-offset: 3px; }
+.booking-quantity-counter button:disabled { opacity: 1; color: var(--ink-400); background: var(--ink-50); }
+.booking-quantity-counter output { display: grid; gap: .05rem; text-align: center; }
+.booking-quantity-counter output strong { color: var(--brand-900); font-size: 1.4rem; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.booking-quantity-counter output span { color: var(--ink-600); font-size: .65rem; line-height: 1.2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .booking-quantity-counter button { transition: none; }
+  .booking-quantity-counter button:not(:disabled):hover { transform: none; }
+}
+
 @media (max-width: 47.99rem) {
   .booking-details-step { gap: .72rem; }
   .booking-section-heading { align-items: flex-start; }
   .booking-section-heading p { font-size: .76rem; line-height: 1.35; }
+  .booking-quantity-card { flex-wrap: wrap; gap: .75rem; padding: .85rem; }
+  .booking-quantity-copy { flex: 1 1 12rem; }
 }
