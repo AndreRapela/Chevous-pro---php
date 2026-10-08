@@ -1,17 +1,19 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Promotion, ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
 import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
 import { SeoService } from '../../../../core/seo/seo.service';
+import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
 
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
+  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
   template: `
+    <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
     <section class="section home-section home-deals" aria-labelledby="discounts-title">
       <div class="container">
         <div class="home-deals-heading">
@@ -92,6 +94,8 @@ import { SeoService } from '../../../../core/seo/seo.service';
 export class HomeComponent implements OnInit {
   private readonly marketplace = inject(MarketplaceService);
   private readonly seo = inject(SeoService);
+  private readonly router = inject(Router);
+  heroQuery = '';
   readonly categories = signal<ServiceCategory[]>([]);
   readonly popularServices = signal<Service[]>([]);
   readonly providers = signal<ProviderProfile[]>([]);
@@ -103,6 +107,11 @@ export class HomeComponent implements OnInit {
   readonly loading = signal(true);
   readonly error = signal('');
   readonly categoryPath = categoryPublicPath;
+
+  searchServices(): void {
+    const query = this.heroQuery.trim();
+    void this.router.navigate(['/servicos'], { queryParams: query ? { q: query } : {} });
+  }
 
   ngOnInit(): void {
     this.seo.update({

@@ -1,14 +1,13 @@
 import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
-import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
 import { BrandComponent } from '../shared/components';
 import { LocaleControlsComponent } from '../shared/localization/locale-controls.component';
-import { HomeHeroComponent } from '../features/public/components/home-hero/home-hero.component';
 
 @Component({
   selector: 'cvp-public-shell',
   standalone: true,
-  imports: [BrandComponent, HomeHeroComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [BrandComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
     <header class="site-header">
@@ -51,7 +50,6 @@ import { HomeHeroComponent } from '../features/public/components/home-hero/home-
       }
     </header>
     <main id="conteudo-principal" tabindex="-1">
-      <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
       <router-outlet />
     </main>
     <footer class="site-footer">
@@ -95,16 +93,9 @@ import { HomeHeroComponent } from '../features/public/components/home-hero/home-
 })
 export class PublicShellComponent {
   readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
   readonly menuOpen = signal(false);
-  heroQuery = '';
 
   closeMenu(): void { this.menuOpen.set(false); }
-
-  searchServices(): void {
-    const query = this.heroQuery.trim();
-    void this.router.navigate(['/servicos'], { queryParams: query ? { q: query } : {} });
-  }
 
   @HostListener('document:keydown.escape')
   onEscape(): void { this.closeMenu(); }

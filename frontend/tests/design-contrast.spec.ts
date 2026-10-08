@@ -296,11 +296,19 @@ describe('original green brand palette', () => {
   it('keeps service media, profile identity and informational sections proportionate', () => {
     assert.equal(declaration('.service-detail-grid h1', 'max-width'), 'none');
     assert.ok(rules.some(rule => rule.selectors.includes('.service-visual') && rule.declarations.includes('min-height: 15rem')));
-    assert.equal(declaration('.service-visual > img', 'object-fit'), 'cover');
+    const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
+    assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*object-fit:\s*cover;/s);
     assert.equal(declaration('.service-detail-provider-grid .provider-card', 'padding'), '.78rem');
     assert.equal(declaration('cvp-provider-detail .profile-identity-panel', 'display'), 'grid');
     assert.ok(rules.some(rule => rule.selectors.includes('cvp-provider-detail .profile-identity-panel .avatar-lg') && rule.declarations.includes('width: 5rem')));
     assert.equal(declaration('cvp-info-page .info-page-hero', 'padding-bottom'), '.6rem');
     assert.equal(declaration('cvp-info-page .info-page-content', 'padding-top'), '.4rem');
+  });
+  it('frames service portraits in a round slot instead of a wide crop that hides the face', () => {
+    const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
+    assert.match(servicePortrait, /\.service-visual:not\(\.custom-service-visual\)\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;/s);
+    assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*height:\s*141%;[^}]*object-position:\s*50% 8%;/s);
+    assert.match(servicePortrait, /@media \(min-width: 48rem\)\s*\{\s*\.service-detail-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\);/s);
+    assert.doesNotMatch(source, /\.service-visual > img\s*\{/);
   });
 });

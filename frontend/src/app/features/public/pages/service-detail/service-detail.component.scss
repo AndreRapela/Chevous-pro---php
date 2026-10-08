@@ -1,0 +1,25 @@
+:host { display: block; }
+
+.service-visual:not(.custom-service-visual) {
+  width: clamp(14rem, 32vw, 20rem);
+  max-width: 100%;
+  min-height: 0;
+  aspect-ratio: 1;
+  justify-self: center;
+  overflow: hidden;
+  border-radius: 50%;
+}
+
+.service-visual > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 141%;
+  display: block;
+  object-fit: cover;
+  object-position: 50% 8%;
+}
+
+@media (min-width: 48rem) {
+  .service-detail-grid { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); }
+}

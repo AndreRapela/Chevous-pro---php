@@ -21,6 +21,7 @@ import { serviceInitial } from '../../../../shared/utils/service-name.util';
       <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>{{ localization.translate('Profissionais para') }} {{ localization.translate(item.name).toLocaleLowerCase(localization.locale()) }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
     }
   `,
+  styleUrl: './service-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ServiceDetailComponent implements OnInit {
