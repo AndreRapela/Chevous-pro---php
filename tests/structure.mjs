@@ -127,7 +127,8 @@ assert.match(staticHostingRules, /Header always set Cache-Control "public, max-a
 const brandComponent = await text('frontend/src/app/shared/components/brand/brand.component.ts');
 const brandLogo = await text('frontend/public/pro-logo.svg');
 assert.doesNotMatch(brandComponent, /brand-name/, 'A marca não deve recompor o nome fora do SVG oficial.');
-assert.match(brandComponent, /pro-logo\.svg\?v=20260923-green/, 'A marca verde deve invalidar a versão anterior no navegador.');
+assert.match(brandComponent, /pro-logo\.svg\?v=20261008-smaller-r/, 'O ajuste do logo deve invalidar a versão anterior no navegador.');
+assert.match(brandLogo, /font-size="78"[^>]*>P<tspan font-size="70">r<\/tspan><\/text>/, 'A letra r deve ser um pouco menor sem alterar o tamanho do P.');
 assert.match(brandLogo, /viewBox="0 0 220 138"/, 'A marca deve preservar a proporção vertical da referência enviada.');
 assert.match(brandLogo, /fill="#006b4d"/, 'A marca deve usar o verde original da identidade visual.');
 assert.match(documentSource, /name="theme-color" content="#006b4d"/, 'A cor do navegador deve acompanhar a identidade verde.');
