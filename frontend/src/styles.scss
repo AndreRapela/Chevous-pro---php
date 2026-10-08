@@ -27,6 +27,11 @@
   --surface-soft: #eaf1ed;
   --page-background: #edf6f1;
   --hero-background: #dff7ed;
+  --hero-orb-mint-color: var(--brand-400);
+  --hero-orb-duration-mint: 12s;
+  --hero-orb-duration-coral: 11.2s;
+  --hero-orb-duration-amber: 12.8s;
+  --hero-orb-duration-small: 10.4s;
   --control-border: #60786f;
   --control-background: #ffffff;
   --control-focus: var(--brand-700);
@@ -2894,7 +2899,7 @@ body .provider-cta-actions .btn { font-size: 1rem !important; }
 .desktop-hero-visual::after {
   --orb-drift-x: .22rem;
   --orb-drift-y: -.28rem;
-  --orb-duration: 16s;
+  --orb-duration: var(--hero-orb-duration-amber);
   --orb-delay: -7s;
   background: var(--amber-500);
   animation: home-orb-float var(--orb-duration) ease-in-out var(--orb-delay) infinite;
@@ -2903,18 +2908,18 @@ body .provider-cta-actions .btn { font-size: 1rem !important; }
 .desktop-hero-orb {
   --orb-drift-x: .22rem;
   --orb-drift-y: .32rem;
-  --orb-duration: 15s;
+  --orb-duration: var(--hero-orb-duration-mint);
   --orb-delay: -5s;
   border: 0;
   animation: home-orb-float var(--orb-duration) ease-in-out var(--orb-delay) infinite;
   will-change: translate;
 }
-.desktop-hero-orb.orb-mint { background: var(--brand-100); }
-.desktop-hero-orb.orb-coral { background: var(--coral-500); }
+.desktop-hero-orb.orb-mint { background: var(--hero-orb-mint-color); }
+.desktop-hero-orb.orb-coral { --orb-duration: var(--hero-orb-duration-coral); background: var(--coral-500); }
 .desktop-hero-orb.orb-amber {
   --orb-drift-x: -.18rem;
   --orb-drift-y: -.3rem;
-  --orb-duration: 17s;
+  --orb-duration: var(--hero-orb-duration-amber);
   --orb-delay: -9s;
   top: 3.8rem;
   left: calc(50% + 5.8rem);
@@ -3908,7 +3913,7 @@ body .home-discount-copy p {
   cvp-home-hero .mobile-hero-orb {
     --orb-drift-x: 0;
     --orb-drift-y: .3rem;
-    --orb-duration: 14s;
+    --orb-duration: var(--hero-orb-duration-coral);
     --orb-delay: 0s;
     position: absolute;
     z-index: 1;
@@ -3921,18 +3926,18 @@ body .home-discount-copy p {
   cvp-home-hero .mobile-hero-orb-mint {
     --orb-drift-x: .22rem;
     --orb-drift-y: .32rem;
-    --orb-duration: 15s;
+    --orb-duration: var(--hero-orb-duration-mint);
     --orb-delay: -5.2s;
     top: -2.8rem;
     left: -3.2rem;
     width: 7.5rem;
     height: 7.5rem;
-    background: var(--brand-100);
+    background: var(--hero-orb-mint-color);
   }
   cvp-home-hero .mobile-hero-orb-coral {
     --orb-drift-x: -.26rem;
     --orb-drift-y: .36rem;
-    --orb-duration: 14s;
+    --orb-duration: var(--hero-orb-duration-coral);
     --orb-delay: -4.1s;
     z-index: 1;
     top: 1.2rem;
@@ -3944,7 +3949,7 @@ body .home-discount-copy p {
   cvp-home-hero .mobile-hero-orb-amber {
     --orb-drift-x: .18rem;
     --orb-drift-y: -.3rem;
-    --orb-duration: 16s;
+    --orb-duration: var(--hero-orb-duration-amber);
     --orb-delay: -8.4s;
     z-index: 3;
     left: 1.35rem;
@@ -3956,7 +3961,7 @@ body .home-discount-copy p {
   cvp-home-hero .mobile-hero-orb-small {
     --orb-drift-x: -.22rem;
     --orb-drift-y: -.24rem;
-    --orb-duration: 13s;
+    --orb-duration: var(--hero-orb-duration-small);
     --orb-delay: -6.3s;
     z-index: 3;
     right: 2rem;
