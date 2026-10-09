@@ -40,6 +40,19 @@ function contrast(first: string, second: string): number {
 }
 
 describe('original green brand palette', () => {
+  it('keeps the reference logo with aperture P and o, a smaller vector r, and a versioned shared asset', () => {
+    const logo = readFileSync(new URL('../public/pro-logo.svg', import.meta.url), 'utf8');
+    const brand = readFileSync(new URL('../src/app/shared/components/brand/brand.component.ts', import.meta.url), 'utf8');
+    assert.match(logo, /viewBox="0 0 220 138"/);
+    assert.match(logo, /id="letter-p"[\s\S]*mask="url\(#p-shutter\)"/);
+    assert.match(logo, /id="letter-o"[\s\S]*mask="url\(#o-shutter\)"/);
+    assert.match(logo, /<path id="letter-r"/);
+    assert.doesNotMatch(logo, /<tspan|>Pr</);
+    assert.match(logo, /font-weight="700"[^>]*>Chez vous pro<\/text>/);
+    assert.match(brand, /src="\/pro-logo\.svg\?v=20261009-aperture-logo"/);
+    assert.match(brand, /alt="" width="220" height="138"/);
+    assert.ok(!logo.includes('<image'), 'The brand must stay vector-based rather than embedding the reference photograph.');
+  });
   it('keeps secondary reading text above 4.5:1 across the main light surfaces', () => {
     for (const background of ['--surface', '--surface-soft', '--page-background', '--hero-background', '--control-background', '--brand-100', '--coral-100', '--amber-100', '--danger-soft', '--warning-soft']) {
       for (const foreground of ['--ink-500', '--ink-600', '--ink-700']) {

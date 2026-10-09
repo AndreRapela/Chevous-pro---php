@@ -2,23 +2,33 @@
   <title id="logo-title">Pro</title>
   <desc id="logo-description">Chez vous pro</desc>
   <defs>
-    <mask id="shutter" x="-38" y="-38" width="76" height="76" maskUnits="userSpaceOnUse">
-      <rect x="-38" y="-38" width="76" height="76" fill="#fff"/>
-      <path d="M0-14 12.12-7v14L0 14-12.12 7V-7Z" fill="#000"/>
-      <g stroke="#000" stroke-width="3.4">
-        <path id="slit" d="M0-14-34-34"/>
+    <g id="aperture-cutouts" fill="#000">
+      <path d="M0-15 13-7.5v15L0 15-13 7.5v-15Z"/>
+      <g stroke="#000" stroke-width="3.6">
+        <path id="slit" d="M13 7.5 12-42"/>
         <use href="#slit" transform="rotate(60)"/><use href="#slit" transform="rotate(120)"/>
         <use href="#slit" transform="rotate(180)"/><use href="#slit" transform="rotate(240)"/>
         <use href="#slit" transform="rotate(300)"/>
       </g>
+    </g>
+    <mask id="p-shutter" x="-42" y="-42" width="84" height="94" maskUnits="userSpaceOnUse">
+      <rect x="-42" y="-42" width="84" height="94" fill="#fff"/>
+      <use href="#aperture-cutouts" transform="rotate(-20)"/>
+    </mask>
+    <mask id="o-shutter" x="-42" y="-42" width="84" height="84" maskUnits="userSpaceOnUse">
+      <rect x="-42" y="-42" width="84" height="84" fill="#fff"/>
+      <use href="#aperture-cutouts"/>
     </mask>
   </defs>
   <rect width="220" height="138" fill="#006b4d"/>
   <g fill="#fff">
-    <text x="30" y="82" font-family="Arial, Helvetica, sans-serif" font-size="78" font-weight="700" letter-spacing="-4">P<tspan font-size="70">r</tspan></text>
-    <g transform="translate(160 57)">
-      <circle r="34" mask="url(#shutter)"/>
+    <g id="letter-p" transform="translate(52 45)">
+      <path d="M-35 0A35 35 0 1 1-16 31.128V47H-35Z" mask="url(#p-shutter)"/>
     </g>
-    <text x="110" y="119" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="23" font-weight="300" letter-spacing="1.15">Chez vous pro</text>
+    <path id="letter-r" d="M95 40H109V46C113 40 119 38 128 40L126 53C120 51 113 54 112 61V90H95Z"/>
+    <g id="letter-o" transform="translate(171 58)">
+      <circle r="38" mask="url(#o-shutter)"/>
+    </g>
+    <text x="110" y="125" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" textLength="195" lengthAdjust="spacingAndGlyphs">Chez vous pro</text>
   </g>
 </svg>
