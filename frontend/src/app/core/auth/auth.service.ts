@@ -4,9 +4,21 @@ import { ApiService } from '../http/api.service';
 import { AuthSession, AuthSessionInfo, User, UserRole } from '../models';
 import { SessionStoreService } from './session-store.service';
 
-export interface LoginPayload { email: string; password: string; remember?: boolean; }
-export interface RegisterPayload { name: string; email: string; phone: string; password: string; }
-interface RegisterResponse { user: User; message: string; }
+export interface LoginPayload {
+  email: string;
+  password: string;
+  remember?: boolean;
+}
+export interface RegisterPayload {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+}
+interface RegisterResponse {
+  user: User;
+  message: string;
+}
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -26,7 +38,10 @@ export class AuthService {
     );
   }
 
-  register(payload: RegisterPayload, role: Extract<UserRole, 'customer' | 'provider'> = 'customer'): Observable<User> {
+  register(
+    payload: RegisterPayload,
+    role: Extract<UserRole, 'customer' | 'provider'> = 'customer'
+  ): Observable<User> {
     this.busy.set(true);
     return this.api.post<RegisterResponse>(`auth/register/${role}`, payload).pipe(
       map((response) => this.normalizeUser(response.user)),
@@ -55,7 +70,9 @@ export class AuthService {
   }
 
   changePassword(currentPassword: string, newPassword: string): Observable<void> {
-    return this.api.post<unknown>('auth/password/change', { currentPassword, newPassword }).pipe(map(() => undefined));
+    return this.api
+      .post<unknown>('auth/password/change', { currentPassword, newPassword })
+      .pipe(map(() => undefined));
   }
 
   forgotPassword(email: string): Observable<void> {
@@ -63,7 +80,9 @@ export class AuthService {
   }
 
   resetPassword(token: string, password: string): Observable<void> {
-    return this.api.post<unknown>('auth/password/reset', { token, password }).pipe(map(() => undefined));
+    return this.api
+      .post<unknown>('auth/password/reset', { token, password })
+      .pipe(map(() => undefined));
   }
 
   verifyEmail(token: string): Observable<void> {
@@ -92,7 +111,9 @@ export class AuthService {
     return '/conta';
   }
 
-  accessToken(): string | null { return this.session.accessToken; }
+  accessToken(): string | null {
+    return this.session.accessToken;
+  }
 
   private setSession(session: AuthSession): void {
     const user = this.normalizeUser(session.user);
@@ -105,7 +126,14 @@ export class AuthService {
       this.session.clear();
       throw new Error('Papel de usuário inválido.');
     }
-    const initials = raw.initials || raw.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('');
+    const initials =
+      raw.initials ||
+      raw.name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() ?? '')
+        .join('');
     return { ...raw, role: candidate, initials, city: raw.city || '' };
   }
 }

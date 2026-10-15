@@ -16,7 +16,7 @@ try {
     $services['rateLimiter']->check(
         'global:' . $request->ip,
         $services['config']['rate_limit']['requests'],
-        $services['config']['rate_limit']['window']
+        $services['config']['rate_limit']['window'],
     );
 
     // Preflight também consome recursos de bootstrap. Aplicar o limite antes
@@ -33,12 +33,20 @@ try {
     Response::error($exception, $requestId)->send($requestId);
 } catch (Throwable $exception) {
     $requestId = $request?->requestId ?? 'bootstrap-error';
-    error_log(sprintf('[%s] %s in %s:%d', $requestId, $exception->getMessage(), $exception->getFile(), $exception->getLine()));
+    error_log(
+        sprintf(
+            '[%s] %s in %s:%d',
+            $requestId,
+            $exception->getMessage(),
+            $exception->getFile(),
+            $exception->getLine(),
+        ),
+    );
     $debug = isset($services['config']['debug']) && $services['config']['debug'];
     $apiException = new ApiException(
         500,
         'INTERNAL_ERROR',
-        $debug ? $exception->getMessage() : 'Não foi possível processar a solicitação.'
+        $debug ? $exception->getMessage() : 'Não foi possível processar a solicitação.',
     );
     Response::error($apiException, $requestId)->send($requestId);
 }

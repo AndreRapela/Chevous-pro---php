@@ -1,0 +1,65 @@
+<section class="portal-page">
+  <cvp-page-header
+    eyebrow="Centro de operações"
+    title="Visão geral"
+    description="Indicadores e reservas recentes retornados pela API."
+  >
+    <span class="last-updated">
+      <span class="status-dot"></span>
+      Atualizado agora
+    </span>
+  </cvp-page-header>
+  @if (loading()) {
+    <cvp-state-panel kind="loading" />
+  } @else if (error()) {
+    <cvp-state-panel
+      kind="error"
+      title="Indicadores indisponíveis"
+      [message]="error()"
+      (retry)="load()"
+    />
+  } @else {
+    <cvp-metric-grid [metrics]="metrics()" />
+    <section class="portal-card">
+      <div class="card-title-row">
+        <h2>Reservas recentes</h2>
+        <a class="text-link" routerLink="/admin/reservas">Ver todas</a>
+      </div>
+      @if (recent().length) {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Serviço</th>
+                <th>Cliente / profissional</th>
+                <th>Status</th>
+                <th>Criação</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of recent(); track value(item, 'id')) {
+                <tr>
+                  <td>
+                    <strong>{{ value(item, 'serviceName') }}</strong>
+                  </td>
+                  <td>
+                    {{ value(item, 'customerName') }} /
+                    {{ value(item, 'professionalName', 'A definir') }}
+                  </td>
+                  <td><cvp-status-pill [status]="bookingStatus(item)" /></td>
+                  <td>{{ utcDate(item, 'createdAt') | appDate:'MMM d, yyyy HH:mm' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <cvp-state-panel
+          kind="empty"
+          title="Sem atividade recente"
+          message="As reservas recentes aparecerão aqui."
+        />
+      }
+    </section>
+  }
+</section>

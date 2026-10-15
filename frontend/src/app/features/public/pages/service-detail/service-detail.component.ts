@@ -1,4 +1,12 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, effect, inject, signal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  effect,
+  inject,
+  signal
+} from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { BehaviorSubject, catchError, combineLatest, map, of, switchMap } from 'rxjs';
@@ -13,35 +21,7 @@ import { serviceInitial } from '../../../../shared/utils/service-name.util';
   selector: 'cvp-service-detail',
   standalone: true,
   imports: [ProviderCardComponent, RouterLink, StatePanelComponent],
-  template: `
-    @if (loading()) { <div class="container section"><cvp-state-panel kind="loading" /></div> }
-    @else if (error()) { <div class="container section"><cvp-state-panel kind="error" title="Serviço indisponível" [message]="error()" (retry)="load()" /></div> }
-    @else if (service(); as item) {
-      <section class="service-detail-hero">
-        <div class="container service-detail-grid">
-          <div class="service-detail-copy">
-            <span class="kicker">Agendamento simples e seguro</span>
-            <h1>{{ item.name }}</h1>
-            <p>{{ item.description }}</p>
-            <div class="hero-actions"><a class="btn btn-primary" [routerLink]="['/agendar', item.id]">Ver profissionais</a><span><strong>Valor definido por cada profissional</strong></span></div>
-          </div>
-          <div class="service-detail-art" aria-hidden="true">
-            <div class="service-visual" [class.custom-service-visual]="item.isCustom">
-              @if (item.isCustom) { <span>{{ serviceInitial(item.name) }}</span> }
-              @else { <img [src]="heroImage(item)" alt="" /> }
-            </div>
-            @if (!item.isCustom) {
-              <span class="service-hero-orb service-hero-orb-mint"></span>
-              <span class="service-hero-orb service-hero-orb-coral"></span>
-              <span class="service-hero-orb service-hero-orb-amber"></span>
-              <span class="service-hero-orb service-hero-orb-small"></span>
-            }
-          </div>
-        </div>
-      </section>
-      <section class="section section-mint service-detail-providers"><div class="container"><div class="section-heading"><div><span class="eyebrow">Disponíveis para você</span><h2>{{ localization.translate('Profissionais para') }} {{ localization.translate(item.name).toLocaleLowerCase(localization.locale()) }}</h2></div></div><div class="provider-grid service-detail-provider-grid">@for (provider of providers(); track provider.id) { <cvp-provider-card [provider]="provider" /> }</div></div></section>
-    }
-  `,
+  templateUrl: './service-detail.component.html',
   styleUrl: './service-detail.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -67,23 +47,31 @@ export class ServiceDetailComponent implements OnInit {
     combineLatest([
       this.route.paramMap.pipe(map((params) => params.get('slug') ?? '')),
       this.reload
-    ]).pipe(
-      switchMap(([id]) => {
-        this.loading.set(true);
-        this.error.set('');
-        return this.marketplace.service(id).pipe(
-          switchMap((service) => this.marketplace.providers({ serviceId: service.id }).pipe(map((providers) => ({ service, providers, error: '' })))),
-          catchError((failure: Error) => of({ service: null, providers: [] as ProviderProfile[], error: failure.message }))
-        );
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe((result) => {
-      this.service.set(result.service);
-      this.providers.set(result.providers);
-      this.error.set(result.error);
-      this.loading.set(false);
-      if (result.service) this.updateSeo(result.service);
-    });
+    ])
+      .pipe(
+        switchMap(([id]) => {
+          this.loading.set(true);
+          this.error.set('');
+          return this.marketplace.service(id).pipe(
+            switchMap((service) =>
+              this.marketplace
+                .providers({ serviceId: service.id })
+                .pipe(map((providers) => ({ service, providers, error: '' })))
+            ),
+            catchError((failure: Error) =>
+              of({ service: null, providers: [] as ProviderProfile[], error: failure.message })
+            )
+          );
+        }),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe((result) => {
+        this.service.set(result.service);
+        this.providers.set(result.providers);
+        this.error.set(result.error);
+        this.loading.set(false);
+        if (result.service) this.updateSeo(result.service);
+      });
   }
 
   load(): void {
@@ -100,7 +88,9 @@ export class ServiceDetailComponent implements OnInit {
     return '/images/eletricista-login-v1-1280.webp';
   }
 
-  serviceInitial(name: string): string { return serviceInitial(name); }
+  serviceInitial(name: string): string {
+    return serviceInitial(name);
+  }
 
   private updateSeo(service: Service): void {
     const canonicalPath = `/servicos/${service.slug}`;
@@ -127,8 +117,18 @@ export class ServiceDetailComponent implements OnInit {
           '@context': 'https://schema.org',
           '@type': 'BreadcrumbList',
           itemListElement: [
-            { '@type': 'ListItem', position: 1, name: this.localization.translate('Início'), item: '/' },
-            { '@type': 'ListItem', position: 2, name: this.localization.translate('Serviços'), item: '/servicos' },
+            {
+              '@type': 'ListItem',
+              position: 1,
+              name: this.localization.translate('Início'),
+              item: '/'
+            },
+            {
+              '@type': 'ListItem',
+              position: 2,
+              name: this.localization.translate('Serviços'),
+              item: '/servicos'
+            },
             { '@type': 'ListItem', position: 3, name: translatedName, item: canonicalPath }
           ]
         }

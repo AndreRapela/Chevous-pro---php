@@ -24,7 +24,11 @@ final class Env
                 continue;
             }
 
-            if (strlen($value) >= 2 && (($value[0] === '"' && str_ends_with($value, '"')) || ($value[0] === "'" && str_ends_with($value, "'")))) {
+            if (
+                strlen($value) >= 2 &&
+                (($value[0] === '"' && str_ends_with($value, '"')) ||
+                    ($value[0] === "'" && str_ends_with($value, "'")))
+            ) {
                 $value = substr($value, 1, -1);
             }
 

@@ -12,9 +12,8 @@ final class Response
         public readonly array $headers = [],
         public readonly ?string $filePath = null,
         public readonly bool $rawBody = false,
-        public readonly ?\Closure $stream = null
-    ) {
-    }
+        public readonly ?\Closure $stream = null,
+    ) {}
 
     public static function data(mixed $data, int $status = 200, ?array $meta = null): self
     {
@@ -32,30 +31,50 @@ final class Response
 
     public static function file(string $path, string $mimeType, int $cacheSeconds = 0): self
     {
-        return new self(null, 200, [
-            'Content-Type' => $mimeType,
-            'Content-Length' => (string) filesize($path),
-            'Cache-Control' => $cacheSeconds > 0 ? 'public, max-age=' . $cacheSeconds : 'no-store',
-        ], $path);
+        return new self(
+            null,
+            200,
+            [
+                'Content-Type' => $mimeType,
+                'Content-Length' => (string) filesize($path),
+                'Cache-Control' =>
+                    $cacheSeconds > 0 ? 'public, max-age=' . $cacheSeconds : 'no-store',
+            ],
+            $path,
+        );
     }
 
     /** Resposta pública textual (por exemplo robots.txt e sitemap.xml). */
     public static function text(string $body, string $mimeType, int $cacheSeconds = 0): self
     {
-        return new self($body, 200, [
-            'Content-Type' => $mimeType,
-            'Cache-Control' => $cacheSeconds > 0 ? 'public, max-age=' . $cacheSeconds : 'no-store',
-        ], null, true);
+        return new self(
+            $body,
+            200,
+            [
+                'Content-Type' => $mimeType,
+                'Cache-Control' =>
+                    $cacheSeconds > 0 ? 'public, max-age=' . $cacheSeconds : 'no-store',
+            ],
+            null,
+            true,
+        );
     }
 
     /** Fluxo SSE autenticado; a função é executada somente depois dos headers. */
     public static function eventStream(\Closure $stream): self
     {
-        return new self(null, 200, [
-            'Content-Type' => 'text/event-stream; charset=utf-8',
-            'Cache-Control' => 'no-cache, no-store, private',
-            'X-Accel-Buffering' => 'no',
-        ], null, true, $stream);
+        return new self(
+            null,
+            200,
+            [
+                'Content-Type' => 'text/event-stream; charset=utf-8',
+                'Cache-Control' => 'no-cache, no-store, private',
+                'X-Accel-Buffering' => 'no',
+            ],
+            null,
+            true,
+            $stream,
+        );
     }
 
     public static function error(ApiException $exception, string $requestId): self
@@ -103,7 +122,10 @@ final class Response
         }
 
         if ($this->status !== 204 && $this->payload !== null) {
-            echo json_encode($this->payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+            echo json_encode(
+                $this->payload,
+                JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
+            );
         }
     }
 }

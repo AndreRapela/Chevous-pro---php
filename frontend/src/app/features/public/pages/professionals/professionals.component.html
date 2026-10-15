@@ -1,0 +1,142 @@
+<section class="page-hero compact professionals-hero">
+  <div class="container narrow">
+    <span class="eyebrow">Escolha com confiança</span>
+    <h1>Profissionais perto de você</h1>
+    <p>Perfis aprovados, avaliações publicadas e disponibilidade clara.</p>
+  </div>
+</section>
+<section class="section section-tight professionals-results">
+  <div class="container search-layout">
+    <aside class="filters-card professionals-filters" aria-labelledby="filters-title">
+      <div class="filter-title">
+        <h2 id="filters-title">Filtros</h2>
+        <button type="button" class="text-button" (click)="clearFilters()">Limpar</button>
+      </div>
+      <label>
+        Serviço
+        <select [(ngModel)]="serviceId" (ngModelChange)="filtersChanged()">
+          <option value="">Todos os serviços</option>
+          @for (service of services(); track service.id) {
+            <option [value]="service.id">{{ service.name }}</option>
+          }
+        </select>
+      </label>
+      <label>
+        Cidade
+        <input
+          [(ngModel)]="city"
+          (ngModelChange)="filtersChanged()"
+          placeholder="Ex.: São Paulo"
+          autocomplete="address-level2"
+        />
+      </label>
+      <fieldset>
+        <legend>Avaliação mínima</legend>
+        <div class="radio-stack">
+          <label>
+            <input
+              type="radio"
+              name="rating"
+              [(ngModel)]="minRating"
+              (ngModelChange)="filtersChanged()"
+              [value]="0"
+            />
+            Todas
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="rating"
+              [(ngModel)]="minRating"
+              (ngModelChange)="filtersChanged()"
+              [value]="4.8"
+            />
+            4,8+
+          </label>
+          <label>
+            <input
+              type="radio"
+              name="rating"
+              [(ngModel)]="minRating"
+              (ngModelChange)="filtersChanged()"
+              [value]="4.9"
+            />
+            4,9+
+          </label>
+        </div>
+      </fieldset>
+    </aside>
+    <div class="results-column">
+      <div class="results-heading">
+        <h2>{{ total() }} profissionais</h2>
+        <select
+          aria-label="Ordenar resultados"
+          [(ngModel)]="sort"
+          (ngModelChange)="filtersChanged()"
+        >
+          <option value="recommended">Recomendados</option>
+          <option value="rating">Melhor avaliação</option>
+          <option value="price">Menor preço</option>
+        </select>
+      </div>
+      @if (loading()) {
+        <cvp-state-panel kind="loading" />
+      } @else if (error()) {
+        <cvp-state-panel
+          kind="error"
+          title="Não conseguimos buscar profissionais"
+          [message]="error()"
+          (retry)="load()"
+        />
+      } @else if (!providers().length) {
+        <cvp-state-panel
+          kind="empty"
+          title="Nenhum profissional com esses filtros"
+          message="Amplie a cidade, serviço ou avaliação para ver mais opções."
+        />
+      } @else {
+        <div class="provider-grid provider-list">
+          @for (provider of providers(); track provider.id) {
+            <cvp-provider-card [provider]="provider" />
+          }
+        </div>
+        @if (lastPage() > 1) {
+          <nav class="result-pagination" aria-label="Paginação de profissionais">
+            <span>
+              Mostrando {{ firstVisible() }}–{{ lastVisible() }} de {{ total() }} profissionais
+            </span>
+            <div>
+              <button
+                class="btn btn-secondary btn-small"
+                type="button"
+                [disabled]="page() === 1"
+                (click)="goToPage(page() - 1)"
+              >
+                Anterior
+              </button>
+              @for (item of pageNumbers(); track item) {
+                <button
+                  class="page-button"
+                  type="button"
+                  [class.active]="item === page()"
+                  [attr.aria-current]="item === page() ? 'page' : null"
+                  (click)="goToPage(item)"
+                >
+                  {{ item }}
+                </button>
+              }
+              <button
+                class="btn btn-secondary btn-small"
+                type="button"
+                [disabled]="page() === lastPage()"
+                (click)="goToPage(page() + 1)"
+              >
+                Próxima
+              </button>
+            </div>
+          </nav>
+        }
+      }
+    </div>
+  </div>
+</section>

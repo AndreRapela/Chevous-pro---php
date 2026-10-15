@@ -10,9 +10,8 @@ ChezVoust Pro é um marketplace brasileiro, web responsivo e mobile-first, para 
 clientes a profissionais de serviços domésticos. A experiência combina descoberta,
 preço transparente, reserva, agenda e relacionamento dentro de uma identidade própria.
 
-As referências visuais fornecidas orientam composição, paleta e hierarquia. A capa
-usa uma foto da profissional editada a partir da referência autorizada pelo usuário; os demais elementos usam
-tipografia, CSS, símbolos e avatares por iniciais.
+A identidade visual combina fotografias responsivas, tipografia, CSS, símbolos
+vetoriais e avatares por iniciais, com paleta e hierarquia consistentes.
 
 ## Três camadas de produto
 
@@ -192,11 +191,10 @@ roadmap.
 - seguro, antifraude e serviços regulados;
 - aplicativo empacotado, PWA/offline e expansão internacional.
 
-## Limites desta entrega
+## Limites operacionais
 
-- Código e dados permanecem locais, sem commit, push, publicação ou deploy.
-- Fotografias responsivas compõem a interface.
+- Fotografias responsivas compõem a capa, os perfis e as telas de acesso.
 - A plataforma não processa pagamentos nem coleta dados financeiros.
 - Contas, endereços, mensagens e valores de demonstração são fictícios.
 - Operação real exige credenciais, contratos, homologação, política de privacidade,
-  segurança, testes finais e autorização explícita.
+  segurança e validação em homologação.

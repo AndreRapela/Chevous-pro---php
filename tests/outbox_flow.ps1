@@ -2,12 +2,14 @@ $ErrorActionPreference = 'Stop'
 $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
+. (Join-Path $PSScriptRoot 'integration_support.ps1')
 $aggregate = "outbox-e2e-$([guid]::NewGuid())"
 Push-Location $projectRoot
 
 try {
+    Assert-IntegrationTarget $(if ($env:CVP_API_URL) { $env:CVP_API_URL } else { 'http://localhost:8080/api/v1' })
     $environment = (docker compose exec -T api printenv APP_ENV).Trim()
-    if ($environment -ne 'local') { throw "Este teste só pode alterar a outbox local; ambiente atual: '$environment'." }
+    if ($environment -notin @('local', 'testing')) { throw "Este teste só pode alterar a outbox local ou de testes; ambiente atual: '$environment'." }
     $databaseUser = (docker compose exec -T database printenv MYSQL_USER).Trim()
     $databasePassword = (docker compose exec -T database printenv MYSQL_PASSWORD).Trim()
     $databaseName = (docker compose exec -T database printenv MYSQL_DATABASE).Trim()

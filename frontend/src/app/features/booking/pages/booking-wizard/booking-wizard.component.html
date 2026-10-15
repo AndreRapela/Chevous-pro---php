@@ -1,0 +1,175 @@
+<section class="booking-page">
+  <div class="container booking-topbar">
+    @if (step()) {
+      <button class="back-link" type="button" (click)="previous()">
+        <span aria-hidden="true">←</span>
+        Voltar
+      </button>
+    } @else {
+      <a class="back-link" routerLink="/servicos">
+        <span aria-hidden="true">←</span>
+        Serviços
+      </a>
+    }
+    <span>Reserva segura</span>
+  </div>
+  @if (loading()) {
+    <div class="container narrow section">
+      <cvp-state-panel kind="loading" message="Preparando seu agendamento." />
+    </div>
+  } @else if (loadError()) {
+    <div class="container narrow section">
+      <cvp-state-panel
+        kind="error"
+        title="Não foi possível iniciar a reserva"
+        [message]="loadError()"
+        (retry)="load()"
+      />
+    </div>
+  } @else if (service(); as selectedService) {
+    @if (step() < 4) {
+      <div class="container booking-layout">
+        <cvp-booking-price-summary
+          [service]="selectedService"
+          [homeSize]="form.controls.homeSize.value"
+          [quote]="quote()"
+          [loading]="quoteLoading()"
+          [marketplace]="isMarketplace()"
+        />
+        <section
+          class="booking-profile-banner"
+          [attr.aria-label]="bookingProvider() ? 'Perfil profissional do agendamento' : 'Serviço do agendamento'"
+        >
+          @if (bookingProvider(); as person) {
+            <div class="booking-profile-copy">
+              <span class="eyebrow">
+                {{ bookingProviderIsSuggestion() ? 'Profissional recomendado' : 'Profissional selecionado' }}
+              </span>
+              <h1>{{ person.name }}</h1>
+              <p>{{ person.headline }}</p>
+              <span class="booking-profile-rating">
+                <span aria-hidden="true">★</span>
+                {{ person.rating | appNumber:2:2 }} · {{ person.reviewCount }} avaliações
+              </span>
+              <div class="booking-profile-service">
+                <span class="service-symbol" aria-hidden="true">{{ selectedService.symbol }}</span>
+                <strong>{{ selectedService.name }}</strong>
+                <a routerLink="/servicos">Trocar serviço</a>
+              </div>
+            </div>
+            <span class="booking-profile-avatar">
+              @if (person.avatarUrl) {
+                <img [src]="person.avatarUrl" [alt]="person.name" loading="lazy" />
+              } @else {
+                <span aria-hidden="true">{{ person.initials }}</span>
+              }
+            </span>
+          } @else {
+            <div class="booking-profile-copy">
+              <span class="eyebrow">Serviço do agendamento</span>
+              <h1>{{ selectedService.name }}</h1>
+              <p>{{ selectedService.description }}</p>
+              <a class="text-link" routerLink="/servicos">Trocar serviço</a>
+            </div>
+            <span class="booking-profile-service-symbol" aria-hidden="true">
+              {{ selectedService.symbol }}
+            </span>
+          }
+        </section>
+        <div class="booking-main">
+          <cvp-booking-progress
+            [step]="displayStep()"
+            [totalSteps]="totalSteps()"
+            [progress]="progress()"
+            [label]="stepLabels[step()]"
+          />
+          <form (submit)="next(); $event.preventDefault()" novalidate>
+            @if (submitError() || (step() > 0 && availabilityError())) {
+              <div class="alert alert-error" role="alert">
+                <strong>Não foi possível continuar.</strong>
+                <span>{{ submitError() || availabilityError() }}</span>
+              </div>
+            }
+            @switch (step()) {
+              @case (0) {
+                <div class="booking-details-schedule">
+                  <cvp-booking-details-step
+                    [form]="form"
+                    [service]="selectedService"
+                    (quoteRequested)="refreshQuote()"
+                  />
+                  <cvp-booking-schedule-step
+                    [form]="form"
+                    [minDate]="minDate"
+                    [times]="times()"
+                    [loading]="availabilityLoading()"
+                    [availabilityError]="availabilityError()"
+                    [hasProfessionals]="allProviders().length > 0"
+                    [providerSelected]="!!preferredProviderId()"
+                    (dateChanged)="dateChanged()"
+                  />
+                </div>
+              }
+              @case (1) {
+                <cvp-booking-address-step [form]="form" [addresses]="addresses()" />
+              }
+              @case (2) {
+                <cvp-booking-provider-step
+                  [form]="form"
+                  [providers]="providers()"
+                  (quoteRequested)="refreshQuote()"
+                />
+              }
+              @case (3) {
+                <cvp-booking-review-step
+                  [form]="form"
+                  [service]="selectedService"
+                  [provider]="selectedProvider()"
+                />
+              }
+            }
+            <div class="wizard-actions">
+              <button
+                class="btn btn-secondary"
+                type="button"
+                (click)="previous()"
+                [disabled]="step() === 0"
+              >
+                Voltar
+              </button>
+              <button
+                class="btn btn-primary"
+                type="submit"
+                [disabled]="submitting() || quoteLoading() || availabilityLoading()"
+              >
+                {{ primaryActionLabel() }}
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="booking-mobile-action-bar" role="region" aria-label="Resumo e próxima etapa">
+        <div class="booking-mobile-total">
+          <small>{{ quoteLoading() ? 'Calculando valor…' : 'Estimativa' }}</small>
+          @if (quote(); as currentQuote) {
+            <strong>{{ currentQuote.totalCents / 100 | appMoney:currentQuote.currency }}</strong>
+          } @else {
+            <strong>—</strong>
+          }
+        </div>
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="submitting() || quoteLoading() || availabilityLoading()"
+          (click)="next()"
+        >
+          {{ primaryActionLabel() }}
+          <span aria-hidden="true">→</span>
+        </button>
+      </div>
+    } @else if (confirmedBooking(); as booking) {
+      <cvp-booking-confirmation [booking]="booking" />
+    }
+  }
+</section>

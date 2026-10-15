@@ -8,6 +8,7 @@ use ChezVoust\Core\Request;
 use ChezVoust\Core\SensitivePayload;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
+use ChezVoust\Modules\Bookings\AvailabilityPolicy;
 
 require dirname(__DIR__) . '/backend/bootstrap/autoload.php';
 
@@ -40,7 +41,10 @@ function expectApiException(callable $callback, string $code): void
     try {
         $callback();
     } catch (ApiException $exception) {
-        expect($exception->errorCode === $code, "Código esperado {$code}, recebido {$exception->errorCode}.");
+        expect(
+            $exception->errorCode === $code,
+            "Código esperado {$code}, recebido {$exception->errorCode}.",
+        );
         return;
     }
 
@@ -51,7 +55,13 @@ check('UUID v4 válido e não repetido', static function (): void {
     $values = [];
     for ($index = 0; $index < 100; $index++) {
         $uuid = Uuid::v4();
-        expect(preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/', $uuid) === 1, 'UUID fora do padrão v4.');
+        expect(
+            preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/',
+                $uuid,
+            ) === 1,
+            'UUID fora do padrão v4.',
+        );
         $values[$uuid] = true;
     }
     expect(count($values) === 100, 'UUID repetido na amostra.');
@@ -78,7 +88,7 @@ check('JWT rejeita assinatura alterada', static function (): void {
     ]);
     $token = $jwt->issue(['sub' => 'user-1'], 60, 'access');
     $tampered = substr($token, 0, -1) . (str_ends_with($token, 'a') ? 'b' : 'a');
-    expectApiException(static fn () => $jwt->decode($tampered, 'access'), 'INVALID_TOKEN');
+    expectApiException(static fn() => $jwt->decode($tampered, 'access'), 'INVALID_TOKEN');
 });
 
 check('JWT rejeita tipo incompatível', static function (): void {
@@ -88,31 +98,37 @@ check('JWT rejeita tipo incompatível', static function (): void {
         'audience' => 'chezvoust-web-test',
     ]);
     $token = $jwt->issue(['sub' => 'user-1'], 60, 'refresh');
-    expectApiException(static fn () => $jwt->decode($token, 'access'), 'EXPIRED_OR_INVALID_TOKEN');
+    expectApiException(static fn() => $jwt->decode($token, 'access'), 'EXPIRED_OR_INVALID_TOKEN');
 });
 
 check('Validator aceita e-mail e limite numérico', static function (): void {
     $result = Validator::validate(
         ['email' => 'cliente@chezvoust.test', 'rating' => '5'],
-        ['email' => ['required', 'email', 'max:190'], 'rating' => ['required', 'integer', 'min:1', 'max:5']]
+        [
+            'email' => ['required', 'email', 'max:190'],
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+        ],
     );
     expect($result['rating'] === '5', 'Valor validado foi alterado inesperadamente.');
 });
 
 check('Validator rejeita número acima do máximo', static function (): void {
     expectApiException(
-        static fn () => Validator::validate(['rating' => '6'], ['rating' => ['required', 'integer', 'min:1', 'max:5']]),
-        'VALIDATION_ERROR'
+        static fn() => Validator::validate(
+            ['rating' => '6'],
+            ['rating' => ['required', 'integer', 'min:1', 'max:5']],
+        ),
+        'VALIDATION_ERROR',
     );
 });
 
 check('Validator rejeita UUID e e-mail inválidos', static function (): void {
     expectApiException(
-        static fn () => Validator::validate(
+        static fn() => Validator::validate(
             ['id' => 'not-a-uuid', 'email' => 'invalid'],
-            ['id' => ['required', 'uuid'], 'email' => ['required', 'email']]
+            ['id' => ['required', 'uuid'], 'email' => ['required', 'email']],
         ),
-        'VALIDATION_ERROR'
+        'VALIDATION_ERROR',
     );
 });
 
@@ -153,11 +169,233 @@ check('Outbox cifra token efêmero e detecta adulteração', static function ():
     $token = str_repeat('a', 64);
     $encrypted = $protector->encrypt(['email' => 'cliente@example.com', 'token' => $token]);
     expect(!str_contains($encrypted, $token), 'Token apareceu no payload persistido.');
-    expect($protector->decrypt($encrypted) === ['email' => 'cliente@example.com', 'token' => $token], 'Payload não foi recuperado corretamente.');
+    expect(
+        $protector->decrypt($encrypted) === ['email' => 'cliente@example.com', 'token' => $token],
+        'Payload não foi recuperado corretamente.',
+    );
     $rejected = false;
-    try { $protector->decrypt(substr($encrypted, 0, -2) . 'xx'); } catch (RuntimeException) { $rejected = true; }
+    try {
+        $protector->decrypt(substr($encrypted, 0, -2) . 'xx');
+    } catch (RuntimeException) {
+        $rejected = true;
+    }
     expect($rejected, 'Envelope adulterado foi aceito.');
 });
+
+check(
+    'Validator rejeita campos obrigatórios vazios sem rejeitar zero, false ou listas vazias permitidas',
+    static function (): void {
+        foreach ([null, '', '   '] as $value) {
+            expectApiException(
+                static fn() => Validator::validate(['value' => $value], ['value' => ['required']]),
+                'VALIDATION_ERROR',
+            );
+        }
+        foreach ([0, false, []] as $value) {
+            expect(
+                Validator::validate(['value' => $value], ['value' => ['required']])['value'] ===
+                    $value,
+                'Valor legítimo foi descartado.',
+            );
+        }
+    },
+);
+check('Validator rejeita booleanos como inteiros e números não finitos', static function (): void {
+    foreach ([true, false, 1.5] as $value) {
+        expectApiException(
+            static fn() => Validator::validate(['value' => $value], ['value' => ['integer']]),
+            'VALIDATION_ERROR',
+        );
+    }
+    foreach ([INF, -INF, NAN, '1e9999'] as $value) {
+        expectApiException(
+            static fn() => Validator::validate(['value' => $value], ['value' => ['numeric']]),
+            'VALIDATION_ERROR',
+        );
+    }
+});
+check(
+    'Validator aceita datas explícitas válidas e rejeita normalização silenciosa ou datas relativas',
+    static function (): void {
+        foreach (
+            [
+                '2028-02-29',
+                '2026-10-13T12:00:00.000Z',
+                '2026-10-13T09:00-03:00',
+                '2026-10-13 12:00:00',
+            ]
+            as $value
+        ) {
+            expect(
+                Validator::validate(['value' => $value], ['value' => ['date']])['value'] === $value,
+                'Data válida rejeitada.',
+            );
+        }
+        foreach (
+            ['2026-02-29', '2026-04-31', '2026-10-13T25:00:00Z', 'tomorrow', '+1 day', '']
+            as $value
+        ) {
+            expectApiException(
+                static fn() => Validator::validate(['value' => $value], ['value' => ['date']]),
+                'VALIDATION_ERROR',
+            );
+        }
+    },
+);
+check(
+    'Validator rejeita regra desconhecida em vez de desativar a validação',
+    static function (): void {
+        try {
+            Validator::validate(['value' => 'unsafe'], ['value' => ['typo']]);
+        } catch (LogicException) {
+            return;
+        }
+        throw new RuntimeException('Regra desconhecida foi aceita.');
+    },
+);
+check('Request aceita somente objeto JSON e preserva listas internas', static function (): void {
+    expect(Request::decodeJson('{}') === [], 'Objeto vazio inválido.');
+    expect(
+        Request::decodeJson('{"rules":[],"quantity":1}') === ['rules' => [], 'quantity' => 1],
+        'Contrato JSON alterado.',
+    );
+    foreach (['[]', 'null', 'true', '"text"', '{invalid'] as $json) {
+        expectApiException(static fn() => Request::decodeJson($json), 'INVALID_JSON');
+    }
+});
+check('Request limita tamanho e profundidade do JSON', static function (): void {
+    expectApiException(
+        static fn() => Request::decodeJson('{"value":"' . str_repeat('a', 1048576) . '"}'),
+        'PAYLOAD_TOO_LARGE',
+    );
+    expectApiException(
+        static fn() => Request::decodeJson(
+            '{"value":' . str_repeat('[', 65) . '0' . str_repeat(']', 65) . '}',
+        ),
+        'INVALID_JSON',
+    );
+});
+check(
+    'Agenda usa regra semanal com limites exclusivos e rejeita mudança de dia',
+    static function (): void {
+        $start = new DateTimeImmutable('2026-10-13T09:00:00-03:00');
+        $rules = [['weekday' => 2, 'startTime' => '09:00', 'endTime' => '18:00']];
+        expect(
+            AvailabilityPolicy::covers($start, $start->modify('+2 hours'), $rules, []),
+            'Horário regular foi rejeitado.',
+        );
+        expect(
+            !AvailabilityPolicy::covers($start, $start, $rules, []),
+            'Intervalo vazio foi aceito.',
+        );
+        expect(
+            !AvailabilityPolicy::covers($start, $start->modify('+24 hours'), $rules, []),
+            'Reserva passando para outro dia foi aceita.',
+        );
+        expect(
+            !AvailabilityPolicy::covers(
+                $start->modify('-30 minutes'),
+                $start->modify('+1 hour'),
+                $rules,
+                [],
+            ),
+            'Intervalo fora da regra foi aceito.',
+        );
+    },
+);
+check(
+    'Agenda permite exceção disponível sem regra semanal e bloqueio tem precedência',
+    static function (): void {
+        $start = new DateTimeImmutable('2026-10-13T09:00:00-03:00');
+        $end = $start->modify('+2 hours');
+        $available = [
+            'date' => '2026-10-13',
+            'type' => 'available',
+            'startTime' => '09:00',
+            'endTime' => '12:00',
+        ];
+        expect(
+            AvailabilityPolicy::covers($start, $end, [], [$available]),
+            'Exceção anunciada pelo catálogo foi rejeitada.',
+        );
+        $blocked = [
+            'date' => '2026-10-13',
+            'type' => 'unavailable',
+            'startTime' => null,
+            'endTime' => null,
+        ];
+        expect(
+            !AvailabilityPolicy::covers($start, $end, [], [$available, $blocked]),
+            'Bloqueio do dia inteiro foi ignorado.',
+        );
+    },
+);
+check(
+    'Agenda mantém limites sem falsa sobreposição e compara horários no mesmo fuso',
+    static function (): void {
+        $start = new DateTimeImmutable('2026-10-13T09:00:00-03:00');
+        $rules = [['weekday' => 2, 'startTime' => '09:00:00', 'endTime' => '18:00:00']];
+        $exception = [
+            'date' => '2026-10-13',
+            'type' => 'unavailable',
+            'startTime' => '11:00',
+            'endTime' => '12:00',
+        ];
+        expect(
+            AvailabilityPolicy::covers(
+                $start,
+                new DateTimeImmutable('2026-10-13T14:00:00Z'),
+                $rules,
+                [$exception],
+            ),
+            'Fuso UTC ou limite adjacente causou conflito falso.',
+        );
+        expect(
+            !AvailabilityPolicy::covers($start, $start->modify('+150 minutes'), $rules, [
+                $exception,
+            ]),
+            'Sobreposição real foi ignorada.',
+        );
+    },
+);
+
+check(
+    'JWT rejeita expiração no instante atual e timestamps não inteiros',
+    static function (): void {
+        $secret = str_repeat('j', 64);
+        $jwt = new Jwt([
+            'secret' => $secret,
+            'issuer' => 'issuer-test',
+            'audience' => 'audience-test',
+        ]);
+        $encode = static fn(string $value): string => rtrim(
+            strtr(base64_encode($value), '+/', '-_'),
+            '=',
+        );
+        foreach (
+            [
+                ['exp' => time(), 'nbf' => time() - 1],
+                ['exp' => (string) (time() + 60), 'nbf' => time() - 1],
+                ['exp' => time() + 60, 'nbf' => '0'],
+            ]
+            as $timestamps
+        ) {
+            $header = $encode(json_encode(['alg' => 'HS256', 'typ' => 'JWT'], JSON_THROW_ON_ERROR));
+            $payload = $encode(
+                json_encode(
+                    ['iss' => 'issuer-test', 'aud' => 'audience-test', 'typ' => 'access'] +
+                        $timestamps,
+                    JSON_THROW_ON_ERROR,
+                ),
+            );
+            $signature = $encode(hash_hmac('sha256', $header . '.' . $payload, $secret, true));
+            expectApiException(
+                static fn() => $jwt->decode($header . '.' . $payload . '.' . $signature, 'access'),
+                'EXPIRED_OR_INVALID_TOKEN',
+            );
+        }
+    },
+);
 
 fwrite(STDOUT, "\nResultado: {$passed} aprovados, {$failed} falhos.\n");
 exit($failed === 0 ? 0 : 1);

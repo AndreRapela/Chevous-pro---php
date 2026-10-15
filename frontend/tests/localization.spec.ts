@@ -5,7 +5,10 @@ import { replaceTranslationFragment } from '../src/app/core/localization/localiz
 describe('localization text boundaries', () => {
   it('translates standalone words and repeated phrases', () => {
     assert.equal(replaceTranslationFragment('Valor · Valor', 'Valor', 'Price'), 'Price · Price');
-    assert.equal(replaceTranslationFragment('5 profissionais', 'profissionais', 'professionals'), '5 professionals');
+    assert.equal(
+      replaceTranslationFragment('5 profissionais', 'profissionais', 'professionals'),
+      '5 professionals'
+    );
   });
   it('preserves words that only contain a translation key', () => {
     assert.equal(replaceTranslationFragment('Valores', 'Valor', 'Price'), 'Valores');

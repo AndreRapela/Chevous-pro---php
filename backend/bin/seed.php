@@ -9,7 +9,9 @@ require dirname(__DIR__) . '/bootstrap/autoload.php';
 Env::load(dirname(__DIR__) . '/.env');
 $config = require dirname(__DIR__) . '/config/app.php';
 if (!in_array($config['env'], ['local', 'development', 'testing'], true)) {
-    throw new RuntimeException('O seed demonstrativo só pode ser executado em ambiente local ou de teste.');
+    throw new RuntimeException(
+        'O seed demonstrativo só pode ser executado em ambiente local ou de teste.',
+    );
 }
 $db = new Database($config['database']);
 $sql = file_get_contents(dirname(__DIR__, 2) . '/database/seed.sql');
@@ -24,7 +26,7 @@ $sql = str_replace(
         password_hash('Profissional@123', $algorithm),
         password_hash('Admin@123', $algorithm),
     ],
-    $sql
+    $sql,
 );
 $statements = preg_split('/;\s*(?:\r?\n|$)/', $sql) ?: [];
 foreach ($statements as $statement) {

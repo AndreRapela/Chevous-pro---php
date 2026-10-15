@@ -302,7 +302,7 @@ export interface ChatMessage {
 }
 
 export interface ProviderDashboard {
-  metrics: { upcomingJobs: number; completedJobs: number; openRequests: number; };
+  metrics: { upcomingJobs: number; completedJobs: number; openRequests: number };
   profile: Record<string, unknown>;
 }
 

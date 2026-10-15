@@ -1,0 +1,39 @@
+<section class="portal-page customer-favorites-page">
+  <cvp-page-header
+    eyebrow="Sua seleção"
+    title="Profissionais favoritos"
+    description="Encontre rapidamente quem já conquistou sua confiança."
+  />
+  @if (loading()) {
+    <cvp-state-panel kind="loading" />
+  } @else if (error()) {
+    <cvp-state-panel
+      kind="error"
+      title="Favoritos indisponíveis"
+      [message]="error()"
+      (retry)="load()"
+    />
+  } @else if (!providers().length) {
+    <cvp-state-panel
+      kind="empty"
+      title="Nenhum favorito ainda"
+      message="Toque no coração de um perfil para salvá-lo aqui."
+    />
+  } @else {
+    <div class="provider-grid">
+      @for (provider of providers(); track provider.id) {
+        <div>
+          <cvp-provider-card [provider]="provider" />
+          <button
+            class="text-button"
+            type="button"
+            (click)="remove(provider)"
+            [attr.aria-label]="'Remover ' + provider.name + ' dos favoritos'"
+          >
+            Remover dos favoritos
+          </button>
+        </div>
+      }
+    </div>
+  }
+</section>

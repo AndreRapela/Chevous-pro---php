@@ -1,6 +1,7 @@
 # ChezVoust Pro — contrato atual da API
 
-> Estado reconciliado em 26 de agosto de 2026 por inspeção e testes automatizados locais.
+> Contrato mantido por inspeção e testes locais; revisão mais recente em 13 de outubro
+> de 2026. A fonte executável continua sendo `backend/routes/api.php`.
 
 ## Como ler o status
 
@@ -14,7 +15,7 @@ divergência, o código prevalece e este arquivo deve ser atualizado.
 
 ## Convenções implementadas
 
-- Base local: `/api/v1`; JSON UTF-8.
+- Base local: `/api/v1`; JSON UTF-8, raiz objeto, até 1 MiB e 64 níveis de profundidade.
 - Autenticação: `Authorization: Bearer <accessToken>`.
 - Renovação: refresh token rotativo somente no cookie `cv_refresh` `HttpOnly` e `SameSite=Strict`.
 - Sucesso com corpo: `{ "data": ... }`; algumas coleções paginadas também incluem
@@ -23,7 +24,9 @@ divergência, o código prevalece e este arquivo deve ser atualizado.
 - Erro: `{ "error": { "code", "message", "fields?", "requestId" } }`.
 - A API devolve `X-Request-Id`; um identificador de entrada válido pode ser enviado em
   `X-Request-Id`.
-- Valores monetários são inteiros em centavos e usam `EUR` ou `USD`; a moeda deve ser enviada na cotação e na reserva.
+- Valores monetários são inteiros em centavos. Registros usam `BRL` como base; a
+  interface oferece `EUR`/`USD` como referência e deve enviar a moeda na cotação/reserva.
+  A plataforma não realiza cobrança nem conversão financeira.
 - IDs públicos são UUIDs. O detalhe de serviço aceita UUID e também slug.
 - Reservas aceitam `Idempotency-Key`.
 - Horários de reserva e agenda são serializados em RFC 3339 UTC nos endpoints que os
@@ -75,7 +78,7 @@ Erro de validação:
 | GET | `/professionals?service=&city=&state=&ratingMin=&sort=` | Busca pública paginada. |
 | GET | `/professionals/{id}` | Perfil público, vitrine profissional, experiências, cursos e serviços ofertados. |
 | GET | `/avatars/{id}` | Foto pública do perfil, quando o usuário tiver enviado uma. |
-| GET | `/professionals/{id}/availability` | Regras e exceções; não é uma grade final já descontada por reservas. |
+| GET | `/professionals/{id}/availability?date=&durationMinutes=` | Regras e exceções; com `date`, calcula slots descontando reservas e holds. A confirmação revalida conflitos em transação. |
 | GET | `/professionals/{id}/reviews` | Avaliações publicadas. |
 | GET | `/professionals/{id}/comments` | Comentários públicos publicados; não influenciam a nota. |
 | POST | `/professionals/{id}/comments` | Autenticado; publica comentário de comunidade, com limite de uma publicação por minuto por perfil. |
@@ -111,7 +114,8 @@ O backend persiste sessões, tokens de verificação e recuperação. O Compose 
 `backend/bin/worker.php` a cada 30 segundos; fora dos containers, essa execução precisa
 ser agendada manualmente. O driver `log` registra somente o tipo e o agregado do evento,
 sem expor o token. Em `APP_ENV=local` com debug, a própria resposta da API pode fornecer
-o token de demonstração. Não existe entrega de e-mail transacional real.
+o token de demonstração. O driver `resend` entrega e-mail transacional quando
+configurado; a revisão local usa `log`, sem envio externo.
 
 O access token permanece apenas em memória no navegador. O refresh token fica em cookie
 `HttpOnly`, `Secure` em produção e `SameSite=Strict`; não há refresh token em JSON nem

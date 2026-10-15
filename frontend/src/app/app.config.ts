@@ -16,9 +16,16 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       const session = inject(SessionStoreService);
       if (environment.useMockApi || !session.hasSessionHint) return;
-      return firstValueFrom(inject(SessionRefreshService).refresh().pipe(
-        catchError(() => { session.clear(); return of(null); })
-      ));
+      return firstValueFrom(
+        inject(SessionRefreshService)
+          .refresh()
+          .pipe(
+            catchError(() => {
+              session.clear();
+              return of(null);
+            })
+          )
+      );
     }),
     provideHttpClient(withFetch(), withInterceptors([authTokenInterceptor, apiErrorInterceptor])),
     // Não usamos event replay: ele injeta scripts inline, incompatíveis com a

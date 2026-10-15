@@ -1,6 +1,7 @@
 # Revisão de proporção, identidade e legibilidade
 
-Revisão das solicitações visuais acumuladas, consolidada em 18/09/2026.
+Histórico de ajustes visuais, consolidado em 18/09/2026. Paletas, métricas e resultados
+descritos pertencem às versões registradas, não necessariamente ao layout atual.
 
 ## Diagnóstico
 
@@ -28,9 +29,9 @@ indicavam um carrossel que não existia.
 - Grade de profissionais com três colunas no desktop; filtros em coluna separada.
 - Hero e perfil compactos, mantendo o espaço necessário para leitura e ações.
 
-## Solicitações atendidas no código
+## Requisitos de interface
 
-| Solicitação | Solução |
+| Requisito | Implementação |
 | --- | --- |
 | Nome ChezVoust e Pro com abertura fotográfica | Nome tipográfico legível e símbolo SVG compacto, com favicon correspondente. |
 | Sem verde na nova identidade | Tokens e cores fixas revisados; hero, login e cadastro com imagens na paleta quente. |
@@ -42,7 +43,7 @@ indicavam um carrossel que não existia.
 | Três profissionais por linha e paginação | Grade de três colunas; paginação real dos resultados preservada. |
 | Links do rodapé e opções de teste | Rodapé com navegação e três perfis de demonstração na prévia local/mock; credenciais excluídas do build de produção. |
 | Mais avaliações/comentários | Listas de várias entradas com carregamento de páginas adicionais preservadas. |
-| Retirar blocos de benefícios e selo sobre a foto | Blocos solicitados não estão mais nos templates públicos. |
+| Retirar blocos de benefícios e selo sobre a foto | Blocos removidos dos templates públicos daquela versão. |
 | Apenas inglês e francês | Seletor limitado aos dois idiomas; traduções incompletas revisadas. |
 | Textos misturados entre idiomas | Tradução respeita palavras completas, sem substituir fragmentos dentro de outras palavras; respostas rápidas seguem o idioma escolhido e e-mails de teste permanecem intactos. |
 | Retirar real | Preferência limitada a EUR/USD, padrão EUR; BRL antigo salvo não reaparece. |
@@ -56,12 +57,12 @@ renomeados. A conversão existente é estimativa de exibição, não cotação e
 As fotografias originais foram preservadas. As variantes novas são JPEGs
 responsivos, todas abaixo de 100 KB, em `frontend/public/images/*-warm-*`.
 
-As edições de login e cadastro usaram as fotos existentes como referência.
+Login, cadastro e hero utilizam variantes na paleta vinho, terracota e pêssego,
+preservando a composição das fotografias originais.
 
 ## Publicação
 
-O deploy público permanece cancelado conforme a última instrução específica.
-Build e atualização da prévia local são independentes do deploy público.
+As validações descritas utilizam a prévia local. Não constituem homologação de produção.
 
 ## Verificação
 
@@ -241,8 +242,7 @@ Build e atualização da prévia local são independentes do deploy público.
 - `npm run test:coverage` aprovado: 100% de linhas, funções e ramificações
   nos utilitários selecionados, incluindo a normalização de preços e os limites.
   Não representa cobertura de 100% da aplicação inteira.
-- A inspeção visual ficou indisponível nesta etapa.
-  Esta continuação não contém uma nova inspeção visual no navegador;
+- Esta continuação não contém uma nova inspeção visual no navegador;
   as verificações realizadas são de código, testes e HTTP.
 - Build validado: `main-FF4QWEE4.js`; CSS permanece `styles-NKRN4KL3.css`.
   O deploy público continua cancelado.
@@ -281,7 +281,7 @@ Build e atualização da prévia local são independentes do deploy público.
 - Novos testes de contraste da paleta/seletores e dos métodos reais de SEO.
   A suíte unitária final passou com 58 testes; a cobertura de idioma continua com
   1.080 textos/fragmentos dos 53 templates em EN/FR.
-- Não houve nova medição visual nesta etapa.
+- Não foi realizada uma nova medição visual no navegador nesta etapa.
   Os resultados de contraste são cálculos das cores declaradas.
 - Deploy público continua cancelado.
 
@@ -301,7 +301,7 @@ Build e atualização da prévia local são independentes do deploy público.
   `b81e16ed1b76` e worker `7509bfe83e48` continuam com os mesmos IDs.
   Nenhum dado, reserva, mensagem ou volume foi alterado/removido pelos testes.
 
-## Correção solicitada: card do herói apenas com serviços
+## Navegação de serviços no hero
 
 - A faixa inferior da home desktop misturava promoção, atalhos e uma reserva
   fictícia de Ana Clara. Removidos os dois painéis e o título visual adicional:
@@ -329,7 +329,7 @@ Build e atualização da prévia local são independentes do deploy público.
 - Build local atualizado: `main-DRZGSHDF.js` e `styles-ZBI3WVJV.css`.
   Deploy público permanece cancelado; banco, API e worker não foram recriados.
 
-## Ajuste solicitado: convite para profissionais na escala do site
+## Escala do convite para profissionais
 
 - Medição inicial real em 1280px: card com 153,88px de altura, benefícios de
   13,12px e botão com fonte de 14,4px/altura de 41,59px. O título já estava
@@ -358,7 +358,7 @@ Build e atualização da prévia local são independentes do deploy público.
 - Atualizados apenas web/SSR. IDs da API, banco e worker permaneceram os
   mesmos, sem mutações de dados ou volumes. Deploy público continua cancelado.
 
-## Ajuste solicitado: perfil do profissional mais compacto
+## Compactação do perfil profissional
 
 - Alterações restritas a `cvp-provider-detail`: avatar de 52px, nome entre
   26 e 30px, margens menores entre descrição, avaliação e selos, e cards com
@@ -390,9 +390,9 @@ Build e atualização da prévia local são independentes do deploy público.
 - Apenas web/SSR atualizados; API, banco e worker mantidos, sem alterações
   de registros ou volumes. Deploy público permanece cancelado.
 
-## Ajuste solicitado: harmonia de cores ao redor da foto da home
+## Paleta das formas decorativas da home
 
-- Mantida a foto autorizada e a cor azul neutra da página. Alteradas somente
+- Mantida a foto existente e a cor azul neutra da página. Alteradas somente
   as formas decorativas do herói desktop, sem mexer em dimensões ou posições.
 - A base passa do gradiente laranja/marrom para `--brand-600`/`--brand-700`,
   aproximando-se do vinho da foto e dos botões. O círculo pequeno repete
@@ -410,7 +410,7 @@ Build e atualização da prévia local são independentes do deploy público.
   JS/CSS idênticos ao build validado. Proxy, `nginx -t` e health HTTP 200
   aprovados. Apenas web/SSR atualizados; deploy público continua cancelado.
 
-## Ajuste solicitado: variação discreta no fundo superior
+## Contraste do fundo superior
 
 - Apenas o `hero-section` recebe `--hero-background: #dce9f1`, um azul
   levemente mais fechado que o fundo geral `#eaf1f6`. Não foi introduzido
@@ -426,7 +426,7 @@ Build e atualização da prévia local são independentes do deploy público.
   `nginx -t`, health HTTP 200 e os 37 arquivos JS/CSS aprovados. Somente
   web/SSR atualizados; banco, API e worker mantidos. Deploy segue cancelado.
 
-## Segunda redução solicitada: identidade do profissional
+## Densidade do cabeçalho profissional
 
 - O topo da página pública agora funciona como uma identificação compacta,
   não como um segundo herói: avatar de 40px, nome de 20–22px, descrição e

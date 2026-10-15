@@ -1,25 +1,46 @@
 export type ReferenceCurrency = 'BRL' | 'EUR' | 'USD';
 
 // Fixed reference conversions, not settlement rates or platform charges.
-const REFERENCE_RATES: Record<ReferenceCurrency, number> = { BRL: 1, EUR: 0.17, USD: 0.20 };
+const REFERENCE_RATES: Record<ReferenceCurrency, number> = { BRL: 1, EUR: 0.17, USD: 0.2 };
 
-export function convertReferenceAmount(amount: number, source: ReferenceCurrency, target: ReferenceCurrency): number {
+export function convertReferenceAmount(
+  amount: number,
+  source: ReferenceCurrency,
+  target: ReferenceCurrency
+): number {
   if (!Number.isFinite(amount) || source === target) return amount;
-  return amount / REFERENCE_RATES[source] * REFERENCE_RATES[target];
+  return (amount / REFERENCE_RATES[source]) * REFERENCE_RATES[target];
 }
 
-export function displayReferenceAmount(cents: number, source: ReferenceCurrency, target: ReferenceCurrency): number {
+export function displayReferenceAmount(
+  cents: number,
+  source: ReferenceCurrency,
+  target: ReferenceCurrency
+): number {
   return Math.round(convertReferenceAmount(cents / 100, source, target) * 100) / 100;
 }
 
 /** Inward rounding keeps an editable cent value within the source API's bounds. */
-export function displayReferenceBound(cents: number, source: ReferenceCurrency, target: ReferenceCurrency, bound: 'minimum' | 'maximum'): number {
+export function displayReferenceBound(
+  cents: number,
+  source: ReferenceCurrency,
+  target: ReferenceCurrency,
+  bound: 'minimum' | 'maximum'
+): number {
   const convertedCents = convertReferenceAmount(cents / 100, source, target) * 100;
   const tolerance = Math.abs(convertedCents) * Number.EPSILON * 4;
-  return (bound === 'minimum' ? Math.ceil(convertedCents - tolerance) : Math.floor(convertedCents + tolerance)) / 100;
+  return (
+    (bound === 'minimum'
+      ? Math.ceil(convertedCents - tolerance)
+      : Math.floor(convertedCents + tolerance)) / 100
+  );
 }
 
-export function referenceAmountToCents(value: string, display: ReferenceCurrency, source: ReferenceCurrency): number {
+export function referenceAmountToCents(
+  value: string,
+  display: ReferenceCurrency,
+  source: ReferenceCurrency
+): number {
   if (!value.trim()) return NaN;
   return Math.round(convertReferenceAmount(Number(value), display, source) * 100);
 }

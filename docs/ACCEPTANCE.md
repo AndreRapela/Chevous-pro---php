@@ -1,17 +1,14 @@
 # ChezVoust Pro — critérios e estado de aceite
 
-> Este documento não declara aprovação para produção. Ele separa o que existe no
-> código, o que é demonstração e o que permanece no roadmap. A suíte local foi criada
-> e executada somente após o congelamento funcional, na fase final da entrega.
+> Critérios de aceite funcional e operacional. Resultados de validação estão em
+> `CODE_AUDIT_2026-10-13.md`; demonstração e roadmap não contam como capacidades operacionais.
 
-## Regra desta entrega
+## Regras de validação
 
-- Código e documentação permanecem locais: sem commit, push, publicação ou deploy.
-- Fotografias responsivas compõem a interface.
-- Por solicitação do produto, criação complementar e execução da suíte de testes ficam
-  exclusivamente para a fase final, depois do congelamento funcional.
-- Contas, endereços e comunicação usam dados fictícios no ambiente local; nenhum serviço
-  externo deve ser acionado.
+- Imagens da interface devem permanecer otimizadas e consistentes com a identidade visual.
+- Alterações de regra, contrato ou segurança devem incluir testes de regressão e
+  passar pelos gates locais/CI antes da liberação.
+- Testes locais usam contas, endereços e comunicação fictícios, com integrações externas isoladas.
 
 ## Legenda de status
 
@@ -21,10 +18,10 @@
 | Parcial | Parte relevante existe, mas a jornada ainda tem lacuna funcional ou de integração. |
 | Demonstração | Mock, simulador ou conteúdo explicitamente fictício. |
 | Roadmap | Não existe contrato executável completo nesta versão. |
-| Não verificado | Pode existir no código, mas o critério ainda depende da fase final de testes. |
+| Não verificado | Pode existir no código, mas não há evidência atual suficiente para o critério. |
 
-“Implementado” não significa “teste passou”. Todos os itens implementados continuam
-**não verificados** até a fase final.
+“Implementado” não significa “teste passou”. Cada critério precisa de evidência
+correspondente; passar um teste unitário não certifica toda a jornada ou a produção.
 
 ## Escopo de aceite da versão local
 
@@ -40,19 +37,18 @@ A versão local pode buscar aceite funcional para este núcleo:
 - perfil, serviços, disponibilidade, jobs e oportunidades de prestador;
 - administração básica de usuários, prestadores, catálogo, promoções e auditoria.
 
-KYC, uploads, recorrência
-automática, disputa/ticket, privacidade automatizada, múltiplos papéis, PWA e
-fornecedores externos não fazem parte do gate local atual. Eles possuem gate próprio
-quando forem implementados.
+KYC, anexos privados, recorrência automática, disputa/ticket, privacidade automatizada,
+múltiplos papéis e PWA não fazem parte do gate local atual. O upload de avatar existe;
+o adaptador de e-mail existe, mas a homologação externa possui gate próprio.
 
 ## Matriz honesta das jornadas
 
-| ID | Cenário | Estado do código antes dos testes finais | Condição para aceite |
+| ID | Cenário | Estado do código | Condição para aceite |
 | --- | --- | --- | --- |
 | PUB-01 | Landing, categorias e profissionais em mobile/desktop. | Implementado. | Verificar 360, 390, 768, 1024 e 1440 px sem sobreposição ou CTA inacessível. |
 | PUB-02 | Busca sem expor contato/endereço exato. | Parcial: serviço, cidade, estado e nota existem; data, distância, preço e slots não formam busca completa. | Aceitar apenas os filtros existentes e comprovar minimização de dados. |
 | AUTH-01 | Cadastro, login, refresh e logout. | Implementado. | Comprovar expiração, rotação inclusive em abas concorrentes, revogação, papéis e mensagens de erro. |
-| AUTH-02 | Verificação e recuperação de senha. | Parcial: API, tokens e worker existem; o ambiente local usa token debug e não entrega e-mail real. | Comprovar fluxo local sem enumeração e documentar claramente a entrega demo. |
+| AUTH-02 | Verificação e recuperação de senha. | API, tokens, worker e adaptador Resend existem; o ambiente local usa log/token debug. | Comprovar fluxo local sem enumeração e homologar entrega real separadamente. |
 | CLI-01 | Configuração de endereço, serviço, quantidade/área, data e horário. | Implementado no núcleo. Recorrência, materiais e formulário dinâmico são roadmap. | Validar campos aplicáveis aos três tipos de preço. |
 | CLI-02 | Cotação e composição do preço antes da confirmação. | Implementado na API e integrado ao fluxo web pelo endpoint de cotação. | Comparar UI, snapshot e valores persistidos em todos os cenários. |
 | CLI-03 | Reserva direta e bloqueio de agenda. | Implementado. | Comprovar idempotência, conflito de agenda e confirmação sem dupla reserva. |
@@ -66,7 +62,7 @@ quando forem implementados.
 | ADM-02 | Catálogo, promoções e auditoria. | Implementado no núcleo da API. | Testar validação, paginação quando aplicável e persistência. |
 | OPS-01 | Tickets, suporte e disputas. | Roadmap. | Criar modelo, rotas, autorização, UI e auditoria antes de abrir gate. |
 | PRIV-01 | Consentimentos e solicitações do titular. | Roadmap; há apenas documentação orientativa em `LGPD.md`. | Implementar protocolo, autenticação, retenção e resposta operacional. |
-| PRIV-02 | Documentos e anexos privados. | Roadmap; não há upload atual. | Implementar armazenamento privado, autorização, MIME/tamanho, retenção e auditoria. |
+| PRIV-02 | Documentos e anexos privados. | Roadmap; upload atual é apenas avatar público controlado. | Implementar armazenamento privado, autorização, MIME/tamanho, retenção e auditoria. |
 
 ## Critérios de pronto para uma funcionalidade implementada
 
@@ -93,7 +89,8 @@ Uma capacidade só muda de “implementada” para “aceita” quando:
 - Status muda somente para ator/estado autorizado e registra histórico.
 - Avaliação só é criada após conclusão e não duplica a mesma reserva/cliente.
 - Mensagem e detalhe de reserva não vazam para não participante.
-- Mensagens novas aparecem ao outro participante pela sincronização incremental, sem sobrepor requisições nem manter processos PHP ocupados em espera.
+- Mensagens novas aparecem ao outro participante pela sincronização incremental, sem
+  sobrepor requisições; conexões SSE têm duração limitada para liberar workers PHP.
 - Repetir uma mensagem com a mesma chave idempotente não cria uma segunda mensagem.
 - Admin não acessa senha, token bruto ou dado de cartão inexistente.
 - Outbox não registra token/segredo em log técnico.
@@ -128,9 +125,9 @@ Não há alegação de conformidade WCAG ou de Web Vitals antes da medição fin
 - schema existente atualizado por estratégia de migrations antes de produção;
 - backup/restauração e observabilidade definidos para qualquer implantação real.
 
-## Fase final única de testes
+## Processo contínuo de validação e liberação
 
-Após o congelamento funcional, a execução seguiu esta ordem de referência:
+Use esta ordem como referência de liberação, além dos testes durante a implementação:
 
 1. Revisão estática final de configuração, schema, rotas, contratos e permissões.
 2. Instalação/build reproduzível de frontend, backend e containers.
@@ -148,7 +145,10 @@ Após o congelamento funcional, a execução seguiu esta ordem de referência:
 Não executar testes destrutivos contra serviços reais. Nesta versão, gateway e e-mail
 devem permanecer em modo local/fictício.
 
-### Resultado desta máquina — 24/08/2026
+### Registro histórico — 24/08/2026
+
+O quadro abaixo preserva a evidência daquela versão; não representa o código atual.
+Consulte `CODE_AUDIT_2026-10-13.md` para os resultados da revisão mais recente.
 
 | Verificação | Resultado |
 | --- | --- |
@@ -157,7 +157,7 @@ devem permanecer em modo local/fictício.
 | Auditoria de dependências de produção | Aprovada, 0 vulnerabilidades encontradas. |
 | Sintaxe PHP | Aprovada em 33 arquivos. |
 | Núcleo PHP (UUID, JWT, validação e proxy confiável) | 8/8 cenários aprovados. |
-| Estrutura | 95 registros de rota, 35 tabelas e 6 variantes WebP autorizadas. |
+| Estrutura | 95 registros de rota, 35 tabelas e 6 variantes WebP. |
 | Navegador local | Landing, reserva, notificações e painéis dos três papéis aprovados em 390 px, 1280 px e 1440 px; console sem erros ou avisos. |
 | Integração MySQL/Compose | Smoke e fluxo HTTP completo aprovados: quatro serviços ativos, healthcheck, seed, autenticação, agenda, reserva, proposta, execução, mensagens, notificações e administração. |
 
@@ -169,7 +169,7 @@ dinâmica, desempenho, backup/restauração ou homologação com fornecedores ex
 
 A versão local só pode ser declarada aceita quando:
 
-- todos os cenários do núcleo marcados como implementados passam na fase final;
+- todos os cenários do núcleo marcados como implementados possuem evidência atual de aprovação;
 - nenhum defeito bloqueador, crítico ou alto permanece aberto;
 - não há acesso indevido, divergência de preço/snapshot ou conflito de agenda;
 - telas não apresentam KYC, banco ou operação financeira fictícia como fato;
@@ -177,4 +177,4 @@ A versão local só pode ser declarada aceita quando:
 - riscos moderados/baixos possuem registro e decisão explícita.
 
 O aceite local não autoriza produção. Fornecedores, contratos, revisão jurídica/LGPD,
-infraestrutura, observabilidade e autorização de deploy formam um gate separado.
+infraestrutura, observabilidade e liberação operacional formam um gate separado.

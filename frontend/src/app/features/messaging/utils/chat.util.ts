@@ -12,7 +12,10 @@ export function mergeChatMessages(current: ChatMessage[], incoming: ChatMessage[
     const key = message.sequence > 0 ? `sequence:${message.sequence}` : `id:${message.id}`;
     messages.set(key, message);
   }
-  return [...messages.values()].sort((left, right) => left.sequence - right.sequence || Date.parse(left.createdAt) - Date.parse(right.createdAt));
+  return [...messages.values()].sort(
+    (left, right) =>
+      left.sequence - right.sequence || Date.parse(left.createdAt) - Date.parse(right.createdAt)
+  );
 }
 
 export function groupChatMessages(messages: ChatMessage[]): ChatMessageGroup[] {
@@ -26,6 +29,11 @@ export function groupChatMessages(messages: ChatMessage[]): ChatMessageGroup[] {
   return [...groups.values()];
 }
 
-export function isNearChatBottom(scrollTop: number, clientHeight: number, scrollHeight: number, threshold = 96): boolean {
+export function isNearChatBottom(
+  scrollTop: number,
+  clientHeight: number,
+  scrollHeight: number,
+  threshold = 96
+): boolean {
   return scrollHeight - scrollTop - clientHeight <= threshold;
 }

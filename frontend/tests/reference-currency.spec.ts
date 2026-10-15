@@ -1,12 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { convertReferenceAmount, displayReferenceAmount, displayReferenceBound, referenceAmountToCents } from '../src/app/core/localization/reference-currency.util.ts';
+import {
+  convertReferenceAmount,
+  displayReferenceAmount,
+  displayReferenceBound,
+  referenceAmountToCents
+} from '../src/app/core/localization/reference-currency.util.ts';
 
 describe('reference currency form amounts', () => {
   it('rounds form limits inward without floating-point drift at an exact cent', () => {
-    assert.equal(displayReferenceBound(1000, 'BRL', 'EUR', 'minimum'), 1.70);
+    assert.equal(displayReferenceBound(1000, 'BRL', 'EUR', 'minimum'), 1.7);
     assert.equal(displayReferenceBound(100, 'BRL', 'EUR', 'minimum'), 0.17);
-    assert.equal(displayReferenceBound(100, 'BRL', 'USD', 'minimum'), 0.20);
+    assert.equal(displayReferenceBound(100, 'BRL', 'USD', 'minimum'), 0.2);
     assert.equal(displayReferenceBound(10000000, 'BRL', 'EUR', 'maximum'), 17000);
     assert.equal(displayReferenceBound(10000000, 'BRL', 'USD', 'maximum'), 20000);
     assert.equal(displayReferenceBound(1000, 'EUR', 'USD', 'minimum'), 11.77);
@@ -24,7 +29,7 @@ describe('reference currency form amounts', () => {
   });
   it('converts historical amounts to the selected EUR/USD preference', () => {
     assert.equal(displayReferenceAmount(14400, 'BRL', 'EUR'), 24.48);
-    assert.equal(displayReferenceAmount(14400, 'BRL', 'USD'), 28.80);
+    assert.equal(displayReferenceAmount(14400, 'BRL', 'USD'), 28.8);
     assert.equal(displayReferenceAmount(12345, 'EUR', 'EUR'), 123.45);
   });
   it('submits edited display amounts in the request source currency', () => {

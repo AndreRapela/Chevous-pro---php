@@ -3,6 +3,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
+. (Join-Path $PSScriptRoot 'integration_support.ps1')
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }
@@ -36,7 +37,7 @@ function Expect-Status([int]$expected, [scriptblock]$action, [string]$message) {
 function Find-Slot([string]$professionalId, [int]$durationMinutes, [int]$minimumDayOffset) {
     foreach ($offset in $minimumDayOffset..($minimumDayOffset + 45)) {
         $date = (Get-Date).Date.AddDays($offset).ToString('yyyy-MM-dd')
-        $availability = Invoke-Api Get "/professionals/$professionalId/availability?date=$date&duration=$durationMinutes"
+        $availability = Invoke-Api Get "/professionals/$professionalId/availability?date=$date&durationMinutes=$durationMinutes"
         $slots = @($availability.data.slots)
         if ($slots.Count -gt 0) {
             return @{ date = $date; time = [string]$slots[0] }
@@ -47,8 +48,9 @@ function Find-Slot([string]$professionalId, [int]$durationMinutes, [int]$minimum
 
 Push-Location $projectRoot
 try {
+    Assert-IntegrationTarget $baseUrl
     $environment = (docker compose exec -T api printenv APP_ENV).Trim()
-    Assert-True ($environment -eq 'local') "Este teste grava dados e só pode rodar no ambiente local; ambiente atual: '$environment'."
+    Assert-True ($environment -in @('local', 'testing')) "Este teste grava dados e só pode rodar no ambiente local ou de testes; ambiente atual: '$environment'."
 
     $databaseUser = (docker compose exec -T database printenv MYSQL_USER).Trim()
     $databasePassword = (docker compose exec -T database printenv MYSQL_PASSWORD).Trim()
@@ -176,6 +178,40 @@ try {
     $exceptions = @((Invoke-Api Get '/provider/availability-exceptions' $providerHeaders).data)
     Assert-True ($exceptions.id -contains $exception.id) 'A exceção de agenda não foi listada.'
     Invoke-Api Delete "/provider/availability-exceptions/$($exception.id)" $providerHeaders | Out-Null
+
+    # A janela anunciada por uma exceção deve poder ser reservada, com a mesma política.
+    $extraDate = (Get-Date).Date.AddDays(30).ToString('yyyy-MM-dd')
+    $outsidePayload = $bookingPayload.Clone()
+    $outsidePayload.scheduledStart = "${extraDate}T06:00:00-03:00"
+    $outsidePayload.timezone = 'Europe/London'
+    Expect-Status 422 { Invoke-Api Post '/bookings' $customerHeaders $outsidePayload } 'O fuso informado pelo cliente não pode contornar o expediente do profissional.'
+    $availableException = (Invoke-Api Post '/provider/availability-exceptions' $providerHeaders @{
+        date = $extraDate; type = 'available'; startTime = '06:00'; endTime = '18:00'; reason = 'Janela extra controlada de teste'
+    }).data
+    try {
+        $extraSlots = @((Invoke-Api Get "/professionals/$($professional.id)/availability?date=$extraDate&durationMinutes=$duration").data.slots)
+        Assert-True ($extraSlots -contains '06:00') 'O catálogo não anunciou a exceção disponível.'
+        $outsidePayload.timezone = 'America/Sao_Paulo'
+        $extraBooking = (Invoke-Api Post '/bookings' $customerHeaders $outsidePayload).data
+        Assert-True ($extraBooking.status -eq 'confirmed') 'O horário da exceção foi anunciado, mas não pôde ser reservado.'
+        Expect-Status 409 { Invoke-Api Post '/bookings' $customerHeaders $outsidePayload } 'A agenda permitiu duas reservas conflitantes.'
+        Invoke-Api Post "/bookings/$($extraBooking.id)/cancel" $customerHeaders @{ reason = 'Encerramento da reserva de regressão' } | Out-Null
+
+        $nightPayload = $outsidePayload.Clone()
+        $nightPayload.scheduledStart = "${extraDate}T23:00:00-03:00"
+        Expect-Status 422 { Invoke-Api Post '/bookings' $customerHeaders $nightPayload } 'Uma reserva passando para outro dia contornou os limites da agenda.'
+
+        $blockedException = (Invoke-Api Post '/provider/availability-exceptions' $providerHeaders @{
+            date = $extraDate; type = 'unavailable'; reason = 'Bloqueio controlado de regressão'
+        }).data
+        try {
+            Expect-Status 422 { Invoke-Api Post '/bookings' $customerHeaders $outsidePayload } 'Um bloqueio de dia inteiro perdeu prioridade sobre a exceção disponível.'
+        } finally {
+            Invoke-Api Delete "/provider/availability-exceptions/$($blockedException.id)" $providerHeaders | Out-Null
+        }
+    } finally {
+        Invoke-Api Delete "/provider/availability-exceptions/$($availableException.id)" $providerHeaders | Out-Null
+    }
 
     $notifications = Invoke-Api Get '/me/notifications?perPage=50' $customerHeaders
     Assert-True ($null -ne $notifications.meta.unreadCount) 'O contrato de notificações não retornou unreadCount.'

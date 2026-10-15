@@ -1,0 +1,144 @@
+@media (min-width: 64rem) {
+  .customer-profile-page,
+  .customer-favorites-page {
+    width: min(100% - 3rem, 68rem);
+    padding: 1rem 0 1.5rem;
+  }
+  .customer-profile-page .portal-page-heading,
+  .customer-favorites-page .portal-page-heading {
+    margin-bottom: 0.75rem;
+  }
+  .customer-profile-page .portal-page-heading .eyebrow,
+  .customer-favorites-page .portal-page-heading .eyebrow {
+    margin-bottom: 0.22rem;
+    font-size: 0.82rem;
+  }
+  .customer-profile-page .portal-page-heading h1,
+  .customer-favorites-page .portal-page-heading h1 {
+    margin-bottom: 0.18rem;
+    font-size: 1.55rem;
+  }
+  .customer-profile-page .portal-page-heading p,
+  .customer-favorites-page .portal-page-heading p {
+    font-size: 0.82rem;
+  }
+  .customer-profile-page .settings-layout {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    gap: 0.7rem;
+  }
+  .customer-profile-page .portal-card {
+    padding: 0.75rem;
+    border-radius: 0.85rem;
+  }
+  .customer-profile-page .settings-form {
+    gap: 0.55rem;
+  }
+  .customer-profile-page .settings-form h2 {
+    margin: 0.1rem 0;
+    font-size: 0.84rem;
+  }
+  .customer-profile-page .form-grid {
+    gap: 0.55rem;
+  }
+  .customer-profile-page label {
+    gap: 0.25rem;
+    font-size: 0.82rem;
+  }
+  .customer-profile-page input {
+    min-height: 2.35rem;
+    padding: 0.42rem 0.58rem;
+    border-radius: 0.58rem;
+    font-size: 0.82rem;
+  }
+  .customer-profile-page .form-actions {
+    margin-top: 0.3rem;
+  }
+  .customer-profile-page .form-actions .btn {
+    min-height: 2.25rem;
+    padding: 0.42rem 0.7rem;
+    border-radius: 0.58rem;
+    font-size: 0.82rem;
+  }
+  .customer-profile-page .settings-nav .chip {
+    padding: 0.22rem 0.45rem;
+    font-size: 0.82rem;
+  }
+  .customer-profile-page .settings-nav h2 {
+    margin: 0.45rem 0 0.3rem;
+    font-size: 1.05rem;
+  }
+  .customer-profile-page .settings-nav p {
+    margin: 0;
+    line-height: 1.45;
+  }
+  .customer-favorites-page .provider-grid {
+    grid-template-columns: repeat(auto-fill, minmax(13rem, 14rem));
+    gap: 0.65rem;
+  }
+  .customer-favorites-page .provider-card {
+    padding: 0.65rem;
+    border-radius: 0.8rem;
+  }
+  .customer-favorites-page .provider-card-head {
+    gap: 0.55rem;
+  }
+  .customer-favorites-page .avatar-lg {
+    width: 2.65rem;
+    height: 2.65rem;
+  }
+  .customer-favorites-page .provider-card h3 {
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card-head p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0.1rem 0 0.18rem;
+    font-size: 0.82rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 1;
+  }
+  .customer-favorites-page .rating {
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card .chip-row {
+    display: none;
+  }
+  .customer-favorites-page .availability {
+    margin-top: 0.45rem;
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card .card-footer {
+    padding-top: 0.45rem;
+    margin-top: 0.45rem;
+  }
+  .customer-favorites-page .provider-card .card-footer strong {
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card .btn {
+    min-height: 1.85rem;
+    padding: 0.3rem 0.48rem;
+    border-radius: 0.5rem;
+  }
+  .customer-favorites-page .provider-grid > div > .text-button {
+    margin-top: 0.2rem;
+  }
+  .provider-settings-layout {
+    grid-template-columns: minmax(0, 1fr) 16rem;
+  }
+  .provider-settings-form {
+    padding: 0.8rem;
+  }
+  .timeline-list article {
+    grid-template-columns: 3rem auto 1fr auto;
+    align-items: center;
+  }
+  .timeline-list article .btn {
+    grid-column: auto;
+  }
+  .request-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .activity-list article {
+    grid-template-columns: auto 1fr auto;
+  }
+}

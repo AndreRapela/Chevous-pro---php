@@ -1,0 +1,140 @@
+/*
+ * Piso de legibilidade
+ *
+ * A auditoria revelou textos de leitura entre 9 e 15px, sobretudo em cards,
+ * painéis e no hero. A interface usa agora três níveis estáveis: 16px para
+ * leitura, 14px para controles e 13px para metadados. Assim uma página não
+ * parece estar em outra escala só porque utiliza um componente diferente.
+ */
+:root {
+  --type-meta: 0.82rem;
+  --type-ui: 0.9rem;
+  --type-body: 1rem;
+  --type-card: 0.95rem;
+}
+
+/* Texto corrido nunca fica abaixo do tamanho de leitura. */
+body p {
+  font-size: 1rem !important;
+  line-height: 1.55;
+}
+body small {
+  font-size: 0.875rem;
+}
+
+/* Títulos e dados dentro de cards continuam compactos, mas não minúsculos. */
+body
+  :is(
+    .category-card strong,
+    .service-card h3,
+    .provider-card h3,
+    .compact-service-list strong,
+    .steps-grid h3,
+    .timeline-list h3,
+    .notification-list button strong,
+    .toggle-row strong
+  ) {
+  font-size: 1rem !important;
+}
+
+body
+  :is(
+    .rating,
+    .availability,
+    .card-footer,
+    .review-head,
+    .compact-service-list small,
+    .profile-facts span,
+    .footer-grid a:not(.brand),
+    .footer-grid p,
+    .footer-bottom,
+    .bottom-nav a,
+    .hero-trust,
+    .result-pagination,
+    .pagination-summary,
+    .booking-progress p,
+    .selected-service small,
+    .saved-address-option > span:last-child,
+    .timeline-list time,
+    .transaction-list,
+    .notification-list button span,
+    .chat-safety-note,
+    .chat-live-status,
+    .chat-day,
+    .bubble time
+  ) {
+  font-size: 0.9rem !important;
+}
+
+/* Controles mantêm leitura confortável sem fazer os cartões crescerem demais. */
+body
+  :is(
+    button,
+    input,
+    textarea,
+    select,
+    label,
+    .btn,
+    .text-link,
+    .text-button,
+    .chip,
+    .mobile-menu a,
+    .desktop-nav a,
+    .locale-trigger-value,
+    .locale-option,
+    .quick-replies button,
+    .page-button
+  ) {
+  font-size: 0.9rem !important;
+}
+
+/* Metadados ainda são secundários, porém permanecem legíveis. */
+body
+  :is(
+    .eyebrow,
+    .kicker,
+    .optional,
+    .field-hint,
+    .field-error,
+    .field-success,
+    time,
+    .review-head time,
+    .metric-card small,
+    .locale-popover-header span,
+    .locale-setting-label,
+    .locale-code,
+    .showcase-tag,
+    .showcase-service,
+    .hero-banner-label,
+    .hero-banner-proof,
+    .notification-list button time,
+    .composer-actions small
+  ) {
+  font-size: 0.82rem !important;
+}
+
+@media (min-width: 64rem) {
+  /* A frase principal do hero, apontada na revisão, ganha uma leitura normal. */
+  body .hero-copy p,
+  body .desktop-hero-copy p {
+    font-size: 1.05rem !important;
+  }
+
+  body
+    :is(
+      .page-hero p,
+      .catalog-hero p,
+      .professionals-hero p,
+      .info-page-hero p,
+      .profile-intro p,
+      .service-detail-grid p,
+      .portal-page-heading p,
+      .content-card p,
+      .benefits-grid p,
+      .info-grid p,
+      .review-list p,
+      .bubble
+    ) {
+    font-size: 1rem !important;
+  }
+}

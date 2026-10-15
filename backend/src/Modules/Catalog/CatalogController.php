@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace ChezVoust\Modules\Catalog;
 
+use ChezVoust\Modules\Bookings\AvailabilityPolicy;
+
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\Controller;
 use ChezVoust\Core\Request;
@@ -16,19 +18,20 @@ final class CatalogController extends Controller
     public function robots(Request $request, array $params, ?array $auth): Response
     {
         $siteUrl = rtrim((string) $this->config['url'], '/');
-        $body = "User-agent: *\n"
-            . "Allow: /\n"
-            . "Disallow: /api/\n"
-            . "Disallow: /entrar\n"
-            . "Disallow: /cadastro\n"
-            . "Disallow: /recuperar-senha\n"
-            . "Disallow: /redefinir-senha\n"
-            . "Disallow: /verificar-email\n"
-            . "Disallow: /agendar/\n"
-            . "Disallow: /conta/\n"
-            . "Disallow: /prestador/\n"
-            . "Disallow: /admin/\n"
-            . "\nSitemap: {$siteUrl}/sitemap.xml\n";
+        $body =
+            "User-agent: *\n" .
+            "Allow: /\n" .
+            "Disallow: /api/\n" .
+            "Disallow: /entrar\n" .
+            "Disallow: /cadastro\n" .
+            "Disallow: /recuperar-senha\n" .
+            "Disallow: /redefinir-senha\n" .
+            "Disallow: /verificar-email\n" .
+            "Disallow: /agendar/\n" .
+            "Disallow: /conta/\n" .
+            "Disallow: /prestador/\n" .
+            "Disallow: /admin/\n" .
+            "\nSitemap: {$siteUrl}/sitemap.xml\n";
         return Response::text($body, 'text/plain; charset=utf-8', 3600);
     }
 
@@ -46,40 +49,71 @@ final class CatalogController extends Controller
             ['/termos', 'yearly', '0.3', null],
             ['/privacidade', 'yearly', '0.3', null],
         ];
-        $categories = $this->db->query(
-            'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
-             FROM service_categories WHERE active = 1 ORDER BY sort_order, name'
-        )->fetchAll();
+        $categories = $this->db
+            ->query(
+                'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
+             FROM service_categories WHERE active = 1 ORDER BY sort_order, name',
+            )
+            ->fetchAll();
         foreach ($categories as $category) {
-            $entries[] = ['/servicos/categoria/' . rawurlencode((string) $category['slug']), 'weekly', '0.7', $category['lastmod']];
+            $entries[] = [
+                '/servicos/categoria/' . rawurlencode((string) $category['slug']),
+                'weekly',
+                '0.7',
+                $category['lastmod'],
+            ];
         }
-        $services = $this->db->query(
-            'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
-             FROM services WHERE active = 1 ORDER BY updated_at DESC'
-        )->fetchAll();
+        $services = $this->db
+            ->query(
+                'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
+             FROM services WHERE active = 1 ORDER BY updated_at DESC',
+            )
+            ->fetchAll();
         foreach ($services as $service) {
-            $entries[] = ['/servicos/' . rawurlencode((string) $service['slug']), 'weekly', '0.8', $service['lastmod']];
+            $entries[] = [
+                '/servicos/' . rawurlencode((string) $service['slug']),
+                'weekly',
+                '0.8',
+                $service['lastmod'],
+            ];
         }
-        $professionals = $this->db->query(
-            'SELECT u.public_id AS id, u.name, p.base_city AS city,
+        $professionals = $this->db
+            ->query(
+                'SELECT u.public_id AS id, u.name, p.base_city AS city,
                     DATE_FORMAT(GREATEST(u.updated_at, p.updated_at), \'%Y-%m-%d\') AS lastmod
              FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
              WHERE u.status = \'active\' AND p.verification_status = \'approved\'
-             ORDER BY p.updated_at DESC'
-        )->fetchAll();
+             ORDER BY p.updated_at DESC',
+            )
+            ->fetchAll();
         foreach ($professionals as $professional) {
-            $slug = $this->publicSlug((string) $professional['name'] . ' ' . (string) $professional['city']);
-            $entries[] = ['/profissionais/' . rawurlencode((string) $professional['id']) . '/' . rawurlencode($slug), 'weekly', '0.8', $professional['lastmod']];
+            $slug = $this->publicSlug(
+                (string) $professional['name'] . ' ' . (string) $professional['city'],
+            );
+            $entries[] = [
+                '/profissionais/' .
+                rawurlencode((string) $professional['id']) .
+                '/' .
+                rawurlencode($slug),
+                'weekly',
+                '0.8',
+                $professional['lastmod'],
+            ];
         }
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
         foreach ($entries as [$path, $changeFrequency, $priority, $lastModified]) {
-            $xml .= "  <url><loc>" . $this->xml($baseUrl . $path) . "</loc>";
+            $xml .= '  <url><loc>' . $this->xml($baseUrl . $path) . '</loc>';
             if (is_string($lastModified) && $lastModified !== '') {
                 $xml .= '<lastmod>' . $this->xml($lastModified) . '</lastmod>';
             }
-            $xml .= '<changefreq>' . $changeFrequency . '</changefreq><priority>' . $priority . "</priority></url>\n";
+            $xml .=
+                '<changefreq>' .
+                $changeFrequency .
+                '</changefreq><priority>' .
+                $priority .
+                "</priority></url>\n";
         }
         $xml .= '</urlset>\n';
         return Response::text($xml, 'application/xml; charset=utf-8', 3600);
@@ -87,11 +121,14 @@ final class CatalogController extends Controller
 
     public function appConfig(Request $request, array $params, ?array $auth): Response
     {
-        $settings = $this->db->query('SELECT setting_key, setting_value FROM app_settings WHERE is_public = 1')->fetchAll();
+        $settings = $this->db
+            ->query('SELECT setting_key, setting_value FROM app_settings WHERE is_public = 1')
+            ->fetchAll();
         $values = [];
         foreach ($settings as $setting) {
             $decoded = json_decode($setting['setting_value'], true);
-            $values[$setting['setting_key']] = json_last_error() === JSON_ERROR_NONE ? $decoded : $setting['setting_value'];
+            $values[$setting['setting_key']] =
+                json_last_error() === JSON_ERROR_NONE ? $decoded : $setting['setting_value'];
         }
         return Response::data([
             'brand' => $this->config['name'],
@@ -104,26 +141,32 @@ final class CatalogController extends Controller
 
     public function home(Request $request, array $params, ?array $auth): Response
     {
-        $categories = $this->db->query(
-            'SELECT public_id AS id, name, slug, description, icon, color
-             FROM service_categories WHERE active = 1 ORDER BY sort_order, name LIMIT 12'
-        )->fetchAll();
-        $promotions = $this->db->query(
-            'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
+        $categories = $this->db
+            ->query(
+                'SELECT public_id AS id, name, slug, description, icon, color
+             FROM service_categories WHERE active = 1 ORDER BY sort_order, name LIMIT 12',
+            )
+            ->fetchAll();
+        $promotions = $this->db
+            ->query(
+                'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
                     image_url AS imageUrl, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor
              FROM promotions WHERE active = 1
                AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
                AND (ends_at IS NULL OR ends_at >= UTC_TIMESTAMP())
-             ORDER BY sort_order, created_at DESC LIMIT 8'
-        )->fetchAll();
-        $professionals = $this->db->query(
-            'SELECT u.public_id AS id, u.name, p.headline, p.base_city AS city, p.base_state AS state,
+             ORDER BY sort_order, created_at DESC LIMIT 8',
+            )
+            ->fetchAll();
+        $professionals = $this->db
+            ->query(
+                'SELECT u.public_id AS id, u.name, p.headline, p.base_city AS city, p.base_state AS state,
                     p.rating_avg AS rating, p.reviews_count AS reviewsCount, p.verification_status AS verificationStatus
              FROM professional_profiles p INNER JOIN users u ON u.id = p.user_id
              WHERE u.status = \'active\' AND p.verification_status = \'approved\'
-             ORDER BY p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC LIMIT 8'
-        )->fetchAll();
+             ORDER BY p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC LIMIT 8',
+            )
+            ->fetchAll();
         return Response::data(compact('promotions', 'categories', 'professionals'));
     }
 
@@ -148,22 +191,27 @@ final class CatalogController extends Controller
                     image_url AS imageUrl, purchase_url AS purchaseUrl, badge_text AS badgeText,
                     inventory_count AS inventoryCount, featured
              FROM products WHERE {$whereSql}
-             ORDER BY featured DESC, sort_order, created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+             ORDER BY featured DESC, sort_order, created_at DESC LIMIT {$perPage} OFFSET {$offset}",
         );
         $statement->execute($values);
         return Response::data($statement->fetchAll(), 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+            'page' => $page,
+            'perPage' => $perPage,
+            'total' => $total,
+            'lastPage' => max(1, (int) ceil($total / $perPage)),
         ]);
     }
 
     public function categories(Request $request, array $params, ?array $auth): Response
     {
-        $rows = $this->db->query(
-            'SELECT c.public_id AS id, c.name, c.slug, c.description, c.icon, c.color,
+        $rows = $this->db
+            ->query(
+                'SELECT c.public_id AS id, c.name, c.slug, c.description, c.icon, c.color,
                     COUNT(s.id) AS servicesCount
              FROM service_categories c LEFT JOIN services s ON s.category_id = c.id AND s.active = 1
-             WHERE c.active = 1 GROUP BY c.id ORDER BY c.sort_order, c.name'
-        )->fetchAll();
+             WHERE c.active = 1 GROUP BY c.id ORDER BY c.sort_order, c.name',
+            )
+            ->fetchAll();
         return Response::data($rows);
     }
 
@@ -178,19 +226,23 @@ final class CatalogController extends Controller
             $values['category_slug'] = (string) $request->query['category'];
         }
         if (!empty($request->query['q'])) {
-            $where[] = '(s.name LIKE :search_name OR s.short_description LIKE :search_short_description OR s.description LIKE :search_description)';
+            $where[] =
+                '(s.name LIKE :search_name OR s.short_description LIKE :search_short_description OR s.description LIKE :search_description)';
             $search = '%' . mb_substr((string) $request->query['q'], 0, 80) . '%';
             $values['search_name'] = $search;
             $values['search_short_description'] = $search;
             $values['search_description'] = $search;
         }
         if (!empty($request->query['professional'])) {
-            $where[] = 'EXISTS (SELECT 1 FROM professional_services ps INNER JOIN users pu ON pu.id = ps.professional_id WHERE ps.service_id = s.id AND ps.active = 1 AND pu.public_id = :professional_id AND pu.status = \'active\')';
+            $where[] =
+                'EXISTS (SELECT 1 FROM professional_services ps INNER JOIN users pu ON pu.id = ps.professional_id WHERE ps.service_id = s.id AND ps.active = 1 AND pu.public_id = :professional_id AND pu.status = \'active\')';
             $values['professional_id'] = (string) $request->query['professional'];
         }
 
         $whereSql = implode(' AND ', $where);
-        $count = $this->db->prepare("SELECT COUNT(*) FROM services s INNER JOIN service_categories c ON c.id = s.category_id WHERE {$whereSql}");
+        $count = $this->db->prepare(
+            "SELECT COUNT(*) FROM services s INNER JOIN service_categories c ON c.id = s.category_id WHERE {$whereSql}",
+        );
         $count->execute($values);
         $total = (int) $count->fetchColumn();
 
@@ -201,11 +253,14 @@ final class CatalogController extends Controller
                     c.public_id AS categoryId, c.name AS categoryName, c.slug AS categorySlug,
                     (c.slug = 'outros') AS isCustom
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
-             WHERE {$whereSql} ORDER BY s.featured DESC, s.sort_order, s.name LIMIT {$perPage} OFFSET {$offset}"
+             WHERE {$whereSql} ORDER BY s.featured DESC, s.sort_order, s.name LIMIT {$perPage} OFFSET {$offset}",
         );
         $statement->execute($values);
         return Response::data($statement->fetchAll(), 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+            'page' => $page,
+            'perPage' => $perPage,
+            'total' => $total,
+            'lastPage' => max(1, (int) ceil($total / $perPage)),
         ]);
     }
 
@@ -221,11 +276,11 @@ final class CatalogController extends Controller
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
              WHERE (s.public_id = :public_id OR s.slug = :slug) AND s.active = 1 AND c.active = 1',
             ['public_id' => $params['id'], 'slug' => $params['id']],
-            'Serviço não encontrado.'
+            'Serviço não encontrado.',
         );
         $addons = $this->db->prepare(
             'SELECT public_id AS id, name, description, price_cents AS priceCents, pricing_type AS pricingType
-             FROM service_addons WHERE service_id = :service_id AND active = 1 ORDER BY sort_order, name'
+             FROM service_addons WHERE service_id = :service_id AND active = 1 ORDER BY sort_order, name',
         );
         $addons->execute(['service_id' => $service['internalId']]);
         unset($service['internalId']);
@@ -241,7 +296,8 @@ final class CatalogController extends Controller
         $values = [];
 
         if (!empty($request->query['service'])) {
-            $joins[] = 'INNER JOIN professional_services ps ON ps.professional_id = u.id AND ps.active = 1';
+            $joins[] =
+                'INNER JOIN professional_services ps ON ps.professional_id = u.id AND ps.active = 1';
             $joins[] = 'INNER JOIN services s ON s.id = ps.service_id';
             $where[] = '(s.public_id = :service_id OR s.slug = :service_slug)';
             $values['service_id'] = (string) $request->query['service'];
@@ -265,11 +321,14 @@ final class CatalogController extends Controller
         $sort = match ($request->query['sort'] ?? '') {
             'rating' => 'p.rating_avg DESC, p.reviews_count DESC',
             'experience' => 'p.years_experience DESC, p.completed_jobs DESC',
-            'price' => 'COALESCE((SELECT MIN(COALESCE(ps4.price_cents, s4.price_cents)) FROM professional_services ps4 INNER JOIN services s4 ON s4.id = ps4.service_id WHERE ps4.professional_id = u.id AND ps4.active = 1 AND s4.active = 1), 2147483647) ASC, p.rating_avg DESC',
+            'price'
+                => 'COALESCE((SELECT MIN(COALESCE(ps4.price_cents, s4.price_cents)) FROM professional_services ps4 INNER JOIN services s4 ON s4.id = ps4.service_id WHERE ps4.professional_id = u.id AND ps4.active = 1 AND s4.active = 1), 2147483647) ASC, p.rating_avg DESC',
             default => 'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC',
         };
 
-        $count = $this->db->prepare("SELECT COUNT(DISTINCT u.id) FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id {$joinSql} WHERE {$whereSql}");
+        $count = $this->db->prepare(
+            "SELECT COUNT(DISTINCT u.id) FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id {$joinSql} WHERE {$whereSql}",
+        );
         $count->execute($values);
         $total = (int) $count->fetchColumn();
         $statement = $this->db->prepare(
@@ -284,18 +343,27 @@ final class CatalogController extends Controller
                      FROM professional_services ps3 INNER JOIN services s3 ON s3.id = ps3.service_id
                      WHERE ps3.professional_id = u.id AND ps3.active = 1 AND s3.active = 1) AS priceFromCents
              FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id {$joinSql}
-             WHERE {$whereSql} ORDER BY {$sort} LIMIT {$perPage} OFFSET {$offset}"
+             WHERE {$whereSql} ORDER BY {$sort} LIMIT {$perPage} OFFSET {$offset}",
         );
         $statement->execute($values);
         $rows = $statement->fetchAll();
         foreach ($rows as &$row) {
-            $row['serviceIds'] = $row['serviceIds'] ? explode(',', (string) $row['serviceIds']) : [];
-            $row['avatarUrl'] = $this->avatarUrl((string) $row['id'], $row['avatarPath'] ?? null, $row['avatarUpdatedAt'] ?? null);
+            $row['serviceIds'] = $row['serviceIds']
+                ? explode(',', (string) $row['serviceIds'])
+                : [];
+            $row['avatarUrl'] = $this->avatarUrl(
+                (string) $row['id'],
+                $row['avatarPath'] ?? null,
+                $row['avatarUpdatedAt'] ?? null,
+            );
             unset($row['avatarPath'], $row['avatarUpdatedAt']);
         }
         unset($row);
         return Response::data($rows, 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+            'page' => $page,
+            'perPage' => $perPage,
+            'total' => $total,
+            'lastPage' => max(1, (int) ceil($total / $perPage)),
         ]);
     }
 
@@ -310,13 +378,13 @@ final class CatalogController extends Controller
              FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
              WHERE u.public_id = :id AND u.status = \'active\' AND p.verification_status = \'approved\'',
             ['id' => $params['id']],
-            'Profissional não encontrado.'
+            'Profissional não encontrado.',
         );
         $services = $this->db->prepare(
             'SELECT s.public_id AS id, s.name, s.slug, COALESCE(ps.price_cents, s.price_cents) AS priceCents,
                     s.pricing_type AS pricingType, s.unit_label AS unitLabel
              FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
-             WHERE ps.professional_id = :professional_id AND ps.active = 1 AND s.active = 1 ORDER BY s.name'
+             WHERE ps.professional_id = :professional_id AND ps.active = 1 AND s.active = 1 ORDER BY s.name',
         );
         $services->execute(['professional_id' => $professional['internalId']]);
         $professional['services'] = $services->fetchAll();
@@ -324,18 +392,22 @@ final class CatalogController extends Controller
             'SELECT public_id AS id, role_title AS role, company_name AS company, description,
                     DATE_FORMAT(started_at, \'%Y-%m-%d\') AS startedAt, DATE_FORMAT(ended_at, \'%Y-%m-%d\') AS endedAt,
                     is_current AS current
-             FROM professional_experiences WHERE professional_id = :professional_id ORDER BY is_current DESC, started_at DESC'
+             FROM professional_experiences WHERE professional_id = :professional_id ORDER BY is_current DESC, started_at DESC',
         );
         $experiences->execute(['professional_id' => $professional['internalId']]);
         $professional['experiences'] = $experiences->fetchAll();
         $courses = $this->db->prepare(
             'SELECT public_id AS id, title, institution, DATE_FORMAT(completed_at, \'%Y-%m-%d\') AS completedAt,
                     certificate_url AS certificateUrl
-             FROM professional_courses WHERE professional_id = :professional_id ORDER BY completed_at DESC, created_at DESC'
+             FROM professional_courses WHERE professional_id = :professional_id ORDER BY completed_at DESC, created_at DESC',
         );
         $courses->execute(['professional_id' => $professional['internalId']]);
         $professional['courses'] = $courses->fetchAll();
-        $professional['avatarUrl'] = $this->avatarUrl((string) $professional['id'], $professional['avatarPath'] ?? null, $professional['avatarUpdatedAt'] ?? null);
+        $professional['avatarUrl'] = $this->avatarUrl(
+            (string) $professional['id'],
+            $professional['avatarPath'] ?? null,
+            $professional['avatarUpdatedAt'] ?? null,
+        );
         unset($professional['avatarPath'], $professional['avatarUpdatedAt']);
         unset($professional['internalId']);
         return Response::data($professional);
@@ -347,12 +419,12 @@ final class CatalogController extends Controller
             'SELECT u.id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
              WHERE u.public_id = :id AND u.status = \'active\' AND p.verification_status = \'approved\'',
             ['id' => $params['id']],
-            'Profissional não encontrado.'
+            'Profissional não encontrado.',
         );
         $rules = $this->db->prepare(
             'SELECT public_id AS id, weekday, TIME_FORMAT(start_time, \'%H:%i\') AS startTime,
                     TIME_FORMAT(end_time, \'%H:%i\') AS endTime
-             FROM availability_rules WHERE professional_id = :id AND active = 1 ORDER BY weekday, start_time'
+             FROM availability_rules WHERE professional_id = :id AND active = 1 ORDER BY weekday, start_time',
         );
         $rules->execute(['id' => $professional['id']]);
         $ruleRows = $rules->fetchAll();
@@ -361,7 +433,7 @@ final class CatalogController extends Controller
                     TIME_FORMAT(start_time, \'%H:%i\') AS startTime,
                     TIME_FORMAT(end_time, \'%H:%i\') AS endTime, reason
              FROM availability_exceptions WHERE professional_id = :id AND exception_date >= CURRENT_DATE()
-             ORDER BY exception_date, start_time LIMIT 90'
+             ORDER BY exception_date, start_time LIMIT 90',
         );
         $exceptions->execute(['id' => $professional['id']]);
         $exceptionRows = $exceptions->fetchAll();
@@ -374,12 +446,20 @@ final class CatalogController extends Controller
             }
             $duration = (int) ($request->query['durationMinutes'] ?? 120);
             if ($duration < 30 || $duration > 1440 || $duration % 30 !== 0) {
-                throw new ApiException(422, 'INVALID_DURATION', 'A duração deve usar intervalos de 30 minutos.');
+                throw new ApiException(
+                    422,
+                    'INVALID_DURATION',
+                    'A duração deve usar intervalos de 30 minutos.',
+                );
             }
             $timezone = new DateTimeZone($this->config['timezone']);
             $day = DateTimeImmutable::createFromFormat('!Y-m-d', $dateValue, $timezone);
             $dateErrors = DateTimeImmutable::getLastErrors();
-            if (!$day || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))) {
+            if (
+                !$day ||
+                ($dateErrors !== false &&
+                    ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))
+            ) {
                 throw new ApiException(422, 'INVALID_DATE', 'Data de disponibilidade inválida.');
             }
             if ($day < new DateTimeImmutable('today', $timezone)) {
@@ -394,14 +474,23 @@ final class CatalogController extends Controller
                  UNION ALL
                  SELECT starts_at AS scheduled_start, ends_at AS scheduled_end FROM slot_reservations
                  WHERE professional_id = :slot_professional_id AND status = 'held' AND expires_at > UTC_TIMESTAMP()
-                   AND starts_at < :slot_day_end AND ends_at > :slot_day_start"
+                   AND starts_at < :slot_day_end AND ends_at > :slot_day_start",
             );
             $busyStatement->execute([
-                'booking_professional_id' => $professional['id'], 'slot_professional_id' => $professional['id'],
-                'booking_day_start' => $day->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-                'booking_day_end' => $dayEnd->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-                'slot_day_start' => $day->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
-                'slot_day_end' => $dayEnd->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s'),
+                'booking_professional_id' => $professional['id'],
+                'slot_professional_id' => $professional['id'],
+                'booking_day_start' => $day
+                    ->setTimezone(new DateTimeZone('UTC'))
+                    ->format('Y-m-d H:i:s'),
+                'booking_day_end' => $dayEnd
+                    ->setTimezone(new DateTimeZone('UTC'))
+                    ->format('Y-m-d H:i:s'),
+                'slot_day_start' => $day
+                    ->setTimezone(new DateTimeZone('UTC'))
+                    ->format('Y-m-d H:i:s'),
+                'slot_day_end' => $dayEnd
+                    ->setTimezone(new DateTimeZone('UTC'))
+                    ->format('Y-m-d H:i:s'),
             ]);
             $busyRows = $busyStatement->fetchAll();
             $intervals = [];
@@ -412,33 +501,43 @@ final class CatalogController extends Controller
                 $intervals[] = ['startTime' => $rule['startTime'], 'endTime' => $rule['endTime']];
             }
             foreach ($exceptionRows as $exception) {
-                if ($exception['date'] === $dateValue && $exception['type'] === 'available' && $exception['startTime'] !== null && $exception['endTime'] !== null) {
-                    $intervals[] = ['startTime' => $exception['startTime'], 'endTime' => $exception['endTime']];
+                if (
+                    $exception['date'] === $dateValue &&
+                    $exception['type'] === 'available' &&
+                    $exception['startTime'] !== null &&
+                    $exception['endTime'] !== null
+                ) {
+                    $intervals[] = [
+                        'startTime' => $exception['startTime'],
+                        'endTime' => $exception['endTime'],
+                    ];
                 }
             }
             foreach ($intervals as $interval) {
-                $cursor = new DateTimeImmutable($dateValue . ' ' . $interval['startTime'], $timezone);
-                $intervalEnd = new DateTimeImmutable($dateValue . ' ' . $interval['endTime'], $timezone);
+                $cursor = new DateTimeImmutable(
+                    $dateValue . ' ' . $interval['startTime'],
+                    $timezone,
+                );
+                $intervalEnd = new DateTimeImmutable(
+                    $dateValue . ' ' . $interval['endTime'],
+                    $timezone,
+                );
                 while ($cursor->modify('+' . $duration . ' minutes') <= $intervalEnd) {
                     $candidateEnd = $cursor->modify('+' . $duration . ' minutes');
-                    $blocked = $cursor->getTimestamp() < time() + 1800;
-                    foreach ($exceptionRows as $exception) {
-                        if ($blocked || $exception['date'] !== $dateValue || $exception['type'] !== 'unavailable') {
-                            continue;
-                        }
-                        if ($exception['startTime'] === null || $exception['endTime'] === null) {
-                            $blocked = true;
-                            break;
-                        }
-                        $exceptionStart = new DateTimeImmutable($dateValue . ' ' . $exception['startTime'], $timezone);
-                        $exceptionEnd = new DateTimeImmutable($dateValue . ' ' . $exception['endTime'], $timezone);
-                        if ($cursor < $exceptionEnd && $candidateEnd > $exceptionStart) {
-                            $blocked = true;
-                            break;
-                        }
-                    }
-                    $candidateStartUtc = $cursor->setTimezone(new DateTimeZone('UTC'))->getTimestamp();
-                    $candidateEndUtc = $candidateEnd->setTimezone(new DateTimeZone('UTC'))->getTimestamp();
+                    $blocked =
+                        $cursor->getTimestamp() < time() + 1800 ||
+                        !AvailabilityPolicy::covers(
+                            $cursor,
+                            $candidateEnd,
+                            $ruleRows,
+                            $exceptionRows,
+                        );
+                    $candidateStartUtc = $cursor
+                        ->setTimezone(new DateTimeZone('UTC'))
+                        ->getTimestamp();
+                    $candidateEndUtc = $candidateEnd
+                        ->setTimezone(new DateTimeZone('UTC'))
+                        ->getTimestamp();
                     foreach ($busyRows as $busy) {
                         if ($blocked) {
                             break;
@@ -458,7 +557,11 @@ final class CatalogController extends Controller
             $slots = array_values(array_unique($slots));
             sort($slots);
         }
-        return Response::data(['rules' => $ruleRows, 'exceptions' => $exceptionRows, 'slots' => $slots]);
+        return Response::data([
+            'rules' => $ruleRows,
+            'exceptions' => $exceptionRows,
+            'slots' => $slots,
+        ]);
     }
 
     private function avatarUrl(string $publicId, mixed $path, mixed $updatedAt): ?string
@@ -466,7 +569,10 @@ final class CatalogController extends Controller
         if (!is_string($path) || $path === '') {
             return null;
         }
-        return '/api/v1/avatars/' . rawurlencode($publicId) . '?v=' . urlencode((string) ($updatedAt ?? '0'));
+        return '/api/v1/avatars/' .
+            rawurlencode($publicId) .
+            '?v=' .
+            urlencode((string) ($updatedAt ?? '0'));
     }
 
     private function publicSlug(string $value): string

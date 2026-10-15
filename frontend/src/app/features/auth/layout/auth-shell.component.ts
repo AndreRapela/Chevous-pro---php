@@ -5,37 +5,7 @@ import { BrandComponent } from '../../../shared/components';
   selector: 'cvp-auth-shell',
   standalone: true,
   imports: [BrandComponent],
-  template: `
-    <main class="auth-page" [class.login-auth-page]="variant === 'login'">
-      <section
-        class="auth-brand-panel"
-        [class.login-brand-panel]="variant !== 'register'"
-        [class.register-brand-panel]="variant === 'register'"
-      >
-        <cvp-brand />
-        <figure class="auth-professional-visual">
-          <img
-            [src]="imageSrc"
-            [attr.srcset]="imageSrcset || null"
-            [attr.sizes]="imageSrcset ? imageSizes : null"
-            [alt]="imageAlt"
-            [width]="imageWidth"
-            [height]="imageHeight"
-            decoding="async"
-          >
-        </figure>
-        <div>
-          <span class="eyebrow">{{ eyebrow }}</span>
-          <h1>{{ heroTitle }}</h1>
-          <p>{{ heroDescription }}</p>
-        </div>
-        <div class="auth-shapes" aria-hidden="true"><span></span><span></span><span></span></div>
-      </section>
-      <section class="auth-form-panel">
-        <div class="auth-form-wrap"><ng-content /></div>
-      </section>
-    </main>
-  `,
+  templateUrl: './auth-shell.component.html',
   styles: `:host { display: block; }`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })

@@ -1,0 +1,571 @@
+@media (min-width: 64rem) {
+  .portal-layout {
+    display: grid;
+    grid-template-columns: 15rem 1fr;
+  }
+  .admin-layout {
+    grid-template-columns: 16rem 1fr;
+  }
+  .portal-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: flex;
+    flex-direction: column;
+    padding: 1.2rem 0.9rem;
+    border-right: 1px solid var(--ink-200);
+    background: #fff;
+    overflow-y: auto;
+  }
+  .portal-context {
+    margin: 1.5rem 0.65rem 0.5rem;
+    color: var(--ink-500);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .portal-sidebar nav {
+    display: grid;
+    gap: 0.2rem;
+  }
+  .portal-sidebar nav a {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.68rem 0.75rem;
+    border-radius: 0.65rem;
+    color: var(--ink-600);
+    font-weight: 700;
+  }
+  .portal-sidebar nav a > span {
+    width: 1.2rem;
+    text-align: center;
+    font-size: 0.95rem;
+  }
+  .portal-sidebar nav a > .portal-nav-icon {
+    width: 1.2rem;
+  }
+  .portal-sidebar nav a:hover,
+  .portal-sidebar nav a.active {
+    color: var(--brand-800);
+    background: var(--brand-50);
+  }
+  .portal-help {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem;
+    margin-top: auto;
+    border-radius: 0.7rem;
+    color: var(--brand-800);
+    background: var(--brand-50);
+    font-size: 0.82rem;
+    font-weight: 750;
+  }
+  .portal-help span {
+    width: 1.5rem;
+    height: 1.5rem;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    color: #fff;
+    background: var(--brand-600);
+  }
+  .portal-content {
+    padding-bottom: 0;
+  }
+  .portal-header {
+    height: 4.5rem;
+    padding: 0 2rem;
+  }
+  .mobile-context {
+    display: none;
+  }
+  .portal-user-name {
+    display: inline;
+    font-weight: 750;
+  }
+  .portal-bottom-nav {
+    display: none;
+  }
+  .portal-page {
+    width: min(100% - 3rem, 90rem);
+    padding: 2rem 0 3rem;
+  }
+  .metric-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .admin-layout .metric-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .dashboard-grid .span-two {
+    grid-column: span 2;
+  }
+  .customer-dashboard-page {
+    padding-top: 1.1rem;
+  }
+  .customer-dashboard-page .portal-page-heading {
+    align-items: center;
+    margin-bottom: 0.7rem;
+  }
+  .customer-dashboard-page .portal-page-heading .eyebrow {
+    margin-bottom: 0.12rem;
+  }
+  .customer-dashboard-page .portal-page-heading h1 {
+    margin-bottom: 0.1rem;
+    font-size: 1.55rem;
+  }
+  .customer-dashboard-page .portal-page-heading p {
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .portal-page-heading > .btn {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.65rem;
+  }
+  .customer-dashboard-page .metric-grid {
+    gap: 0.55rem;
+    margin-bottom: 0.6rem;
+  }
+  .customer-dashboard-page .metric-card {
+    min-height: 4.6rem;
+    align-content: center;
+    gap: 0.05rem;
+    padding: 0.65rem;
+    border-radius: 0.8rem;
+  }
+  .customer-dashboard-page .metric-card::after {
+    width: 3.4rem;
+    height: 3.4rem;
+    right: -2rem;
+    top: -2rem;
+  }
+  .customer-dashboard-page .metric-card p,
+  .customer-dashboard-page .metric-card small {
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .metric-card strong {
+    font-size: 1.05rem;
+  }
+  .customer-dashboard-page .dashboard-grid {
+    align-items: start;
+    gap: 0.6rem;
+    margin: 0.6rem 0;
+  }
+  .customer-dashboard-page .dashboard-next-card,
+  .customer-dashboard-page .dashboard-shortcuts {
+    padding: 0.7rem;
+  }
+  .customer-dashboard-page .card-title-row {
+    margin-bottom: 0.4rem;
+  }
+  .customer-dashboard-page .card-title-row .eyebrow {
+    margin-bottom: 0.12rem;
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .card-title-row h2 {
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .card-title-row .text-link,
+  .customer-dashboard-page .dashboard-shortcuts .card-title-row > small {
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .dashboard-empty-booking {
+    gap: 0.55rem;
+    padding: 0.25rem 0 0;
+  }
+  .customer-dashboard-page .dashboard-empty-booking strong {
+    font-size: 0.82rem;
+  }
+  .customer-dashboard-page .empty-service-icon {
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 0.65rem;
+  }
+  .customer-dashboard-page .dashboard-empty-booking .btn {
+    min-height: 2rem;
+    padding: 0.35rem 0.55rem;
+  }
+  .customer-dashboard-page .shortcut-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+  .customer-dashboard-page .shortcut-list a {
+    min-height: 3.65rem;
+    padding: 0.45rem;
+    border: 1px solid var(--ink-200);
+    border-radius: 0.65rem;
+    background: var(--surface-soft);
+  }
+  .customer-dashboard-page .shortcut-list a:nth-child(2) {
+    background: var(--surface-soft);
+    border-color: var(--ink-200);
+  }
+  .customer-dashboard-page .shortcut-list a:nth-child(3) {
+    background: var(--surface-soft);
+    border-color: var(--ink-200);
+  }
+  .customer-dashboard-page .shortcut-list a:nth-child(4) {
+    background: var(--surface-soft);
+    border-color: var(--ink-200);
+  }
+  .customer-dashboard-page .shortcut-list > a > span:first-child {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.5rem;
+  }
+  .customer-dashboard-page .shortcut-list i {
+    display: none;
+  }
+  .provider-dashboard-page,
+  .provider-operations-page:not(.provider-profile-page) {
+    width: min(100% - 3rem, 64rem);
+    padding: 1rem 0 1.5rem;
+  }
+  .provider-dashboard-page .portal-page-heading,
+  .provider-operations-page:not(.provider-profile-page) .portal-page-heading {
+    margin-bottom: 0.7rem;
+  }
+  .provider-dashboard-page .portal-page-heading .eyebrow,
+  .provider-operations-page:not(.provider-profile-page) .portal-page-heading .eyebrow {
+    margin-bottom: 0.18rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .portal-page-heading h1,
+  .provider-operations-page:not(.provider-profile-page) .portal-page-heading h1 {
+    margin-bottom: 0.15rem;
+    font-size: 1.55rem;
+  }
+  .provider-dashboard-page .portal-page-heading p,
+  .provider-operations-page:not(.provider-profile-page) .portal-page-heading p {
+    font-size: 0.82rem;
+  }
+  .provider-schedule-page .portal-page-heading > .btn {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.65rem;
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .portal-page-heading > .chip {
+    padding: 0.22rem 0.45rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.55rem;
+    margin-bottom: 0.6rem;
+  }
+  .provider-dashboard-page .metric-card,
+  .provider-earnings-page .metric-card {
+    min-height: 4.6rem;
+    align-content: center;
+    gap: 0.05rem;
+    padding: 0.65rem;
+    border-radius: 0.8rem;
+  }
+  .provider-dashboard-page .metric-card::after,
+  .provider-earnings-page .metric-card::after {
+    width: 3.4rem;
+    height: 3.4rem;
+    right: -2rem;
+    top: -2rem;
+  }
+  .provider-dashboard-page .metric-card p,
+  .provider-dashboard-page .metric-card small,
+  .provider-earnings-page .metric-card p,
+  .provider-earnings-page .metric-card small {
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .provider-dashboard-page .metric-card strong,
+  .provider-earnings-page .metric-card strong {
+    position: relative;
+    z-index: 1;
+    font-size: 1.05rem;
+  }
+  .provider-dashboard-page .dashboard-grid {
+    align-items: stretch;
+    gap: 0.6rem;
+    margin: 0.6rem 0;
+  }
+  .provider-dashboard-page .portal-card {
+    padding: 0.7rem;
+    border-radius: 0.8rem;
+  }
+  .provider-dashboard-page .card-title-row {
+    margin-bottom: 0.4rem;
+  }
+  .provider-dashboard-page .card-title-row .eyebrow {
+    margin-bottom: 0.12rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .card-title-row h2 {
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .card-title-row .text-link {
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .timeline-list article {
+    grid-template-columns: 2.6rem auto minmax(0, 1fr) auto;
+    gap: 0.45rem;
+    padding: 0.45rem 0;
+  }
+  .provider-dashboard-page .timeline-dot {
+    width: 0.55rem;
+    height: 0.55rem;
+    box-shadow: 0 0 0 0.22rem var(--brand-100);
+  }
+  .provider-dashboard-page .timeline-list .status-pill {
+    min-height: 1.35rem;
+    padding: 0.18rem 0.4rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .timeline-list article > div h3 {
+    margin: 0.2rem 0 0.1rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .timeline-list article > div p {
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .timeline-list article .btn {
+    min-height: 1.95rem;
+    padding: 0.32rem 0.5rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .profile-health .success-mark.small {
+    width: 2.1rem;
+    height: 2.1rem;
+    margin: 0.25rem 0 0.65rem;
+    font-size: 0.85rem;
+    box-shadow: 0 0 0 0.3rem var(--brand-100);
+  }
+  .provider-dashboard-page .profile-health h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.05rem;
+  }
+  .provider-dashboard-page .profile-health p {
+    margin: 0 0 0.55rem;
+    line-height: 1.45;
+  }
+  .provider-dashboard-page .profile-health .btn {
+    min-height: 2.05rem;
+    padding: 0.35rem 0.55rem;
+    font-size: 0.82rem;
+  }
+  .provider-dashboard-page .request-preview {
+    gap: 0.55rem;
+  }
+  .provider-dashboard-page .request-preview p {
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .request-list {
+    gap: 0.65rem;
+  }
+  .provider-requests-page .request-card {
+    padding: 0.75rem;
+    border-radius: 0.8rem;
+  }
+  .provider-requests-page .request-card-head {
+    gap: 0.55rem;
+  }
+  .provider-requests-page .request-card-head h2 {
+    margin-bottom: 0.15rem;
+    font-size: 0.88rem;
+  }
+  .provider-requests-page .request-card-head p {
+    margin-bottom: 0;
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .request-card dl {
+    padding: 0.55rem 0;
+    margin: 0.45rem 0;
+  }
+  .provider-requests-page .request-card dd {
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .request-card .form-grid {
+    gap: 0.55rem;
+  }
+  .provider-requests-page .request-card label {
+    gap: 0.25rem;
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .request-card input,
+  .provider-requests-page .request-card textarea {
+    min-height: 2.35rem;
+    padding: 0.42rem 0.58rem;
+    border-radius: 0.58rem;
+    font-size: 0.82rem;
+  }
+  .provider-requests-page .request-card textarea {
+    min-height: 3.8rem;
+  }
+  .provider-requests-page .request-card .card-actions {
+    padding-top: 0.55rem;
+  }
+  .provider-requests-page .request-card .btn {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.7rem;
+  }
+  .provider-schedule-page > .portal-card,
+  .provider-earnings-page > .portal-card {
+    padding: 0.7rem;
+    border-radius: 0.8rem;
+  }
+  .provider-schedule-page > .portal-card + .portal-card,
+  .provider-earnings-page > .portal-card + .portal-card {
+    margin-top: 0.65rem;
+  }
+  .provider-schedule-page .card-title-row,
+  .provider-earnings-page .card-title-row {
+    margin-bottom: 0.45rem;
+  }
+  .provider-schedule-page .card-title-row h2,
+  .provider-earnings-page .card-title-row h2 {
+    font-size: 0.85rem;
+  }
+  .provider-schedule-page th {
+    padding: 0.45rem 0.55rem;
+  }
+  .provider-schedule-page td {
+    padding: 0.4rem 0.55rem;
+  }
+  .provider-schedule-page td input {
+    min-height: 2.25rem;
+    padding: 0.35rem 0.55rem;
+    border-radius: 0.55rem;
+  }
+  .provider-earnings-page .metric-grid {
+    grid-template-columns: repeat(2, minmax(12rem, 16rem));
+    gap: 0.55rem;
+    margin-bottom: 0.65rem;
+  }
+  .provider-earnings-page .transaction-list article {
+    gap: 0.55rem;
+    padding: 0.5rem 0;
+  }
+  .provider-earnings-page .transaction-symbol {
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0.55rem;
+  }
+  .provider-earnings-page > aside .chip {
+    padding: 0.22rem 0.45rem;
+    font-size: 0.82rem;
+  }
+  .provider-earnings-page > aside h2 {
+    margin: 0.4rem 0 0.25rem;
+    font-size: 1.05rem;
+  }
+  .provider-earnings-page > aside p {
+    margin: 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+  .next-booking {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+  }
+  .next-booking-actions {
+    grid-column: auto;
+  }
+  .booking-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .customer-bookings-page,
+  .messages-page {
+    width: min(100% - 3rem, 64rem);
+    padding: 1rem 0 1.5rem;
+  }
+  .customer-bookings-page .portal-page-heading,
+  .messages-page .portal-page-heading {
+    margin-bottom: 0.7rem;
+  }
+  .customer-bookings-page .portal-page-heading .eyebrow,
+  .messages-page .portal-page-heading .eyebrow {
+    margin-bottom: 0.18rem;
+    font-size: 0.82rem;
+  }
+  .customer-bookings-page .portal-page-heading h1,
+  .messages-page .portal-page-heading h1 {
+    margin-bottom: 0.15rem;
+    font-size: 1.55rem;
+  }
+  .customer-bookings-page .portal-page-heading p,
+  .messages-page .portal-page-heading p {
+    font-size: 0.82rem;
+  }
+  .customer-bookings-page .portal-page-heading > .btn {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 0.65rem;
+  }
+  .customer-bookings-page .tabs {
+    margin-bottom: 0.65rem;
+  }
+  .customer-bookings-page .tabs button {
+    padding: 0.5rem 0.7rem;
+  }
+  .messages-page .chat-layout {
+    height: clamp(24rem, calc(100svh - 11rem), 30rem);
+    min-height: 0;
+    grid-template-columns: 16rem 1fr;
+  }
+  .messages-page .conversation-list {
+    min-height: 0;
+  }
+  .messages-page .conversation-list button {
+    padding: 0.65rem;
+  }
+  .messages-page .chat-panel {
+    min-height: 0;
+    overflow: hidden;
+  }
+  .messages-page .chat-panel > header {
+    padding: 0.65rem;
+    font-size: 0.82rem;
+  }
+  .messages-page .chat-body {
+    min-height: 0;
+    gap: 0.55rem;
+    padding: 0.75rem;
+    overflow-y: auto;
+  }
+  .messages-page .bubble {
+    padding: 0.55rem 0.65rem;
+  }
+  .messages-page .chat-composer {
+    gap: 0.4rem;
+    padding: 0.6rem;
+  }
+  .messages-page .chat-composer input {
+    min-height: 2.35rem;
+    padding: 0.45rem 0.65rem;
+  }
+  .messages-page .chat-composer .btn {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.65rem;
+  }
+  .conversation-list {
+    display: block;
+    overflow: auto;
+    border-right: 1px solid var(--ink-200);
+    border-bottom: 0;
+  }
+  .conversation-list button {
+    width: 100%;
+    min-width: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--ink-100);
+  }
+  .settings-layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}

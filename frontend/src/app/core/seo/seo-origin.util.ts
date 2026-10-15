@@ -22,13 +22,22 @@ function origin(value: string | undefined): string {
   }
 }
 
-export function allowedSeoHosts(value: string | undefined, siteUrl: string | undefined): ReadonlySet<string> {
-  const configured = (value ?? '').split(',').map((entry) => hostName(entry.trim())).filter((entry): entry is string => Boolean(entry));
+export function allowedSeoHosts(
+  value: string | undefined,
+  siteUrl: string | undefined
+): ReadonlySet<string> {
+  const configured = (value ?? '')
+    .split(',')
+    .map((entry) => hostName(entry.trim()))
+    .filter((entry): entry is string => Boolean(entry));
   const siteHost = origin(siteUrl) ? new URL(origin(siteUrl)).hostname.toLowerCase() : null;
   return new Set(siteHost ? [...configured, siteHost] : configured);
 }
 
-export function isAllowedSeoHost(host: string | undefined, allowedHosts: ReadonlySet<string>): boolean {
+export function isAllowedSeoHost(
+  host: string | undefined,
+  allowedHosts: ReadonlySet<string>
+): boolean {
   const normalized = hostName(host?.trim() ?? '');
   return normalized !== null && allowedHosts.has(normalized);
 }

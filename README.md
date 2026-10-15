@@ -2,9 +2,8 @@
 
 Marketplace mobile-first de serviços domésticos para clientes, profissionais e
 equipes de operação. O projeto combina um frontend Angular, uma API REST em PHP
-puro e um banco MySQL 8. A identidade visual usa tipografia, iniciais, CSS e três
-fotos autorizadas, entregues em seis variantes WebP responsivas para evitar downloads
-desnecessários em celulares.
+puro e um banco MySQL 8. A identidade visual usa tipografia, iniciais, CSS e
+fotografias responsivas otimizadas para evitar downloads desnecessários em celulares.
 
 ## O que está incluído
 
@@ -125,13 +124,21 @@ ou substituídas em qualquer implantação real:
 
 ## Qualidade e testes
 
-Resultado da validação local mais recente:
+Resultado da revisão local de 13/10/2026:
 
-- lint Angular/TypeScript/templates, build de produção, SSR e inspeção do bundle aprovados;
-- testes unitários do frontend: 70/70 em 20 suítes, cobrindo agenda, chat, perfil, CEP, registros profissionais, SEO, preços, contraste e paginação;
-- testes centrais PHP: 9/9, incluindo JWT, validação, IP confiável e cifra da outbox;
-- inspeção estrutural: 113 rotas REST, 34 tabelas e 14 assets visuais autorizados;
-- migração limpa, health check, conversa pré-reserva, SSE autenticado, limpeza da outbox e sintaxe do Nginx validados em MySQL 8.4/Docker.
+- formatação, lint Angular/TypeScript/templates, build de produção, SSR e inspeção do bundle aprovados;
+- 127/127 testes do frontend; cobertura de 100% de linhas, funções e ramificações
+  somente no conjunto explícito de 17 utilitários puros;
+- 19/19 testes centrais PHP e sintaxe válida nos 38 arquivos PHP;
+- inspeção estrutural: 119 registros de rota REST, 35 tabelas do schema e 22 assets visuais;
+- 57 templates e 1.292 frases de interface com cobertura EN/FR;
+- cinco fluxos de integração aprovados em MySQL 8.4/PHP 8.4 isolados: saúde,
+  outbox, sessões, mensagens e reserva;
+- auditoria npm completa sem vulnerabilidades conhecidas na execução local.
+
+A análise detalhada, as correções e os limites de verificação estão em
+[docs/CODE_AUDIT_2026-10-13.md](docs/CODE_AUDIT_2026-10-13.md). A validação visual
+manual permanece pendente. Os contratos automatizados de layout e SSR estão aprovados.
 
 Testes reais em dispositivos, matriz de concorrência, acessibilidade e segurança
 dinâmica continuam gates obrigatórios antes da homologação. Comandos e escopo estão
@@ -140,6 +147,5 @@ em `tests/README.md` e `docs/ACCEPTANCE.md`.
 ## Limites intencionais
 
 - e-mail, SMS e verificação de identidade exigem configuração operacional antes da produção;
-- Fotografias responsivas compõem a interface.
-- nenhuma publicação, deploy, commit ou envio para repositório remoto é realizado automaticamente;
+- as fotografias são servidas em variantes responsivas otimizadas;
 - integrações de produção exigem credenciais e decisões comerciais do responsável pelo produto.

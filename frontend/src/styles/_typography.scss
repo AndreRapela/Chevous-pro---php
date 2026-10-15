@@ -1,0 +1,880 @@
+/*
+ * Sistema de proporções — fonte única para as páginas principais.
+ *
+ * Antes deste bloco, a página inicial tinha exceções de desktop com textos de
+ * .58–.80rem, enquanto o perfil público usava texto padrão de 1rem e cartões
+ * de 1.25rem de espaçamento. O resultado era a mesma interface em duas
+ * escalas. A referência abaixo usa três níveis consistentes:
+ * - texto de apoio: .78rem; texto de leitura: .9rem; títulos de cartão: 1rem;
+ * - controles: 2.6rem; cartões: 1.1rem; intervalo entre cartões: 1rem;
+ * - títulos de página: 2.2rem e destaque editorial da home: até 3.55rem.
+ *
+ * Páginas podem ter uma composição diferente, mas não devem mudar a escala de
+ * leitura e dos controles sem uma razão funcional clara.
+ */
+@media (min-width: 64rem) {
+  :root {
+    --container: 72rem;
+    --type-meta: 0.72rem;
+    --type-ui: 0.875rem;
+    --type-body: 0.9rem;
+    --type-card: 0.875rem;
+    --control-height: 2.6rem;
+    --control-height-compact: 2.3rem;
+    --card-padding: 1.1rem;
+  }
+
+  .container,
+  .container.narrow {
+    width: min(100% - 3rem, var(--container));
+  }
+  .container.narrow {
+    max-width: 60rem;
+  }
+  .section {
+    padding-block: 3rem;
+  }
+  .section-tight {
+    padding-top: 2rem;
+  }
+
+  /* Página inicial: ganha presença sem voltar aos microcartões antigos. */
+  .hero-section {
+    padding-block: 1.5rem 1.9rem;
+  }
+  .desktop-home-hero {
+    width: min(100% - 3rem, 72rem);
+    gap: 0.85rem;
+  }
+  .desktop-hero-top {
+    grid-template-columns: minmax(23rem, 0.95fr) minmax(25rem, 1.05fr);
+    gap: 1.7rem;
+  }
+  .desktop-hero-visual::before {
+    width: 23rem;
+    height: 15.2rem;
+  }
+  .desktop-hero-visual::after {
+    left: calc(50% - 12.6rem);
+  }
+  .desktop-hero-visual img {
+    width: 14.3rem;
+    top: 0.15rem;
+  }
+  .desktop-hero-orb.orb-mint {
+    left: calc(50% - 12.5rem);
+  }
+  .desktop-hero-orb.orb-coral {
+    right: calc(50% - 12.3rem);
+  }
+  .hero-copy h1 {
+    max-width: 39rem;
+    font-size: clamp(2.8rem, 4.15vw, 3.55rem);
+    line-height: 1.05;
+  }
+  .hero-copy p {
+    max-width: 39rem;
+    font-size: 0.95rem;
+  }
+  .hero-search {
+    max-width: 39rem;
+    margin-block: 1.45rem 1.1rem;
+    padding: 0.4rem;
+  }
+  .hero-search input {
+    min-height: 2.85rem;
+    font-size: 0.9rem;
+  }
+  .hero-search .btn {
+    min-height: 2.65rem;
+    padding-inline: 1rem;
+    font-size: 0.84rem;
+  }
+
+  .home-categories,
+  .home-popular,
+  .home-providers,
+  .home-steps,
+  .home-provider-cta {
+    padding-block: 3rem;
+  }
+  .home-section .section-heading {
+    margin-bottom: 1.25rem;
+  }
+  .home-section .section-heading h2 {
+    font-size: clamp(1.85rem, 2.7vw, 2.2rem);
+  }
+  .home-section .section-heading .eyebrow {
+    font-size: 0.82rem;
+  }
+  .home-categories .category-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .home-categories .category-card {
+    min-height: 7rem;
+    padding: 1rem;
+    gap: 0.3rem 0.7rem;
+  }
+  .home-categories .category-card strong {
+    font-size: 0.95rem;
+  }
+  .home-categories .category-symbol,
+  .home-categories .service-symbol {
+    width: 2.55rem;
+    height: 2.55rem;
+    font-size: 0.82rem;
+  }
+  .home-popular .service-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .home-popular .service-card,
+  .home-providers .provider-card {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .home-popular .service-card {
+    gap: 0.85rem;
+  }
+  .home-popular .service-symbol {
+    width: 2.55rem;
+    height: 2.55rem;
+    font-size: 0.82rem;
+  }
+  .home-popular .service-card .eyebrow {
+    font-size: 0.82rem;
+  }
+  .home-popular .service-card h3,
+  .home-providers .provider-card h3 {
+    font-size: 1rem;
+  }
+  .home-popular .service-card p,
+  .home-providers .provider-card-head p {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+  .home-popular .service-card .card-footer,
+  .home-providers .provider-card .card-footer {
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+  }
+  .home-popular .service-card .card-footer strong,
+  .home-providers .provider-card .card-footer strong {
+    font-size: 0.95rem;
+  }
+  .home-popular .service-card .text-link {
+    font-size: 0.82rem;
+  }
+  .home-providers .provider-grid {
+    grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+    max-width: 72rem;
+  }
+  .home-providers .provider-card-head {
+    gap: 0.9rem;
+  }
+  .home-providers .avatar-lg {
+    width: 3.25rem;
+    height: 3.25rem;
+    font-size: 0.9rem;
+  }
+  .home-providers .rating,
+  .home-providers .availability {
+    font-size: 0.82rem;
+  }
+  .home-providers .availability {
+    margin-top: 0.8rem;
+  }
+  .home-providers .provider-card .btn {
+    min-height: 2.4rem;
+    font-size: 0.82rem;
+  }
+  .home-steps .steps-grid {
+    gap: 1rem;
+  }
+  .home-steps .steps-grid li {
+    padding: 1.1rem;
+  }
+  .home-steps .steps-grid h3 {
+    font-size: 1rem;
+  }
+  .home-steps .steps-grid p {
+    font-size: 0.875rem;
+  }
+
+  /* Catálogo, listagem, conteúdo e perfil usam a mesma cadência de leitura. */
+  .page-hero,
+  .page-hero.compact,
+  .catalog-hero,
+  .professionals-hero,
+  .info-page-hero {
+    padding-block: 2.6rem;
+  }
+  .page-hero h1,
+  .catalog-hero h1,
+  .professionals-hero h1,
+  .info-page-hero h1 {
+    font-size: clamp(2.2rem, 3.25vw, 2.8rem);
+  }
+  .page-hero p,
+  .catalog-hero p,
+  .professionals-hero p,
+  .info-page-hero p {
+    font-size: 0.95rem;
+  }
+  .page-hero .search-field {
+    max-width: 38rem;
+    margin-top: 1rem;
+  }
+  .page-hero .search-field input {
+    min-height: 2.65rem;
+    font-size: 0.875rem;
+  }
+  .catalog-results,
+  .professionals-results,
+  .info-page-content {
+    padding-block: 2.25rem 3rem;
+  }
+  .catalog-results > .container,
+  .professionals-results > .container {
+    width: min(100% - 3rem, 72rem);
+  }
+  .catalog-results .catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+  }
+  .catalog-results .service-card,
+  .professionals-results .provider-card {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .catalog-results .service-card {
+    gap: 0.85rem;
+  }
+  .catalog-results .service-card h3,
+  .professionals-results .provider-card h3 {
+    font-size: 1rem;
+  }
+  .catalog-results .service-card p,
+  .professionals-results .provider-card-head p,
+  .professionals-results .rating,
+  .professionals-results .availability {
+    font-size: 0.875rem;
+  }
+  .catalog-results .service-card .card-footer,
+  .professionals-results .provider-card .card-footer {
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+  }
+  .catalog-results .service-card .card-footer strong,
+  .professionals-results .provider-card .card-footer strong {
+    font-size: 0.95rem;
+  }
+  .catalog-results .service-card .text-link {
+    font-size: 0.82rem;
+  }
+  .professionals-results .provider-card .btn {
+    min-height: 2.4rem;
+    font-size: 0.82rem;
+  }
+  .professionals-filters {
+    padding: 1.1rem;
+  }
+  .professionals-filters :is(label, legend, .text-button),
+  .professionals-filters :is(select, input) {
+    font-size: 0.875rem;
+  }
+  .professionals-filters :is(select, input) {
+    min-height: 2.6rem;
+  }
+  .info-page-content .content-card {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .info-page-content .content-card h2 {
+    font-size: 1.05rem;
+  }
+  .info-page-content .content-card p {
+    font-size: 0.875rem;
+  }
+
+  /* O perfil deixa de ser uma versão ampliada da interface pública. */
+  .profile-hero {
+    padding: 2.5rem 0 1.75rem;
+  }
+  .profile-hero-inner {
+    gap: 0.85rem 1.1rem;
+  }
+  .profile-hero .avatar-lg {
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.05rem;
+  }
+  .profile-intro h1 {
+    font-size: clamp(2.25rem, 3vw, 2.7rem);
+    margin-bottom: 0.35rem;
+  }
+  .profile-intro p,
+  .profile-hero .rating {
+    font-size: 0.9rem;
+  }
+  .profile-summary-tags {
+    gap: 0.45rem;
+    margin-top: 0.2rem;
+  }
+  .profile-summary-tags .chip {
+    padding: 0.35rem 0.62rem;
+  }
+  .detail-layout {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    gap: 1.25rem;
+  }
+  .detail-main {
+    gap: 1rem;
+  }
+  .content-card {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .content-card h2 {
+    font-size: 1.2rem;
+  }
+  .content-card p,
+  .review-list p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+  .content-card .eyebrow {
+    font-size: 0.82rem;
+  }
+  .profile-facts {
+    gap: 0.75rem;
+    padding-top: 0.9rem;
+    margin-top: 0.9rem;
+  }
+  .profile-facts strong {
+    font-size: 0.95rem;
+  }
+  .profile-facts span,
+  .compact-service-list small,
+  .review-head time {
+    font-size: 0.82rem;
+  }
+  .compact-service-list a {
+    gap: 0.75rem;
+    padding-block: 0.8rem;
+  }
+  .compact-service-list strong {
+    font-size: 0.9rem;
+  }
+  .booking-aside {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .booking-aside > strong {
+    font-size: 1.15rem;
+  }
+  .booking-aside p,
+  .booking-aside small {
+    font-size: 0.82rem;
+  }
+  .booking-aside .btn {
+    min-height: 2.5rem;
+    font-size: 0.82rem;
+  }
+
+  /* Formulários e áreas autenticadas seguem os mesmos controles e densidade. */
+  .portal-page {
+    width: min(100% - 3rem, 72rem);
+    padding: 2.25rem 0 3rem;
+  }
+  .portal-page .portal-page-heading {
+    margin-bottom: 1.25rem;
+  }
+  .portal-page .portal-page-heading h1 {
+    font-size: clamp(1.95rem, 2.65vw, 2.2rem);
+  }
+  .portal-page .portal-page-heading p {
+    font-size: 0.9rem;
+  }
+  .portal-page .portal-card {
+    padding: 1.1rem;
+    border-radius: 1rem;
+  }
+  .portal-page :is(label, input, textarea, select, .btn, .chip) {
+    font-size: 0.875rem;
+  }
+  .portal-page :is(input, select, .btn) {
+    min-height: 2.6rem;
+  }
+  .portal-page textarea {
+    min-height: 5rem;
+  }
+  .portal-page .metric-card {
+    min-height: 5.5rem;
+    padding: 1rem;
+  }
+  .portal-page .metric-card :is(p, small) {
+    font-size: 0.82rem;
+  }
+  .portal-page .metric-card strong {
+    font-size: 1.3rem;
+  }
+
+  /* Detalhe do serviço é uma decisão objetiva, não um segundo hero gigante. */
+  .service-detail-hero {
+    padding-block: 1.7rem;
+  }
+  .service-detail-grid {
+    gap: 1.6rem;
+  }
+  .service-detail-grid h1 {
+    font-size: clamp(2.25rem, 3.15vw, 2.8rem);
+  }
+  .service-detail-grid p {
+    margin-bottom: 0.85rem;
+    font-size: 0.9rem;
+  }
+  .service-visual {
+    min-height: 12.75rem;
+    border-radius: 1.25rem;
+  }
+  .service-visual > span {
+    width: 4rem;
+    height: 4rem;
+    border-radius: 1rem;
+    font-size: 1.15rem;
+  }
+  .benefits-grid article {
+    min-height: 10.5rem;
+    padding: 1.1rem;
+  }
+  .benefits-grid h2,
+  .info-grid h2 {
+    font-size: 1.05rem;
+  }
+  .benefits-grid p,
+  .info-grid p {
+    font-size: 0.875rem;
+  }
+}
+
+/* Em telas intermediárias a escala se reduz uma vez, de forma contínua, sem
+   criar outra versão compactada para cada página. */
+@media (min-width: 42rem) and (max-width: 63.99rem) {
+  :root {
+    --type-body: 0.9rem;
+    --type-card: 0.85rem;
+    --card-padding: 1rem;
+  }
+  .section {
+    padding-block: 2.5rem;
+  }
+  .page-hero,
+  .profile-hero,
+  .service-detail-hero {
+    padding-block: 2rem;
+  }
+  .profile-hero {
+    padding-bottom: 1.5rem;
+  }
+  .content-card,
+  .portal-card {
+    padding: 1rem;
+  }
+  .home-popular .service-card,
+  .home-providers .provider-card,
+  .catalog-results .service-card,
+  .professionals-results .provider-card {
+    padding: 1rem;
+  }
+}
+
+/* Cartões comparáveis: a descrição pode variar, a caixa e a ação não. */
+cvp-service-card,
+cvp-provider-card {
+  display: block;
+  height: 100%;
+}
+.service-grid,
+.provider-grid {
+  grid-auto-rows: 1fr;
+}
+.service-grid > cvp-service-card,
+.provider-grid > cvp-provider-card,
+.service-card,
+.provider-card {
+  min-height: 0;
+  height: 100%;
+}
+.service-card-copy {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.service-card-copy .card-footer {
+  margin-top: auto;
+}
+.provider-card {
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+}
+.provider-card .card-footer {
+  align-self: end;
+  width: 100%;
+}
+
+/* Escala tipográfica da área autenticada e das mensagens. */
+@media (min-width: 64rem) {
+  /* Grade de três colunas na página de favoritos. */
+  .customer-favorites-page {
+    width: min(100% - 3rem, 72rem);
+  }
+  .customer-favorites-page .provider-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.85rem;
+  }
+  .customer-favorites-page .provider-card {
+    padding: 0.9rem;
+    border-radius: 0.9rem;
+  }
+  .customer-favorites-page .provider-card-head {
+    gap: 0.7rem;
+  }
+  .customer-favorites-page .avatar-lg {
+    width: 2.9rem;
+    height: 2.9rem;
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card h3 {
+    font-size: 0.92rem;
+  }
+  .customer-favorites-page .provider-card-head p,
+  .customer-favorites-page .rating,
+  .customer-favorites-page .availability {
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .availability {
+    margin-top: 0.65rem;
+  }
+  .customer-favorites-page .provider-card .card-footer {
+    padding-top: 0.6rem;
+    margin-top: 0.6rem;
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-card .card-footer strong {
+    font-size: 0.9rem;
+  }
+  .customer-favorites-page .provider-card .btn {
+    min-height: 2.25rem;
+    padding-inline: 0.65rem;
+    font-size: 0.82rem;
+  }
+  .customer-favorites-page .provider-grid > div > .text-button {
+    min-height: 2.15rem;
+    font-size: 0.82rem;
+  }
+
+  /* Cabeçalho e ajuda do painel precisam ser reconhecíveis em leitura normal. */
+  .portal-header {
+    height: 5.5rem;
+  }
+  .portal-header .brand {
+    gap: 0.7rem;
+    font-size: 1.2rem;
+  }
+  .portal-header .brand-mark {
+    width: 2.3rem;
+    height: 2.3rem;
+  }
+  .portal-header .locale-trigger,
+  .portal-header .icon-button,
+  .portal-header .btn-small {
+    min-height: 3rem;
+  }
+  .portal-header .locale-trigger {
+    padding-inline: 0.85rem;
+  }
+  .portal-header .locale-trigger-value,
+  .portal-user-name {
+    font-size: 0.9rem;
+  }
+  .portal-help {
+    min-height: 4.25rem;
+    gap: 0.75rem;
+    padding: 1rem;
+    font-size: 0.9rem;
+  }
+  .portal-help > span {
+    font-size: 1.2rem;
+  }
+
+  /* Nas configurações, o rótulo verde passa a ser a hierarquia principal. */
+  .settings-form > .eyebrow,
+  .settings-section-heading .eyebrow,
+  .address-settings > .eyebrow {
+    margin-bottom: 0.35rem;
+    font-size: 1.02rem;
+    letter-spacing: 0.075em;
+  }
+  .settings-form > h2,
+  .settings-section-heading h2,
+  .address-settings > h2 {
+    font-size: 0.96rem;
+  }
+  .customer-profile-page .field-hint,
+  .customer-profile-page .field-error {
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+  .customer-profile-page .address-settings .btn-primary {
+    min-height: 3rem;
+    padding-inline: 1.15rem;
+    border-radius: 0.8rem;
+    font-size: 0.95rem;
+  }
+
+  /* A conversa prioriza leitura e passa a ocupar uma seção própria da página. */
+  .messages-page .enhanced-chat-layout {
+    height: 46rem;
+    min-height: 46rem;
+    grid-template-columns: minmax(19rem, 0.5fr) minmax(0, 1.2fr);
+  }
+  .messages-page .chat-header {
+    min-height: 5.6rem;
+    padding: 1rem;
+  }
+  .messages-page .chat-header > div {
+    font-size: 1rem;
+  }
+  .messages-page .chat-header small,
+  .messages-page .booking-chat-status,
+  .messages-page .chat-live-status {
+    font-size: 0.82rem;
+  }
+  .messages-page .chat-body {
+    gap: 0.9rem;
+    padding: 1.25rem;
+  }
+  .messages-page .chat-day {
+    font-size: 0.82rem;
+  }
+  .messages-page .bubble {
+    max-width: min(76%, 38rem);
+    padding: 0.8rem 0.9rem;
+    font-size: 0.94rem;
+    line-height: 1.5;
+  }
+  .messages-page .bubble time {
+    font-size: 0.82rem;
+  }
+  .messages-page .chat-safety-note {
+    min-height: 2.6rem;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.82rem;
+  }
+  .messages-page .quick-replies button {
+    min-height: 2.4rem;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.82rem;
+  }
+  .messages-page .enhanced-chat-composer textarea {
+    min-height: 6rem;
+    font-size: 0.92rem;
+  }
+  .messages-page .composer-actions small {
+    font-size: 0.82rem;
+  }
+  .messages-page .composer-actions .btn {
+    min-height: 2.7rem;
+    font-size: 0.86rem;
+  }
+
+  .catalog-results .service-card h3 {
+    min-height: 2.25em;
+  }
+  .catalog-results .service-card p {
+    display: -webkit-box;
+    min-height: 2.65em;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-width: 63.99rem) {
+  .messages-page .enhanced-chat-layout {
+    height: 42rem;
+    min-height: 42rem;
+  }
+  .messages-page .chat-body {
+    padding: 1rem;
+  }
+  .messages-page .bubble {
+    font-size: 0.9rem;
+  }
+}
+
+/* Paginação pública: mesma linguagem visual para serviços e profissionais. */
+.result-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--ink-200);
+  border-radius: 1rem;
+  color: var(--ink-600);
+  background: var(--surface-soft);
+  font-size: 0.84rem;
+}
+.result-pagination > div {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.page-button {
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid var(--ink-200);
+  border-radius: 0.65rem;
+  color: var(--brand-800);
+  background: #fff;
+  font: inherit;
+  font-weight: 800;
+}
+.page-button:hover,
+.page-button.active {
+  color: #fff;
+  border-color: var(--brand-700);
+  background: var(--brand-700);
+}
+
+@media (max-width: 41.99rem) {
+  .result-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+    font-size: 0.82rem;
+  }
+  .result-pagination > div {
+    justify-content: flex-start;
+  }
+  .customer-favorites-page .provider-grid {
+    grid-template-columns: 1fr;
+  }
+  .messages-page .enhanced-chat-layout {
+    height: 38rem;
+    min-height: 38rem;
+  }
+  .messages-page .bubble {
+    font-size: 0.88rem;
+  }
+}
+
+/* Auditoria final de densidade: cada contexto usa a mesma escala, sem
+   transformar o perfil ou os ícones em elementos de destaque desnecessário. */
+.service-icon {
+  display: block;
+  width: var(--service-icon-size, 1.18rem);
+  height: var(--service-icon-size, 1.18rem);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.service-visual .service-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+@media (min-width: 64rem) {
+  /* Categorias: informação suficiente, sem os vazios de uma segunda hero. */
+  .home-categories .category-grid {
+    gap: 0.85rem;
+  }
+  .home-categories .category-card {
+    min-height: 5.1rem;
+    padding: 0.7rem 0.75rem;
+    gap: 0.15rem 0.7rem;
+  }
+  .home-categories .category-card strong {
+    font-size: 0.92rem;
+  }
+  .home-categories .category-card small {
+    font-size: 0.82rem;
+  }
+  .home-categories .category-symbol,
+  .home-categories .service-symbol {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.68rem;
+  }
+  .home-categories .service-icon {
+    width: 1.08rem;
+    height: 1.08rem;
+    stroke-width: 2.1;
+  }
+
+  /* O cabeçalho do profissional é introdutório; o conteúdo começa na dobra. */
+  .profile-hero {
+    padding: 1.35rem 0 1.25rem;
+  }
+  .profile-intro h1 {
+    font-size: clamp(2rem, 2.55vw, 2.4rem);
+  }
+  .profile-hero .avatar-lg {
+    width: 3.7rem;
+    height: 3.7rem;
+  }
+  .profile-summary-tags .chip {
+    padding: 0.32rem 0.58rem;
+    font-size: 0.82rem;
+  }
+
+  /* A página do serviço preserva destaque, mas deixa de consumir a viewport. */
+  .service-detail-hero {
+    padding-block: 1.25rem;
+  }
+  .service-detail-grid {
+    gap: 1.25rem;
+  }
+  .service-visual {
+    min-height: 10.75rem;
+    border-radius: 1.1rem;
+  }
+  .service-visual > span {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-radius: 0.9rem;
+  }
+
+  /* Cards de escolha: compactos, com mesma altura e ação sempre alinhada. */
+  .service-grid {
+    gap: 0.9rem;
+  }
+  .service-card,
+  .provider-card {
+    border-radius: 0.9rem;
+  }
+  .catalog-results .service-card,
+  .home-popular .service-card {
+    padding: 0.95rem;
+  }
+  .catalog-results .service-card {
+    min-height: 9.65rem;
+  }
+  .catalog-results .service-card .service-symbol,
+  .home-popular .service-card .service-symbol {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.65rem;
+  }
+  .catalog-results .service-card .service-icon,
+  .home-popular .service-card .service-icon {
+    width: 1.03rem;
+    height: 1.03rem;
+  }
+}

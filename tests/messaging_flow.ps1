@@ -3,6 +3,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
+. (Join-Path $PSScriptRoot 'integration_support.ps1')
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }
@@ -33,8 +34,9 @@ function Latest-Sequence([string]$conversationId, [hashtable]$headers) {
 
 Push-Location $projectRoot
 try {
+    Assert-IntegrationTarget $baseUrl
     $environment = (docker compose exec -T api printenv APP_ENV).Trim()
-    Assert-True ($environment -eq 'local') "Este teste grava mensagens e só pode rodar no ambiente local; ambiente atual: '$environment'."
+    Assert-True ($environment -in @('local', 'testing')) "Este teste grava mensagens e só pode rodar no ambiente local ou de testes; ambiente atual: '$environment'."
 
     $databaseUser = (docker compose exec -T database printenv MYSQL_USER).Trim()
     $databasePassword = (docker compose exec -T database printenv MYSQL_PASSWORD).Trim()

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 use ChezVoust\Core\Env;
 
-$origins = array_values(array_filter(array_map(
-    'trim',
-    explode(',', Env::get('FRONTEND_ORIGINS', 'http://localhost:4200'))
-)));
+$origins = array_values(
+    array_filter(
+        array_map('trim', explode(',', Env::get('FRONTEND_ORIGINS', 'http://localhost:4200'))),
+    ),
+);
 $environment = Env::get('APP_ENV', 'production');
 $isLocalEnvironment = in_array($environment, ['local', 'development', 'testing'], true);
 $debug = Env::bool('APP_DEBUG', false);
@@ -16,7 +17,10 @@ $jwtSecret = Env::get('JWT_SECRET', $isLocalEnvironment ? $localJwtSecret : '');
 $localProxySecret = 'local-only-proxy-secret-change-before-public-use';
 $proxySharedSecret = Env::get('PROXY_SHARED_SECRET', $isLocalEnvironment ? $localProxySecret : '');
 $localOutboxKey = 'local-only-outbox-encryption-key-change-before-public-use-2026';
-$outboxEncryptionKey = Env::get('OUTBOX_ENCRYPTION_KEY', $isLocalEnvironment ? $localOutboxKey : '');
+$outboxEncryptionKey = Env::get(
+    'OUTBOX_ENCRYPTION_KEY',
+    $isLocalEnvironment ? $localOutboxKey : '',
+);
 $cookieSecure = Env::bool('REFRESH_COOKIE_SECURE', !$isLocalEnvironment);
 $autoSeed = Env::bool('AUTO_SEED', false);
 $mailDriver = Env::get('MAIL_DRIVER', 'disabled');
@@ -30,7 +34,9 @@ if (!$isLocalEnvironment) {
         'local_only_change_this_64_character_secret_before_any_public_use',
     ];
     if (in_array($jwtSecret, $unsafeSecrets, true)) {
-        throw new RuntimeException('JWT_SECRET seguro e exclusivo é obrigatório fora do ambiente local.');
+        throw new RuntimeException(
+            'JWT_SECRET seguro e exclusivo é obrigatório fora do ambiente local.',
+        );
     }
     $unsafeProxySecrets = [
         '',
@@ -38,17 +44,32 @@ if (!$isLocalEnvironment) {
         'replace-with-an-independent-32-character-secret',
         'replace_with_an_independent_64_character_secret_before_public_use',
     ];
-    if (in_array($proxySharedSecret, $unsafeProxySecrets, true) || strlen($proxySharedSecret) < 32) {
-        throw new RuntimeException('PROXY_SHARED_SECRET seguro e exclusivo é obrigatório fora do ambiente local.');
+    if (
+        in_array($proxySharedSecret, $unsafeProxySecrets, true) ||
+        strlen($proxySharedSecret) < 32
+    ) {
+        throw new RuntimeException(
+            'PROXY_SHARED_SECRET seguro e exclusivo é obrigatório fora do ambiente local.',
+        );
     }
-    if ($outboxEncryptionKey === '' || $outboxEncryptionKey === $localOutboxKey || strlen($outboxEncryptionKey) < 32) {
-        throw new RuntimeException('OUTBOX_ENCRYPTION_KEY seguro e exclusivo é obrigatório fora do ambiente local.');
+    if (
+        $outboxEncryptionKey === '' ||
+        $outboxEncryptionKey === $localOutboxKey ||
+        strlen($outboxEncryptionKey) < 32
+    ) {
+        throw new RuntimeException(
+            'OUTBOX_ENCRYPTION_KEY seguro e exclusivo é obrigatório fora do ambiente local.',
+        );
     }
     if (!$cookieSecure) {
-        throw new RuntimeException('REFRESH_COOKIE_SECURE deve permanecer habilitado fora do ambiente local.');
+        throw new RuntimeException(
+            'REFRESH_COOKIE_SECURE deve permanecer habilitado fora do ambiente local.',
+        );
     }
     if ($debug) {
-        throw new RuntimeException('APP_DEBUG deve permanecer desabilitado fora do ambiente local.');
+        throw new RuntimeException(
+            'APP_DEBUG deve permanecer desabilitado fora do ambiente local.',
+        );
     }
     if ($autoSeed) {
         throw new RuntimeException('AUTO_SEED não pode ser habilitado fora do ambiente local.');
@@ -57,7 +78,9 @@ if (!$isLocalEnvironment) {
         throw new RuntimeException('MAIL_DRIVER=resend é obrigatório fora do ambiente local.');
     }
     if (Env::get('MAIL_FROM', '') === '' || Env::get('RESEND_API_KEY', '') === '') {
-        throw new RuntimeException('MAIL_FROM e RESEND_API_KEY são obrigatórios fora do ambiente local.');
+        throw new RuntimeException(
+            'MAIL_FROM e RESEND_API_KEY são obrigatórios fora do ambiente local.',
+        );
     }
 }
 

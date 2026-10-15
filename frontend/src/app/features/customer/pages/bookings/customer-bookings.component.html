@@ -1,0 +1,158 @@
+<section class="portal-page customer-bookings-page">
+  <cvp-page-header
+    eyebrow="Sua agenda"
+    title="Agendamentos"
+    description="Acompanhe serviços futuros e seu histórico."
+  >
+    <a class="btn btn-primary" routerLink="/servicos">+ Agendar serviço</a>
+  </cvp-page-header>
+  <div class="tabs" role="tablist" aria-label="Filtrar agendamentos">
+    @for (tab of tabs; track tab.value) {
+      <button
+        type="button"
+        role="tab"
+        [id]="'booking-tab-' + tab.value"
+        [attr.aria-controls]="'booking-panel-' + tab.value"
+        [attr.tabindex]="filter() === tab.value ? 0 : -1"
+        [attr.aria-selected]="filter() === tab.value"
+        [class.active]="filter() === tab.value"
+        (click)="selectTab(tab.value)"
+        (keydown)="tabKeydown($event, tab.value)"
+      >
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+  @if (actionMessage()) {
+    <div class="alert alert-success" role="status">{{ actionMessage() }}</div>
+  }
+  @if (actionError()) {
+    <div class="alert alert-error" role="alert">{{ actionError() }}</div>
+  }
+  @if (loading()) {
+    <cvp-state-panel kind="loading" />
+  } @else if (error()) {
+    <cvp-state-panel
+      kind="error"
+      title="Agendamentos indisponíveis"
+      [message]="error()"
+      (retry)="load()"
+    />
+  } @else if (!filtered().length) {
+    <cvp-state-panel
+      kind="empty"
+      title="Nenhum agendamento aqui"
+      message="Quando você fizer uma reserva, ela aparecerá nesta lista."
+    />
+  } @else {
+    <div
+      class="booking-list"
+      role="tabpanel"
+      [id]="'booking-panel-' + filter()"
+      [attr.aria-labelledby]="'booking-tab-' + filter()"
+    >
+      @for (booking of filtered(); track booking.id) {
+        <article class="booking-list-card">
+          <div class="booking-card-top">
+            <div>
+              <span class="eyebrow">{{ booking.code }}</span>
+              <h2>{{ booking.service.name }}</h2>
+            </div>
+            <cvp-status-pill [status]="booking.status" />
+          </div>
+          <div class="booking-info-grid">
+            <div>
+              <span>Data e horário</span>
+              <strong>{{ booking.scheduledAt | appDate:'EEE, dd MMM · HH:mm' }}</strong>
+            </div>
+            <div>
+              <span>Profissional</span>
+              <strong>{{ booking.provider.name }}</strong>
+            </div>
+            <div>
+              <span>Região</span>
+              <strong>{{ booking.addressLabel }}</strong>
+            </div>
+            <div>
+              <span>Total</span>
+              <strong>
+                {{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}
+              </strong>
+            </div>
+          </div>
+          <div class="card-actions">
+            <a
+              class="btn btn-secondary btn-small"
+              [routerLink]="['/conta/agendamentos', booking.id]"
+            >
+              Detalhes
+            </a>
+            @if (booking.canMessage && booking.conversationId) {
+              <a
+                class="btn btn-secondary btn-small"
+                routerLink="/conta/mensagens"
+                [queryParams]="{ conversa: booking.conversationId }"
+              >
+                Enviar mensagem
+              </a>
+            }
+            @if (booking.canCancel) {
+              <button
+                class="btn btn-danger btn-small"
+                type="button"
+                (click)="cancelTarget.set(cancelTarget() === booking.id ? '' : booking.id)"
+              >
+                Cancelar
+              </button>
+            }
+            @if (booking.canReview) {
+              <button
+                class="btn btn-primary btn-small"
+                type="button"
+                (click)="reviewTarget.set(reviewTarget() === booking.id ? '' : booking.id)"
+              >
+                Avaliar serviço
+              </button>
+            }
+          </div>
+          @if (cancelTarget() === booking.id) {
+            <form class="inline-action-form" (submit)="cancel($event, booking)">
+              <label>
+                Motivo do cancelamento
+                <textarea
+                  required
+                  maxlength="500"
+                  placeholder="Conte brevemente o motivo"
+                ></textarea>
+              </label>
+              <button class="btn btn-danger btn-small" type="submit" [disabled]="acting()">
+                Confirmar cancelamento
+              </button>
+            </form>
+          }
+          @if (reviewTarget() === booking.id) {
+            <form class="inline-action-form" (submit)="review($event, booking)">
+              <label>
+                Nota
+                <select required>
+                  <option value="5">5 — Excelente</option>
+                  <option value="4">4 — Muito bom</option>
+                  <option value="3">3 — Bom</option>
+                  <option value="2">2 — Regular</option>
+                  <option value="1">1 — Ruim</option>
+                </select>
+              </label>
+              <label>
+                Comentário
+                <textarea required maxlength="1000" placeholder="Como foi o serviço?"></textarea>
+              </label>
+              <button class="btn btn-primary btn-small" type="submit" [disabled]="acting()">
+                Enviar avaliação
+              </button>
+            </form>
+          }
+        </article>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,599 @@
+/* Mobile accessibility and conversion guardrails. Keep content readable instead of
+   shrinking it to fit, and reserve space for every fixed mobile control. */
+.mobile-scroll-hint {
+  display: none;
+}
+
+@media (max-width: 63.99rem) {
+  :root {
+    --portal-bottom-nav-height: calc(4.85rem + env(safe-area-inset-bottom));
+  }
+  .portal-content {
+    padding-bottom: var(--portal-bottom-nav-height);
+  }
+  .portal-bottom-nav {
+    height: var(--portal-bottom-nav-height);
+  }
+  .portal-bottom-nav .bottom-label {
+    font-size: 0.82rem;
+  }
+  .portal-header .icon-button,
+  .portal-header .btn-small {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+  }
+  .customer-dashboard-page .metric-grid,
+  .customer-dashboard-page .shortcut-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .portal-layout :is(p, small, label, .eyebrow, .status-pill, .chip, .bottom-label, .text-link) {
+    font-size: 0.82rem;
+  }
+  .portal-layout .metric-card {
+    min-height: 5.75rem;
+  }
+  .portal-layout .metric-card p,
+  .portal-layout .metric-card small {
+    white-space: normal;
+    overflow: visible;
+  }
+  .portal-layout .btn,
+  .portal-layout .text-button,
+  .portal-layout .tabs button,
+  .portal-layout .page-button {
+    min-height: 2.75rem;
+    font-size: 0.82rem;
+  }
+  .portal-layout input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  .portal-layout select,
+  .portal-layout textarea {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 41.99rem) {
+  .site-footer {
+    padding-bottom: calc(var(--public-bottom-nav-height) + 1rem);
+  }
+  body:has(cvp-provider-detail) .site-footer {
+    padding-bottom: calc(
+      var(--public-bottom-nav-height) + var(--mobile-sticky-action-height) + 1rem
+    );
+  }
+  .mobile-sticky-action .btn {
+    min-width: 9rem;
+    min-height: 2.75rem;
+  }
+  body:has(cvp-provider-detail) .mobile-sticky-action {
+    gap: 0.4rem;
+    padding-inline: 0.65rem;
+  }
+  body:has(cvp-provider-detail) .mobile-sticky-action > div {
+    min-width: 3.75rem;
+  }
+  body:has(cvp-provider-detail) .mobile-sticky-action .btn {
+    min-width: 0;
+    flex: 1 1 0;
+    padding-inline: 0.45rem;
+    font-size: 0.82rem;
+  }
+  .mobile-scroll-hint {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.35rem;
+    margin: 0.15rem 0 0;
+    color: var(--brand-800);
+    font-size: 0.82rem;
+    font-weight: 750;
+  }
+  .mobile-scroll-hint span {
+    font-size: 1rem;
+  }
+
+  button,
+  .btn,
+  .chip,
+  .mobile-menu a,
+  .bottom-nav a,
+  .quick-replies button,
+  .credential-edit summary {
+    min-height: 2.75rem;
+  }
+  .icon-button,
+  .locale-close {
+    width: 2.75rem;
+    height: 2.75rem;
+  }
+  input:not([type='checkbox']):not([type='radio']):not([type='range']),
+  select,
+  textarea {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+  label:has(input[type='checkbox']),
+  label:has(input[type='radio']) {
+    min-height: 2.75rem;
+  }
+
+  .auth-form-panel
+    :is(
+      label,
+      .back-link,
+      .auth-form-wrap > .muted,
+      .check-row,
+      .auth-switch,
+      .field-hint,
+      .field-error
+    ),
+  .page-hero p,
+  .info-page-content :is(.content-card p, .help-cta p),
+  .professionals-results
+    :is(.provider-card-head p, .rating, .availability, .card-footer, .text-link),
+  .catalog-results
+    :is(
+      .filter-scroll .chip,
+      .service-card p,
+      .service-card .card-footer,
+      .service-card .text-link
+    ),
+  .profile-facts span,
+  .compact-service-list small,
+  .public-timeline :is(span, p),
+  .feedback-section .section-heading > div p,
+  .comment-composer :is(label, small),
+  .review-service {
+    font-size: 0.82rem;
+  }
+
+  .professionals-filters {
+    grid-template-columns: 1fr;
+  }
+  .professionals-filters .radio-stack {
+    grid-template-columns: 1fr;
+  }
+  .professionals-filters :is(label, legend, .text-button) {
+    font-size: 0.82rem;
+  }
+  .professionals-filters :is(input, select) {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+  .professionals-filters .radio-stack label {
+    justify-content: flex-start;
+    min-height: 2.75rem;
+    padding-inline: 0.7rem;
+    font-size: 0.82rem;
+  }
+
+  .professionals-results .provider-card-head p,
+  .customer-favorites-page .provider-card-head p {
+    display: -webkit-box;
+    font-size: 0.82rem;
+    white-space: normal;
+    -webkit-line-clamp: 2;
+  }
+  .professionals-results .provider-card .chip-row,
+  .customer-favorites-page .provider-card .chip-row {
+    display: flex;
+  }
+  .professionals-results .provider-card .btn,
+  .customer-favorites-page .provider-card .btn {
+    min-height: 2.75rem;
+    font-size: 0.82rem;
+  }
+
+  .catalog-results .catalog-grid {
+    grid-template-columns: 1fr;
+  }
+  .catalog-results .service-card {
+    min-height: 0;
+    flex-direction: row;
+    gap: 0.7rem;
+    padding: 0.85rem;
+  }
+  .catalog-results .service-card-copy > .eyebrow {
+    display: block;
+  }
+  .catalog-results .service-card p {
+    display: -webkit-box;
+    overflow: hidden;
+    margin: 0.2rem 0 0;
+    font-size: 0.82rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .catalog-results .service-card h3 {
+    min-height: 0;
+    font-size: 0.95rem;
+  }
+  .catalog-results .service-card .card-footer {
+    display: flex;
+    margin-top: 0.55rem;
+    font-size: 0.82rem;
+  }
+  .catalog-results .service-card .text-link {
+    font-size: 0.82rem;
+  }
+
+  .messages-page .bubble,
+  .messages-page .bubble > span {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+  .messages-page .chat-composer .btn {
+    min-height: 2.75rem;
+    font-size: 0.82rem;
+  }
+  .quick-replies button {
+    padding-inline: 0.7rem;
+  }
+  .enhanced-chat-composer textarea {
+    min-height: 3.25rem;
+    max-height: 7rem;
+  }
+}
+
+@media (max-width: 52rem) {
+  .enhanced-chat-layout {
+    height: min(40rem, calc(100dvh - 12.5rem));
+    grid-template-rows: 8.25rem minmax(0, 1fr);
+  }
+  .enhanced-chat-layout.chat-has-selection {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  .enhanced-chat-layout.chat-has-selection .conversation-list {
+    display: none;
+  }
+  .chat-back-to-list {
+    min-height: 2.75rem;
+    align-items: center;
+    border: 0;
+    border-radius: 0.55rem;
+    padding: 0.4rem 0.55rem;
+    color: var(--brand-800);
+    background: var(--brand-100);
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+  }
+}
+
+@media (max-width: 34rem) {
+  .enhanced-chat-layout {
+    height: calc(100dvh - 10.5rem);
+    grid-template-rows: 7rem minmax(0, 1fr);
+  }
+  .chat-header {
+    min-height: 4.5rem;
+  }
+  .chat-safety-note {
+    font-size: 0.82rem;
+  }
+}
+
+/* Quando o teclado virtual reduz muito a área visual, priorize a leitura e o
+   envio. O painel nunca fica menor do que os seus controles nem corta o botão. */
+@media (max-width: 52rem) and (max-height: 34rem) {
+  .enhanced-chat-layout.chat-has-selection {
+    height: calc(100dvh - 4.5rem);
+    min-height: 0;
+  }
+  .chat-header {
+    min-height: 3.5rem;
+    padding: 0.45rem;
+  }
+  .chat-header .avatar {
+    width: 2rem;
+    height: 2rem;
+  }
+  .chat-safety-note,
+  .quick-replies {
+    display: none;
+  }
+  .enhanced-chat-composer {
+    gap: 0.3rem;
+    padding: 0.45rem;
+  }
+  .enhanced-chat-composer textarea {
+    min-height: 2.75rem;
+    max-height: 3.75rem;
+  }
+  .chat-body {
+    min-height: 2.5rem;
+    padding: 0.5rem;
+  }
+  .composer-actions small {
+    max-width: 12rem;
+    font-size: 0.82rem;
+    line-height: 1.2;
+  }
+}
+
+.chat-load-older {
+  justify-self: center;
+  min-height: 2.75rem;
+  margin: 0.35rem auto;
+  border: 1px solid var(--ink-200);
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem;
+  color: var(--brand-800);
+  background: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.chat-back-to-list {
+  display: none;
+}
+.conversation-list-more {
+  display: flex;
+  justify-content: center;
+  padding: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 52rem) {
+  .chat-back-to-list {
+    display: inline-flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Regra final mobile: controles e conteúdo informativo não podem encolher
+   abaixo de uma medida confortável de leitura/toque para acomodar o layout. */
+@media (max-width: 41.99rem) {
+  .home-categories .category-grid,
+  .home-popular .service-grid,
+  .home-providers .provider-grid {
+    min-width: 0;
+    max-width: 100%;
+    contain: layout paint;
+  }
+  .home-categories,
+  .home-popular,
+  .home-providers {
+    overflow-x: clip;
+  }
+
+  .locale-trigger {
+    min-height: 2.75rem;
+  }
+  .locale-trigger-value {
+    font-size: 0.82rem;
+  }
+  .menu-button {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+  }
+  .site-header .brand,
+  .site-footer .brand {
+    min-height: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+  }
+  .site-footer {
+    padding-top: 1rem;
+  }
+  .footer-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .footer-grid > :first-child {
+    grid-column: auto;
+    padding-bottom: 0.45rem;
+  }
+  .footer-group {
+    gap: 0;
+    border-top: 1px solid var(--ink-200);
+  }
+  .footer-group summary {
+    min-height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin: 0;
+    font-size: 0.82rem;
+    cursor: pointer;
+  }
+  .footer-group summary::after {
+    content: '+';
+    color: var(--brand-700);
+    font-size: 1.2rem;
+    font-weight: 500;
+    line-height: 1;
+  }
+  .footer-group[open] summary::after {
+    content: '−';
+  }
+  .footer-group summary:focus-visible {
+    outline: 3px solid var(--amber-500);
+    outline-offset: -3px;
+  }
+  .footer-group:not([open]) .footer-links {
+    display: none;
+  }
+  .footer-links {
+    gap: 0;
+    padding: 0 0 0.45rem;
+  }
+  .footer-grid a:not(.brand) {
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+  }
+  .footer-bottom {
+    justify-content: flex-start;
+    margin-top: 0.75rem;
+    font-size: 0.82rem;
+  }
+  .bottom-nav a {
+    min-height: 2.75rem;
+    font-size: 0.82rem;
+  }
+
+  /* The clipped next card and snap points communicate horizontal browsing */
+  /* without reserving a visually awkward line below every carousel. */
+  .mobile-scroll-hint {
+    display: none;
+  }
+
+  /* Keep a professional's credentials scannable without letting the avatar */
+  /* and favourite action squeeze every label into a separate line. */
+  .profile-showcase-hero {
+    padding-block: 1.5rem 1.25rem;
+  }
+  .profile-showcase-hero .profile-summary-tags {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-top: 0.1rem;
+  }
+  .profile-showcase-hero .profile-summary-tags .chip {
+    min-height: 2.2rem;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.38rem 0.48rem;
+    font-size: 0.82rem;
+    line-height: 1.2;
+    text-align: center;
+    white-space: normal;
+  }
+
+  /* Benefits are supporting information on small screens. A media-object */
+  /* layout retains the full explanation while avoiding three tall cards. */
+  .benefits-grid {
+    gap: 0.65rem;
+  }
+  .benefits-grid article {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    column-gap: 0.75rem;
+    align-items: start;
+    padding: 0.85rem;
+    border-radius: 0.85rem;
+  }
+  .benefits-grid article > span {
+    grid-row: 1 / span 2;
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0;
+    border-radius: 0.65rem;
+  }
+  .benefits-grid h2 {
+    margin: 0.08rem 0 0;
+    font-size: 0.95rem;
+  }
+  .benefits-grid p {
+    margin: 0.22rem 0 0;
+    font-size: 0.82rem;
+    line-height: 1.45;
+  }
+
+  .page-hero .eyebrow,
+  .page-hero p,
+  .info-page-content .content-card p,
+  .info-page-content .help-cta p {
+    font-size: 0.875rem;
+  }
+  .info-page-content .content-card h2 {
+    font-size: 1rem;
+  }
+  .info-page-content .help-cta .btn {
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+  }
+
+  .auth-form-panel .back-link,
+  .auth-form-panel label,
+  .auth-form-panel .auth-form-wrap > .muted,
+  .auth-form-panel .check-row,
+  .auth-form-panel .auth-switch {
+    font-size: 0.875rem;
+  }
+  .auth-form-panel input:not([type='checkbox']),
+  .auth-form-panel select,
+  .auth-form-panel .btn,
+  .auth-form-panel .demo-accounts button,
+  .auth-form-panel .switch-mode {
+    min-height: 2.75rem;
+    font-size: 1rem;
+  }
+  .auth-form-panel .password-input button {
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+  }
+  .auth-form-panel .check-row {
+    min-height: 2.75rem;
+    align-items: center;
+  }
+  .auth-form-panel form label > small,
+  .auth-form-panel .auth-divider {
+    font-size: 0.82rem;
+  }
+
+  .professionals-filters .filter-title h2,
+  .professionals-filters .text-button,
+  .professionals-results .results-heading h2 {
+    font-size: 1rem;
+  }
+  .professionals-results .results-heading select {
+    min-height: 2.75rem;
+    font-size: 0.875rem;
+  }
+  .professionals-results .provider-card .card-footer,
+  .professionals-results .provider-card .rating,
+  .professionals-results .provider-card .availability,
+  .professionals-results .provider-card .text-link,
+  .catalog-results .service-card .card-footer,
+  .catalog-results .service-card .text-link {
+    font-size: 0.875rem;
+  }
+  .professionals-results .provider-card .card-footer strong,
+  .catalog-results .service-card .card-footer strong {
+    font-size: 0.875rem;
+  }
+  .professionals-results .provider-card .verified {
+    width: 1.4rem;
+    height: 1.4rem;
+    font-size: 0.82rem;
+  }
+
+  .quick-replies button {
+    min-height: 2.75rem;
+    font-size: 0.82rem;
+  }
+  .chat-safety-note,
+  .composer-actions small {
+    font-size: 0.82rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .verified,
+  .status-dot,
+  .btn-primary,
+  .brand-mark,
+  .service-symbol,
+  .category-symbol {
+    forced-color-adjust: none;
+  }
+}

@@ -1,5 +1,21 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  OnInit,
+  computed,
+  inject,
+  signal
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  ValidatorFn,
+  Validators
+} from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Product } from '../../../../core/models';
@@ -17,7 +33,9 @@ import {
 
 type PaymentMethod = 'card' | 'pix';
 
-const cardNumberValidator: ValidatorFn = (control: AbstractControl<string>): ValidationErrors | null =>
+const cardNumberValidator: ValidatorFn = (
+  control: AbstractControl<string>
+): ValidationErrors | null =>
   !control.value || isValidCardNumber(control.value) ? null : { cardNumber: true };
 
 const expiryValidator: ValidatorFn = (control: AbstractControl<string>): ValidationErrors | null =>
@@ -26,7 +44,13 @@ const expiryValidator: ValidatorFn = (control: AbstractControl<string>): Validat
 @Component({
   selector: 'cvp-payment',
   standalone: true,
-  imports: [BrandComponent, LocalizedMoneyPipe, ReactiveFormsModule, RouterLink, StatePanelComponent],
+  imports: [
+    BrandComponent,
+    LocalizedMoneyPipe,
+    ReactiveFormsModule,
+    RouterLink,
+    StatePanelComponent
+  ],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -46,7 +70,9 @@ export class PaymentComponent implements OnInit {
   readonly processing = signal(false);
   readonly completed = signal(false);
   readonly orderCode = signal('');
-  readonly totalCents = computed(() => checkoutTotalCents(this.product()?.priceCents ?? 0, this.quantity()));
+  readonly totalCents = computed(() =>
+    checkoutTotalCents(this.product()?.priceCents ?? 0, this.quantity())
+  );
   readonly detectedBrand = computed(() => cardBrand(this.cardForm.controls.number.value));
 
   readonly deliveryForm = this.fb.nonNullable.group({
@@ -70,6 +96,8 @@ export class PaymentComponent implements OnInit {
   ngOnInit(): void {
     this.destroyRef.onDestroy(() => {
       if (this.completionTimer) clearTimeout(this.completionTimer);
+      this.cardForm.reset();
+      this.deliveryForm.reset();
     });
     this.load();
   }
@@ -78,18 +106,21 @@ export class PaymentComponent implements OnInit {
     const slug = this.route.snapshot.paramMap.get('slug') ?? '';
     this.loading.set(true);
     this.error.set('');
-    this.marketplace.products().subscribe({
-      next: (products) => {
-        const product = products.find((item) => item.slug === slug || item.id === slug) ?? null;
-        this.product.set(product);
-        this.loading.set(false);
-        if (!product) this.error.set('Produto indisponível para pagamento.');
-      },
-      error: (failure: Error) => {
-        this.error.set(failure.message || 'Não foi possível preparar o pagamento.');
-        this.loading.set(false);
-      }
-    });
+    this.marketplace
+      .products()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (products) => {
+          const product = products.find((item) => item.slug === slug || item.id === slug) ?? null;
+          this.product.set(product);
+          this.loading.set(false);
+          if (!product) this.error.set('Produto indisponível para pagamento.');
+        },
+        error: (failure: Error) => {
+          this.error.set(failure.message || 'Não foi possível preparar o pagamento.');
+          this.loading.set(false);
+        }
+      });
   }
 
   selectMethod(method: PaymentMethod): void {
@@ -123,7 +154,7 @@ export class PaymentComponent implements OnInit {
   }
 
   submit(): void {
-    if (this.processing() || !this.product()) return;
+    if (this.processing() || !this.product() || this.product()!.inventoryCount < 1) return;
     this.deliveryForm.markAllAsTouched();
     if (this.method() === 'card') this.cardForm.markAllAsTouched();
     if (this.deliveryForm.invalid || (this.method() === 'card' && this.cardForm.invalid)) return;

@@ -1,0 +1,191 @@
+<section class="portal-page messages-page">
+  <cvp-page-header
+    eyebrow="Conversa protegida"
+    title="Mensagens"
+    description="Alinhe detalhes da reserva com segurança, sem compartilhar seus dados de contato."
+  />
+  @if (loading()) {
+    <cvp-state-panel kind="loading" />
+  } @else if (error()) {
+    <cvp-state-panel
+      kind="error"
+      title="Mensagens indisponíveis"
+      [message]="error()"
+      (retry)="load()"
+    />
+  } @else if (!conversations().length) {
+    <cvp-state-panel
+      kind="empty"
+      title="Nenhuma conversa ainda"
+      message="Abra um perfil profissional para iniciar uma conversa antes de agendar."
+    />
+  } @else {
+    <div class="chat-layout enhanced-chat-layout" [class.chat-has-selection]="!!selected()">
+      <aside class="conversation-list" aria-label="Conversas">
+        <div class="conversation-list-heading">
+          <strong>Suas conversas</strong>
+          <span>{{ conversationTotal() }}</span>
+        </div>
+        <div class="conversation-list-items">
+          @for (conversation of conversations(); track conversation.id) {
+            <button
+              type="button"
+              [class.active]="selected()?.id === conversation.id"
+              (click)="select(conversation)"
+              [attr.aria-current]="selected()?.id === conversation.id ? 'true' : null"
+            >
+              <cvp-avatar
+                data-cvp-no-localize
+                [initials]="initials(contactName(conversation))"
+                [imageUrl]="conversation.contactAvatarUrl"
+                [label]="contactName(conversation)"
+              />
+              <span data-cvp-no-localize>
+                <strong>{{ contactName(conversation) }}</strong>
+                <small>
+                  {{ localization.translate(conversation.serviceName) }} ·
+                  {{ conversation.lastMessage }}
+                </small>
+              </span>
+              <span class="message-meta">
+                <time>{{ conversation.updatedAt | appDate:'MMM d, HH:mm' }}</time>
+                @if (conversation.unreadCount) {
+                  <b [attr.aria-label]="conversation.unreadCount + ' mensagens não lidas'">
+                    {{ conversation.unreadCount }}
+                  </b>
+                }
+              </span>
+            </button>
+          }
+        </div>
+        @if (conversationPage() < conversationLastPage()) {
+          <div class="conversation-list-more">
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              [disabled]="loadingMoreConversations()"
+              (click)="loadMoreConversations()"
+            >
+              {{ loadingMoreConversations() ? 'Carregando…' : 'Ver conversas anteriores' }}
+            </button>
+          </div>
+        }
+      </aside>
+      <section class="chat-panel" aria-label="Conversa selecionada">
+        @if (selected(); as conversation) {
+          <header class="chat-header">
+            <button class="chat-back-to-list" type="button" (click)="backToConversations()">
+              <span aria-hidden="true">←</span>
+              <span class="sr-only">Conversas</span>
+            </button>
+            <cvp-avatar
+              data-cvp-no-localize
+              [initials]="initials(contactName(conversation))"
+              [imageUrl]="conversation.contactAvatarUrl"
+              [label]="contactName(conversation)"
+            />
+            <div data-cvp-no-localize>
+              <strong>{{ contactName(conversation) }}</strong>
+              <small>{{ localization.translate(conversation.serviceName) }}</small>
+            </div>
+            <span class="chat-live-status" [attr.data-state]="connectionState()">
+              <span aria-hidden="true">●</span>
+              {{ connectionStatusLabel() }}
+            </span>
+            <span class="booking-chat-status" [attr.data-status]="conversation.bookingStatus">
+              {{ bookingStatusLabel(conversation.bookingStatus) }}
+            </span>
+          </header>
+          <p class="sr-only" aria-live="polite">{{ liveAnnouncement() }}</p>
+          <div #chatBody class="chat-body" (scroll)="onChatScroll()">
+            @if (hasOlderMessages()) {
+              <button
+                class="chat-load-older"
+                type="button"
+                [disabled]="loadingOlder()"
+                (click)="loadOlderMessages()"
+              >
+                {{ loadingOlder() ? 'Carregando histórico…' : 'Carregar mensagens anteriores' }}
+              </button>
+            }
+            @if (loadingMessages()) {
+              <p class="chat-empty-state">Carregando conversa…</p>
+            } @else if (!chatMessages().length) {
+              <div class="chat-empty-state">
+                <strong>Conversa iniciada</strong>
+                <span>
+                  Use este espaço para alinhar acesso, detalhes e expectativas do serviço.
+                </span>
+              </div>
+            } @else {
+              @for (group of messageGroups(); track group.key) {
+                <p class="chat-day">{{ group.date | appDate:'EEEE, d MMM' }}</p>
+                @for (message of group.messages; track message.id) {
+                  <div
+                    class="bubble"
+                    [class.sent]="message.senderId === auth.user()?.id"
+                    [class.received]="message.senderId !== auth.user()?.id"
+                  >
+                    <strong data-cvp-no-localize>
+                      {{ message.senderId === auth.user()?.id ? localization.translate('Você') : message.senderName }}
+                    </strong>
+                    <span data-cvp-no-localize>{{ message.body }}</span>
+                    <time>{{ message.createdAt | appDate:'HH:mm' }}</time>
+                  </div>
+                }
+              }
+            }
+          </div>
+          <div class="chat-safety-note">
+            <span aria-hidden="true">⌁</span>
+            Use o chat para alinhar detalhes do serviço e proteja suas informações pessoais.
+          </div>
+          <form class="chat-composer enhanced-chat-composer" (submit)="send($event)">
+            <div class="quick-replies" aria-label="Respostas rápidas">
+              @for (reply of quickReplies; track reply) {
+                <button
+                  type="button"
+                  [disabled]="sending() || !canSendMessage(conversation)"
+                  (click)="sendQuickReply(reply)"
+                >
+                  {{ localization.translate(reply) }}
+                </button>
+              }
+            </div>
+            <label class="sr-only" for="chat-message">Mensagem</label>
+            <textarea
+              id="chat-message"
+              name="body"
+              maxlength="4000"
+              required
+              [disabled]="!canSendMessage(conversation)"
+              [placeholder]="canSendMessage(conversation) ? 'Escreva uma mensagem…' : 'Este chat não aceita novas mensagens.'"
+              [value]="draft()"
+              (input)="updateDraft($any($event.target).value)"
+              (keydown.enter)="onComposerKeydown($event)"
+            ></textarea>
+            <div class="composer-actions">
+              <small>
+                {{ canSendMessage(conversation) ? draft().length + '/4000 · Ctrl/Cmd + Enter envia · Enter quebra linha' : 'A reserva foi encerrada e o histórico permanece disponível.' }}
+              </small>
+              <button
+                class="btn btn-primary btn-small"
+                type="submit"
+                [disabled]="sending() || !draft().trim() || !canSendMessage(conversation)"
+                aria-label="Enviar mensagem"
+              >
+                {{ sending() ? 'Enviando…' : 'Enviar' }}
+              </button>
+            </div>
+            @if (messageError()) {
+              <span class="field-error chat-message-error" role="alert">{{ messageError() }}</span>
+            }
+            @if (syncError()) {
+              <span class="chat-sync-error" role="status">{{ syncError() }}</span>
+            }
+          </form>
+        }
+      </section>
+    </div>
+  }
+</section>

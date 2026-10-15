@@ -29,7 +29,9 @@ final class Jwt
         $header = ['alg' => 'HS256', 'typ' => 'JWT'];
         $segments = [
             self::base64UrlEncode(json_encode($header, JSON_THROW_ON_ERROR)),
-            self::base64UrlEncode(json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)),
+            self::base64UrlEncode(
+                json_encode($payload, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE),
+            ),
         ];
         $signature = hash_hmac('sha256', implode('.', $segments), $this->config['secret'], true);
         $segments[] = self::base64UrlEncode($signature);
@@ -53,20 +55,32 @@ final class Jwt
             throw new ApiException(401, 'INVALID_TOKEN', 'Token de autenticação inválido.');
         }
 
-        $expected = hash_hmac('sha256', $encodedHeader . '.' . $encodedPayload, $this->config['secret'], true);
+        $expected = hash_hmac(
+            'sha256',
+            $encodedHeader . '.' . $encodedPayload,
+            $this->config['secret'],
+            true,
+        );
         if (!hash_equals($expected, $signature)) {
             throw new ApiException(401, 'INVALID_TOKEN', 'Token de autenticação inválido.');
         }
 
         $now = time();
-        if (($payload['iss'] ?? null) !== $this->config['issuer']
-            || ($payload['aud'] ?? null) !== $this->config['audience']
-            || !isset($payload['exp'], $payload['nbf'])
-            || (int) $payload['exp'] < $now
-            || (int) $payload['nbf'] > $now + 30
-            || ($expectedType !== null && ($payload['typ'] ?? null) !== $expectedType)
+        if (
+            ($payload['iss'] ?? null) !== $this->config['issuer'] ||
+            ($payload['aud'] ?? null) !== $this->config['audience'] ||
+            !isset($payload['exp'], $payload['nbf']) ||
+            !is_int($payload['exp']) ||
+            !is_int($payload['nbf']) ||
+            $payload['exp'] <= $now ||
+            (int) $payload['nbf'] > $now + 30 ||
+            ($expectedType !== null && ($payload['typ'] ?? null) !== $expectedType)
         ) {
-            throw new ApiException(401, 'EXPIRED_OR_INVALID_TOKEN', 'A sessão expirou ou o token é inválido.');
+            throw new ApiException(
+                401,
+                'EXPIRED_OR_INVALID_TOKEN',
+                'A sessão expirou ou o token é inválido.',
+            );
         }
 
         return $payload;

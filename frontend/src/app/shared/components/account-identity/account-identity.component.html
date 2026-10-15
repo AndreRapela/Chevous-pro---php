@@ -1,0 +1,55 @@
+<section class="portal-card identity-editor">
+  <div class="identity-editor-heading">
+    <div>
+      <span class="eyebrow">Dados pessoais</span>
+      <h2>Sua identidade na plataforma</h2>
+      <p>Seu e-mail é protegido; apenas nome e foto aparecem quando necessário.</p>
+    </div>
+  </div>
+  @if (success()) {
+    <div class="alert alert-success" role="status">{{ success() }}</div>
+  }
+  @if (error()) {
+    <div class="alert alert-error" role="alert">{{ error() }}</div>
+  }
+  <div class="avatar-editor">
+    <cvp-avatar
+      [initials]="user()?.initials || ''"
+      [imageUrl]="user()?.avatarUrl"
+      [label]="user()?.name || 'Foto de perfil'"
+      size="lg"
+    />
+    <div>
+      <strong>Foto de perfil</strong>
+      <span>JPG, PNG ou WebP · até 5 MB</span>
+      <label class="btn btn-secondary btn-small upload-button" [class.is-disabled]="uploading()">
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          (change)="upload($any($event.target).files?.item(0))"
+          [disabled]="uploading()"
+        />
+        {{ uploading() ? 'Enviando…' : 'Trocar foto' }}
+      </label>
+    </div>
+  </div>
+  <form class="identity-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <label>
+      Nome completo
+      <input formControlName="name" autocomplete="name" />
+    </label>
+    <label>
+      E-mail
+      <input formControlName="email" autocomplete="email" readonly />
+    </label>
+    <label>
+      Celular
+      <input type="tel" formControlName="phone" autocomplete="tel" />
+    </label>
+    <div class="form-actions">
+      <button class="btn btn-primary" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Salvando…' : 'Salvar dados pessoais' }}
+      </button>
+    </div>
+  </form>
+</section>

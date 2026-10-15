@@ -1,12 +1,43 @@
 import { AdminPageConfig, AdminPageKey, AdminRow } from '../models/admin-page.model';
 
 export const ADMIN_PAGES: Record<AdminPageKey, AdminPageConfig> = {
-  bookings: { eyebrow: 'Operação', title: 'Reservas', description: 'Acompanhe o ciclo das reservas retornadas pela API.', columns: ['Reserva', 'Cliente / Profissional', 'Data', 'Valor'] },
-  customers: { eyebrow: 'Comunidade', title: 'Clientes', description: 'Gerencie o estado das contas de clientes.', columns: ['Cliente', 'Contato', 'Cadastro', 'Papel'] },
-  providers: { eyebrow: 'Rede profissional', title: 'Prestadores pendentes', description: 'Aprove ou rejeite perfis que aguardam análise.', columns: ['Profissional', 'Contato', 'Local', 'Cadastro'] },
-  catalog: { eyebrow: 'Oferta da plataforma', title: 'Catálogo', description: 'Consulte serviços e preços-base publicados.', columns: ['Serviço', 'Categoria', 'Preço-base', 'Precificação'] },
-  support: { eyebrow: 'Confiança e segurança', title: 'Moderação', description: 'Analise denúncias de avaliações e comentários e registre a decisão.', columns: ['Conteúdo', 'Denunciante', 'Motivo', 'Recebida'] },
-  settings: { eyebrow: 'Demonstração', title: 'Configurações', description: 'Prévia visual: a API atual não expõe configurações administrativas.', columns: ['Configuração', 'Escopo', 'Valor', 'Observação'], demo: true }
+  bookings: {
+    eyebrow: 'Operação',
+    title: 'Reservas',
+    description: 'Acompanhe o ciclo das reservas retornadas pela API.',
+    columns: ['Reserva', 'Cliente / Profissional', 'Data', 'Valor']
+  },
+  customers: {
+    eyebrow: 'Comunidade',
+    title: 'Clientes',
+    description: 'Gerencie o estado das contas de clientes.',
+    columns: ['Cliente', 'Contato', 'Cadastro', 'Papel']
+  },
+  providers: {
+    eyebrow: 'Rede profissional',
+    title: 'Prestadores pendentes',
+    description: 'Aprove ou rejeite perfis que aguardam análise.',
+    columns: ['Profissional', 'Contato', 'Local', 'Cadastro']
+  },
+  catalog: {
+    eyebrow: 'Oferta da plataforma',
+    title: 'Catálogo',
+    description: 'Consulte serviços e preços-base publicados.',
+    columns: ['Serviço', 'Categoria', 'Preço-base', 'Precificação']
+  },
+  support: {
+    eyebrow: 'Confiança e segurança',
+    title: 'Moderação',
+    description: 'Analise denúncias de avaliações e comentários e registre a decisão.',
+    columns: ['Conteúdo', 'Denunciante', 'Motivo', 'Recebida']
+  },
+  settings: {
+    eyebrow: 'Demonstração',
+    title: 'Configurações',
+    description: 'Prévia visual: a API atual não expõe configurações administrativas.',
+    columns: ['Configuração', 'Escopo', 'Valor', 'Observação'],
+    demo: true
+  }
 };
 
 export const ADMIN_DEMO_ROWS: AdminRow[] = [

@@ -27,7 +27,10 @@ export class SessionStoreService {
   }
 
   get hasSessionHint(): boolean {
-    return this.readStorage(this.sessionStorage, SESSION_HINT_KEY) === '1' || this.readStorage(this.localStorage, SESSION_HINT_KEY) === '1';
+    return (
+      this.readStorage(this.sessionStorage, SESSION_HINT_KEY) === '1' ||
+      this.readStorage(this.localStorage, SESSION_HINT_KEY) === '1'
+    );
   }
 
   save(user: User, accessToken: string): void {
@@ -80,16 +83,30 @@ export class SessionStoreService {
   private isUser(value: unknown): value is User {
     if (!value || typeof value !== 'object') return false;
     const user = value as Partial<User>;
-    return typeof user.id === 'string' && typeof user.name === 'string' &&
-      typeof user.email === 'string' && this.isAllowedRole(user.role);
+    return (
+      typeof user.id === 'string' &&
+      typeof user.name === 'string' &&
+      typeof user.email === 'string' &&
+      this.isAllowedRole(user.role)
+    );
   }
 
   private get sessionStorage(): Storage | null {
-    return isPlatformBrowser(this.platformId) ? sessionStorage : null;
+    if (!isPlatformBrowser(this.platformId)) return null;
+    try {
+      return sessionStorage;
+    } catch {
+      return null;
+    }
   }
 
   private get localStorage(): Storage | null {
-    return isPlatformBrowser(this.platformId) ? localStorage : null;
+    if (!isPlatformBrowser(this.platformId)) return null;
+    try {
+      return localStorage;
+    } catch {
+      return null;
+    }
   }
 
   private removeLegacyStorage(storage: Storage | null): void {
@@ -100,16 +117,28 @@ export class SessionStoreService {
 
   private readStorage(storage: Storage | null, key: string): string | null {
     if (!storage) return null;
-    try { return storage.getItem(key); } catch { return null; }
+    try {
+      return storage.getItem(key);
+    } catch {
+      return null;
+    }
   }
 
   private writeStorage(storage: Storage | null, key: string, value: string): void {
     if (!storage) return;
-    try { storage.setItem(key, value); } catch { /* storage indisponível */ }
+    try {
+      storage.setItem(key, value);
+    } catch {
+      /* storage indisponível */
+    }
   }
 
   private removeStorage(storage: Storage | null, key: string): void {
     if (!storage) return;
-    try { storage.removeItem(key); } catch { /* storage indisponível */ }
+    try {
+      storage.removeItem(key);
+    } catch {
+      /* storage indisponível */
+    }
   }
 }

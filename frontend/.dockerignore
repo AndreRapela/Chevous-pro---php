@@ -3,3 +3,10 @@ dist
 .angular
 .git
 *.log
+.env
+.env.*
+coverage
+test-results
+playwright-report
+*.dump
+*.sql.gz

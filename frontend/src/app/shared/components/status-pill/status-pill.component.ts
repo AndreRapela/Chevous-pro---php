@@ -21,7 +21,7 @@ export class StatusPillComponent {
       in_progress: 'Em andamento',
       completed: 'Concluído',
       cancelled: 'Cancelado',
-      disputed: 'Em análise',
+      disputed: 'Em análise'
     };
     return labels[this.status];
   }

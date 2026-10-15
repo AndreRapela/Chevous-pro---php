@@ -1,0 +1,97 @@
+<section class="page-hero compact catalog-hero">
+  <div class="container narrow">
+    <span class="eyebrow">O que oferecemos</span>
+    <h1>Nossos serviços</h1>
+    <p>Encontre profissionais para cuidar da casa, da rotina e de quem você ama.</p>
+    <label class="search-field">
+      <span aria-hidden="true">⌕</span>
+      <span class="sr-only">Buscar serviço por nome ou descrição</span>
+      <input
+        type="search"
+        [value]="query()"
+        (input)="setQuery($any($event.target).value)"
+        placeholder="Busque pelo nome ou pela descrição"
+        autocomplete="off"
+      />
+    </label>
+  </div>
+</section>
+<section class="section section-tight catalog-results">
+  <div class="container">
+    <div class="filter-scroll" aria-label="Filtrar por categoria">
+      <button type="button" class="chip" [class.active]="!category()" (click)="selectCategory('')">
+        Todos
+      </button>
+      @for (item of categories(); track item.id) {
+        <button
+          type="button"
+          class="chip"
+          [class.active]="category() === item.id"
+          (click)="selectCategory(item.id)"
+        >
+          {{ item.shortName }}
+        </button>
+      }
+    </div>
+    <div class="results-heading">
+      <h2>{{ total() }} serviços disponíveis</h2>
+      <span>Escolha um serviço para comparar os profissionais disponíveis</span>
+    </div>
+    @if (loading()) {
+      <cvp-state-panel kind="loading" />
+    } @else if (error()) {
+      <cvp-state-panel
+        kind="error"
+        title="O catálogo não carregou"
+        [message]="error()"
+        (retry)="load()"
+      />
+    } @else if (!services().length) {
+      <cvp-state-panel
+        kind="empty"
+        title="Nenhum serviço encontrado"
+        message="Tente outro termo ou remova um dos filtros."
+      />
+    } @else {
+      <div class="service-grid catalog-grid">
+        @for (service of services(); track service.id) {
+          <cvp-service-card [service]="service" />
+        }
+      </div>
+      @if (lastPage() > 1) {
+        <nav class="result-pagination" aria-label="Paginação de serviços">
+          <span>Mostrando {{ firstVisible() }}–{{ lastVisible() }} de {{ total() }} serviços</span>
+          <div>
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              [disabled]="page() === 1"
+              (click)="goToPage(page() - 1)"
+            >
+              Anterior
+            </button>
+            @for (item of pageNumbers(); track item) {
+              <button
+                class="page-button"
+                type="button"
+                [class.active]="item === page()"
+                [attr.aria-current]="item === page() ? 'page' : null"
+                (click)="goToPage(item)"
+              >
+                {{ item }}
+              </button>
+            }
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              [disabled]="page() === lastPage()"
+              (click)="goToPage(page() + 1)"
+            >
+              Próxima
+            </button>
+          </div>
+        </nav>
+      }
+    }
+  </div>
+</section>

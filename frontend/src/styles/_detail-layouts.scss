@@ -1,0 +1,379 @@
+/* Service and professional detail polish ---------------------------------
+   Keep the media useful as a future portrait slot, preserve natural title
+   wrapping, and give profile information a clear sidebar hierarchy. */
+.service-detail-grid h1 {
+  max-width: none;
+  text-wrap: pretty;
+}
+.service-detail-providers .service-detail-provider-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 20.5rem));
+  gap: 0.75rem;
+}
+.service-detail-provider-grid .provider-card {
+  padding: 0.78rem;
+}
+.service-detail-provider-grid .provider-card .avatar-lg {
+  width: 3rem;
+  height: 3rem;
+}
+
+cvp-provider-detail .profile-overview-card {
+  gap: 0.65rem;
+  padding: 0.85rem;
+}
+cvp-provider-detail .profile-card-heading {
+  width: 100%;
+  min-height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+cvp-provider-detail .profile-card-heading .eyebrow {
+  margin: 0;
+}
+cvp-provider-detail .profile-overview-card .favorite-button {
+  position: static;
+  width: 2.25rem;
+  height: 2.25rem;
+}
+cvp-provider-detail .profile-identity-panel {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 0.65rem;
+  padding: 1rem 0.75rem;
+  border: 1px solid var(--ink-100);
+  border-radius: 0.8rem;
+  background: var(--surface-soft);
+}
+cvp-provider-detail .profile-identity-panel .avatar-lg {
+  width: 5rem;
+  height: 5rem;
+  margin: 0;
+}
+cvp-provider-detail .profile-sidebar-facts {
+  margin-top: 0;
+}
+cvp-provider-detail .profile-sidebar-facts div {
+  padding-block: 0.5rem;
+}
+cvp-provider-detail .detail-main {
+  gap: 0.85rem;
+}
+
+/* The informational cards should follow the heading without a large void. */
+cvp-info-page .info-page-hero {
+  padding-bottom: 0.6rem;
+}
+cvp-info-page .info-page-content {
+  padding-top: 0.4rem;
+}
+
+@media (min-width: 64rem) {
+  .service-visual {
+    min-height: 15rem;
+  }
+}
+
+@media (max-width: 63.99rem) {
+  cvp-provider-detail .profile-card-heading,
+  cvp-provider-detail .profile-identity-panel {
+    grid-column: 1 / -1;
+  }
+  cvp-provider-detail .profile-identity-panel {
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: start;
+    text-align: left;
+  }
+  cvp-provider-detail .profile-identity-panel .profile-intro {
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 31.99rem) {
+  .service-visual {
+    min-height: 13rem;
+  }
+  cvp-provider-detail .profile-identity-panel {
+    padding: 0.8rem;
+  }
+  cvp-provider-detail .profile-identity-panel .avatar-lg {
+    width: 4rem;
+    height: 4rem;
+  }
+}
+
+/* Desktop home banner: the slimmer service strip sits behind two raised cards. */
+@media (min-width: 64rem) {
+  .desktop-home-hero {
+    gap: 0;
+    padding-bottom: 4rem;
+  }
+  .desktop-hero-top,
+  .desktop-hero-visual {
+    min-height: 16.25rem;
+  }
+  .desktop-hero-copy {
+    align-self: start;
+    padding-top: 0.75rem;
+  }
+  .desktop-hero-visual::before {
+    bottom: 0.6rem;
+  }
+  .desktop-hero-visual::after {
+    left: calc(50% - 13.25rem);
+    bottom: 3.2rem;
+  }
+  .desktop-hero-visual img {
+    top: 0;
+  }
+  .desktop-hero-orb.orb-mint {
+    left: calc(50% - 11rem);
+    top: 0.25rem;
+  }
+  .desktop-hero-orb.orb-coral {
+    right: calc(50% - 11rem);
+    top: 0.45rem;
+  }
+
+  .desktop-hero-tag {
+    z-index: 3;
+    left: calc(50% - 9.3rem);
+    right: auto;
+    bottom: 1.2rem;
+    top: auto;
+    padding: 0.3rem 0.52rem;
+    border: 1px solid rgba(255, 255, 255, 0.56);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.84);
+    box-shadow: 0 4px 12px rgba(15, 54, 40, 0.08);
+    backdrop-filter: blur(6px);
+    font-size: 0.7rem;
+    font-weight: 750;
+  }
+
+  .desktop-hero-lower {
+    --promo-offset: clamp(1.5rem, 2.3vw, 2rem);
+    --services-offset: clamp(6.25rem, 9vw, 7rem);
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) minmax(0, 13.4rem);
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.75rem;
+    min-height: 5.5rem;
+    padding: 0.25rem 0.4rem;
+    border: 1px solid var(--ink-200);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+  .desktop-promo-card {
+    position: absolute;
+    z-index: 4;
+    top: auto;
+    bottom: -1.5rem;
+    left: var(--promo-offset);
+    width: 15rem;
+    min-width: 0;
+    padding: 0.4rem;
+    border: 1px solid var(--ink-200);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+  .desktop-service-strip {
+    grid-column: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 0.35rem;
+    padding: 0 0.1rem 0 var(--services-offset);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+  .desktop-service-strip > .eyebrow {
+    margin: 0;
+    font-size: 0.75rem;
+  }
+  .desktop-service-links {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.25rem;
+  }
+  .desktop-service-strip a {
+    min-height: 2.5rem;
+    gap: 0.35rem;
+    padding: 0.15rem 0.1rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .desktop-service-strip b {
+    width: 2rem;
+    height: 2rem;
+  }
+  .desktop-promo-card > div {
+    min-height: 7.35rem;
+    display: grid;
+    align-content: center;
+    gap: 0.25rem;
+    padding: 0.75rem;
+    border-radius: 0.75rem;
+    color: #fff;
+    background: var(--brand-800);
+    text-align: center;
+  }
+  body .desktop-promo-card .eyebrow {
+    margin: 0;
+    color: var(--brand-100);
+    font-size: 0.72rem !important;
+  }
+  .desktop-promo-card strong {
+    font-size: 0.9rem;
+    line-height: 1.25;
+  }
+  .desktop-promo-card small {
+    color: #fff;
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .desktop-booking-preview {
+    position: absolute;
+    z-index: 4;
+    top: auto;
+    bottom: -2.25rem;
+    right: 0.5rem;
+    width: 13.4rem;
+    min-width: 0;
+    padding: 0.5rem;
+    border: 1px solid var(--ink-200);
+    border-radius: 1rem;
+    background: var(--surface);
+    box-shadow: var(--shadow-md);
+  }
+  .desktop-booking-preview header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--ink-100);
+  }
+  .desktop-booking-preview header > span:nth-child(2) {
+    min-width: 0;
+    display: grid;
+  }
+  .desktop-booking-preview header strong {
+    overflow: hidden;
+    font-size: 0.82rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .desktop-booking-preview header small {
+    color: var(--ink-500);
+    font-size: 0.72rem;
+  }
+  .desktop-booking-preview .avatar-sm {
+    width: 2rem;
+    height: 2rem;
+    font-size: 0.72rem;
+  }
+  .desktop-booking-preview .verified {
+    width: 1.25rem;
+    height: 1.25rem;
+    font-size: 0.7rem;
+  }
+  .desktop-booking-preview dl {
+    margin: 0;
+  }
+  .desktop-booking-preview dl div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.6rem;
+    padding: 0.35rem 0;
+    border-bottom: 1px solid var(--ink-100);
+  }
+  .desktop-booking-preview dt {
+    color: var(--ink-500);
+    font-size: 0.72rem;
+  }
+  .desktop-booking-preview dd {
+    margin: 0;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-align: right;
+  }
+  .desktop-booking-preview .btn {
+    min-height: 2.2rem;
+    margin-top: 0.4rem;
+    padding: 0.38rem 0.65rem;
+    font-size: 0.78rem;
+  }
+}
+
+/* Keep the professional's central feed independently scrollable on desktop. */
+@media (min-width: 64rem) {
+  cvp-provider-detail .detail-main {
+    min-height: 0;
+    max-height: calc(100vh - var(--header-height) - 2rem);
+    max-height: calc(100dvh - var(--header-height) - 2rem);
+    padding: 0.15rem 0.45rem 0.35rem 0.15rem;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: var(--brand-400) var(--surface-soft);
+  }
+  cvp-provider-detail .detail-main::-webkit-scrollbar {
+    width: 0.55rem;
+  }
+  cvp-provider-detail .detail-main::-webkit-scrollbar-track {
+    border-radius: 999px;
+    background: var(--surface-soft);
+  }
+  cvp-provider-detail .detail-main::-webkit-scrollbar-thumb {
+    border: 2px solid var(--surface-soft);
+    border-radius: 999px;
+    background: var(--brand-400);
+  }
+  cvp-provider-detail .detail-main::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-700);
+  }
+}
+
+/* Give review entries a clear divider and let the note use the full card width. */
+cvp-provider-detail .feedback-section > .feedback-intro {
+  max-width: none;
+  margin: -0.3rem 0 0.8rem;
+  color: var(--ink-500);
+  font-size: 0.875rem !important;
+  line-height: 1.4;
+}
+cvp-provider-detail .feedback-section .review-list article {
+  border-top-color: var(--ink-300);
+}
+
+@media (min-width: 64rem) and (max-width: 74.99rem) {
+  .desktop-hero-lower {
+    grid-template-columns: minmax(0, 13.5rem) minmax(0, 1fr) minmax(0, 12.6rem);
+  }
+  .desktop-promo-card {
+    width: 13.5rem;
+  }
+  .desktop-booking-preview {
+    width: 12.6rem;
+  }
+  .desktop-service-strip a {
+    font-size: 0.78rem;
+  }
+  .desktop-service-strip b {
+    width: 1.8rem;
+    height: 1.8rem;
+  }
+}

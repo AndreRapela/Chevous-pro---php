@@ -1,0 +1,195 @@
+/* Catálogo de serviços ---------------------------------------------------
+   Cards em duas colunas, inspirados na referência, sem preço genérico e
+   preservando busca, filtros e paginação. */
+.service-symbol-initial {
+  font-size: 1.25rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.custom-service-visual {
+  display: grid;
+  place-items: center;
+  background: radial-gradient(
+    circle at 35% 30%,
+    #fff 0 8%,
+    var(--brand-100) 9% 42%,
+    var(--brand-200) 43% 100%
+  );
+}
+.custom-service-visual > span {
+  width: clamp(6rem, 13vw, 9rem);
+  height: clamp(6rem, 13vw, 9rem);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand-700);
+  font-size: clamp(3rem, 7vw, 5rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  box-shadow: 0 1rem 2.5rem rgba(8, 126, 102, 0.22);
+}
+
+@media (min-width: 64rem) {
+  .catalog-hero {
+    padding-block: 2.35rem 2.7rem;
+    background: linear-gradient(180deg, var(--brand-50), var(--page-background));
+  }
+  .catalog-hero .container.narrow {
+    width: min(100% - 3rem, 52rem);
+  }
+  body .catalog-hero .eyebrow {
+    color: var(--brand-700);
+    font-size: 0.72rem !important;
+    letter-spacing: 0.12em;
+  }
+  .catalog-hero h1 {
+    font-size: clamp(2rem, 3vw, 2.7rem);
+  }
+  .catalog-hero .search-field {
+    max-width: 40rem;
+  }
+
+  .catalog-results > .container {
+    width: min(100% - 3rem, 84rem);
+  }
+  .catalog-results .filter-scroll {
+    justify-content: center;
+    padding-bottom: 0.85rem;
+  }
+  .catalog-results .results-heading {
+    margin-block: 1.1rem 0.9rem;
+  }
+  .catalog-results .results-heading > span {
+    display: inline;
+  }
+}
+
+/* Home service cards echo the lighter category cards in the visual reference. */
+.home-popular {
+  background: #fff;
+}
+.home-popular .section-heading {
+  justify-content: center;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+.home-popular .service-grid {
+  width: min(100%, 56rem);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 0.9rem;
+  margin-inline: auto;
+}
+@media (max-width: 47.99rem) {
+  .home-popular .section-heading {
+    justify-content: flex-start;
+    text-align: left;
+  }
+  body cvp-home .home-popular cvp-service-card {
+    width: 17rem;
+    flex-basis: 17rem;
+  }
+}
+
+/* Cadastro de serviços do profissional. */
+.provider-add-service select {
+  min-height: 2.3rem;
+  border-radius: 0.55rem;
+  padding: 0.42rem 0.58rem;
+  font-size: 0.82rem;
+}
+.custom-service-name-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.custom-service-name-field input {
+  flex: 1;
+  min-width: 0;
+}
+.custom-service-preview,
+.provider-service-avatar {
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 2.15rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brand-800);
+  background: var(--brand-100);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+.provider-service-avatar .service-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+.provider-service-avatar-initial {
+  font-size: 1rem;
+  text-transform: uppercase;
+}
+.provider-service-identity {
+  min-width: 0;
+  display: flex !important;
+  align-items: center;
+  gap: 0.6rem;
+}
+.provider-service-copy {
+  min-width: 0;
+  display: grid;
+}
+
+@media (min-width: 42rem) {
+  .provider-add-service {
+    grid-template-columns: minmax(0, 1.5fr) minmax(8rem, 0.55fr) auto;
+    align-items: end;
+  }
+  .provider-add-service > label:first-child {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .provider-add-service .provider-new-service-price {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .provider-add-service > .btn {
+    grid-column: 3;
+    grid-row: 1;
+    min-height: 2.3rem;
+  }
+  .provider-add-service .custom-service-name {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .toggle-row.provider-service-row {
+    grid-template-columns: minmax(0, 1fr) 6rem 2.25rem auto;
+  }
+}
+
+@media (max-width: 41.99rem) {
+  .provider-add-service {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .provider-add-service > *,
+  .provider-add-service .custom-service-name,
+  .provider-add-service .provider-new-service-price {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .toggle-row.provider-service-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .provider-service-row .service-price-control {
+    grid-column: 1;
+    grid-row: 2;
+    max-width: 6rem;
+  }
+  .provider-service-row .service-toggle-control {
+    grid-column: 2;
+    grid-row: 1 / 3;
+  }
+  .provider-service-row .card-actions {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+}

@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { bookingCalendarDays, bookingDateKey, parseBookingDate } from '../src/app/features/booking/utils/booking-calendar.util.ts';
+import {
+  bookingCalendarDays,
+  bookingDateKey,
+  parseBookingDate
+} from '../src/app/features/booking/utils/booking-calendar.util.ts';
 
 test('calendar starts on Monday and includes leap-day dates without spilling into the following month', () => {
   const cells = bookingCalendarDays(2024, 1, '2024-02-01');
@@ -8,9 +12,15 @@ test('calendar starts on Monday and includes leap-day dates without spilling int
   assert.equal(cells[0].date, '2024-01-29');
   assert.equal(cells[0].inCurrentMonth, false);
   assert.equal(cells.length, 35);
-  assert.deepEqual(cells.find((cell) => cell.date === '2024-02-29'), {
-    date: '2024-02-29', day: 29, inCurrentMonth: true, disabled: false
-  });
+  assert.deepEqual(
+    cells.find((cell) => cell.date === '2024-02-29'),
+    {
+      date: '2024-02-29',
+      day: 29,
+      inCurrentMonth: true,
+      disabled: false
+    }
+  );
 });
 
 test('calendar disables past dates and every day outside its displayed month', () => {

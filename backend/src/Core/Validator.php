@@ -17,7 +17,8 @@ final class Validator
             $fieldRules = is_array($definition) ? $definition : explode('|', $definition);
             $exists = array_key_exists($field, $data);
             $nullable = in_array('nullable', $fieldRules, true);
-            $numericBounds = in_array('integer', $fieldRules, true) || in_array('numeric', $fieldRules, true);
+            $numericBounds =
+                in_array('integer', $fieldRules, true) || in_array('numeric', $fieldRules, true);
 
             if (!$exists) {
                 if (in_array('required', $fieldRules, true)) {
@@ -27,6 +28,13 @@ final class Validator
             }
 
             $value = $data[$field];
+            if (
+                in_array('required', $fieldRules, true) &&
+                ($value === null || (is_string($value) && trim($value) === ''))
+            ) {
+                $errors[$field][] = 'Este campo é obrigatório.';
+                continue;
+            }
             if ($value === null && $nullable) {
                 $validated[$field] = null;
                 continue;
@@ -42,16 +50,25 @@ final class Validator
                     'string' => is_string($value),
                     'array' => is_array($value),
                     'boolean' => is_bool($value) || in_array($value, [0, 1, '0', '1'], true),
-                    'integer' => filter_var($value, FILTER_VALIDATE_INT) !== false,
-                    'numeric' => is_numeric($value),
-                    'email' => is_string($value) && filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
-                    'uuid' => is_string($value) && preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $value) === 1,
+                    'integer' => (is_int($value) || is_string($value)) &&
+                        filter_var($value, FILTER_VALIDATE_INT) !== false,
+                    'numeric' => is_numeric($value) && is_finite((float) $value),
+                    'email' => is_string($value) &&
+                        filter_var($value, FILTER_VALIDATE_EMAIL) !== false,
+                    'uuid' => is_string($value) &&
+                        preg_match(
+                            '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
+                            $value,
+                        ) === 1,
                     'date' => self::validDate($value),
                     'min' => self::size($value, $numericBounds) >= (float) $argument,
                     'max' => self::size($value, $numericBounds) <= (float) $argument,
-                    'in' => in_array((string) $value, explode(',', (string) $argument), true),
+                    'in' => is_scalar($value) &&
+                        in_array((string) $value, explode(',', (string) $argument), true),
                     'regex' => is_string($value) && preg_match((string) $argument, $value) === 1,
-                    default => true,
+                    default => throw new \LogicException(
+                        'Regra de validação desconhecida: ' . $name,
+                    ),
                 };
 
                 if (!$valid) {
@@ -66,7 +83,12 @@ final class Validator
         }
 
         if ($errors !== []) {
-            throw new ApiException(422, 'VALIDATION_ERROR', 'Revise os campos informados.', $errors);
+            throw new ApiException(
+                422,
+                'VALIDATION_ERROR',
+                'Revise os campos informados.',
+                $errors,
+            );
         }
 
         return $validated;
@@ -74,12 +96,20 @@ final class Validator
 
     private static function validDate(mixed $value): bool
     {
-        if (!is_string($value)) {
+        if (
+            !is_string($value) ||
+            preg_match(
+                '/^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,6})?)?(?:Z|[+-]\d{2}:\d{2})?)?$/',
+                $value,
+            ) !== 1
+        ) {
             return false;
         }
         try {
             new DateTimeImmutable($value);
-            return true;
+            $errors = DateTimeImmutable::getLastErrors();
+            return $errors === false ||
+                ($errors['warning_count'] === 0 && $errors['error_count'] === 0);
         } catch (\Throwable) {
             return false;
         }

@@ -1,5 +1,13 @@
 import { isPlatformBrowser } from '@angular/common';
-import { AfterViewInit, DestroyRef, Directive, ElementRef, PLATFORM_ID, effect, inject } from '@angular/core';
+import {
+  AfterViewInit,
+  DestroyRef,
+  Directive,
+  ElementRef,
+  PLATFORM_ID,
+  effect,
+  inject
+} from '@angular/core';
 import { LocalizationService } from '../../core/localization/localization.service';
 
 const LOCALIZED_ATTRIBUTES = ['aria-label', 'placeholder', 'title', 'alt', 'data-label'] as const;
@@ -29,12 +37,20 @@ export class LocalizedContentDirective implements AfterViewInit {
     this.localizeTree(this.host);
     this.observer = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        if (mutation.type === 'characterData' && mutation.target instanceof Text) this.localizeText(mutation.target);
-        if (mutation.type === 'attributes' && mutation.target instanceof Element) this.localizeAttribute(mutation.target, mutation.attributeName ?? '');
+        if (mutation.type === 'characterData' && mutation.target instanceof Text)
+          this.localizeText(mutation.target);
+        if (mutation.type === 'attributes' && mutation.target instanceof Element)
+          this.localizeAttribute(mutation.target, mutation.attributeName ?? '');
         mutation.addedNodes.forEach((node) => this.localizeTree(node));
       }
     });
-    this.observer.observe(this.host, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: [...LOCALIZED_ATTRIBUTES] });
+    this.observer.observe(this.host, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: [...LOCALIZED_ATTRIBUTES]
+    });
     this.destroyRef.onDestroy(() => this.observer?.disconnect());
   }
 
@@ -61,7 +77,8 @@ export class LocalizedContentDirective implements AfterViewInit {
     if (node.parentElement?.closest('[data-cvp-no-localize]')) return;
     const current = node.data;
     const previousRender = this.renderedText.get(node);
-    if (!this.sourceText.has(node) || (previousRender !== undefined && current !== previousRender)) this.sourceText.set(node, current);
+    if (!this.sourceText.has(node) || (previousRender !== undefined && current !== previousRender))
+      this.sourceText.set(node, current);
     const source = this.sourceText.get(node) ?? current;
     const translated = this.localization.translate(source);
     this.renderedText.set(node, translated);
@@ -70,7 +87,11 @@ export class LocalizedContentDirective implements AfterViewInit {
 
   private localizeAttribute(element: Element, attribute: string): void {
     if (element.closest('[data-cvp-no-localize]')) return;
-    if (!LOCALIZED_ATTRIBUTES.includes(attribute as typeof LOCALIZED_ATTRIBUTES[number]) || !element.hasAttribute(attribute)) return;
+    if (
+      !LOCALIZED_ATTRIBUTES.includes(attribute as (typeof LOCALIZED_ATTRIBUTES)[number]) ||
+      !element.hasAttribute(attribute)
+    )
+      return;
     const current = element.getAttribute(attribute) ?? '';
     const previousRender = this.renderedAttributes.get(element)?.get(attribute);
     let sourceMap = this.sourceAttributes.get(element);
@@ -78,7 +99,8 @@ export class LocalizedContentDirective implements AfterViewInit {
       sourceMap = new Map<string, string>();
       this.sourceAttributes.set(element, sourceMap);
     }
-    if (!sourceMap.has(attribute) || (previousRender !== undefined && current !== previousRender)) sourceMap.set(attribute, current);
+    if (!sourceMap.has(attribute) || (previousRender !== undefined && current !== previousRender))
+      sourceMap.set(attribute, current);
     const translated = this.localization.translate(sourceMap.get(attribute) ?? current);
     let renderedMap = this.renderedAttributes.get(element);
     if (!renderedMap) {

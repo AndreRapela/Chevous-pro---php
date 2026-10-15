@@ -38,6 +38,7 @@ $services = [
     'router' => $router,
 ];
 
-(require dirname(__DIR__) . '/routes/api.php')($services);
+$registerRoutes = require dirname(__DIR__) . '/routes/api.php';
+$registerRoutes($services);
 
 return $services;

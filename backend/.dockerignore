@@ -1,7 +1,12 @@
 .env
+.env.*
 .git
 .gitignore
 *.log
+*.dump
+*.sql.gz
+backup.sql
+*.backup.sql
 
 storage/cache/*
 !storage/cache/.gitkeep

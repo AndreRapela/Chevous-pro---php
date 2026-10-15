@@ -7,19 +7,7 @@ import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-fo
   selector: 'cvp-booking-price-summary',
   standalone: true,
   imports: [LocalizedMoneyPipe],
-  template: `
-    <aside class="price-card" [attr.aria-label]="marketplace ? 'Resumo da estimativa' : 'Resumo do preço'" aria-live="polite">
-      <span class="eyebrow">{{ marketplace ? 'Sua solicitação' : 'Seu agendamento' }}</span>
-      <div class="price-service"><span class="service-symbol">{{ service.symbol }}</span><div><strong>{{ service.name }}</strong><small>{{ detailLabel }}</small></div></div>
-      @if (quote; as currentQuote) {
-        <dl><div><dt>Referência do serviço</dt><dd>{{ currentQuote.subtotalCents / 100 | appMoney:currentQuote.currency }}</dd></div><div class="price-total"><dt>Estimativa inicial</dt><dd>{{ currentQuote.totalCents / 100 | appMoney:currentQuote.currency }}</dd></div></dl>
-        <small>Não há cobrança pela plataforma. Confirme os detalhes e o valor diretamente com o profissional.</small>
-      } @else {
-        <p>{{ loading ? 'Calculando valor…' : 'Selecione os detalhes para calcular.' }}</p>
-      }
-      <div class="secure-line"><span aria-hidden="true">{{ marketplace ? '+' : '◇' }}</span> {{ marketplace ? 'Compare propostas com tranquilidade' : 'Horário reservado ao confirmar' }}</div>
-    </aside>
-  `,
+  templateUrl: './booking-price-summary.component.html',
   styles: `:host { display: block; }`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -32,7 +20,8 @@ export class BookingPriceSummaryComponent {
   @Input() marketplace = false;
 
   get detailLabel(): string {
-    if (this.quote?.pricingType === 'area' || this.service.pricingType === 'area') return `${this.quote?.areaSqm ?? this.homeSize} m²`;
+    if (this.quote?.pricingType === 'area' || this.service.pricingType === 'area')
+      return `${this.quote?.areaSqm ?? this.homeSize} m²`;
     if (this.quote?.pricingType === 'hourly' || this.service.pricingType === 'hourly') {
       const hours = (this.quote?.durationMinutes ?? this.service.durationMinutes) / 60;
       return `${hours} ${this.localization.translate(hours === 1 ? 'hora' : 'horas')}`;

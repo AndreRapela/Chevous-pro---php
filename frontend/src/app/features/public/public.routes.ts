@@ -2,18 +2,206 @@ import { Routes } from '@angular/router';
 import { authGuard, roleGuard } from '../../core/auth/auth.guard';
 
 export const publicRoutes: Routes = [
-  { path: '', title: 'Pro | Home services', data: { seo: { title: 'Pro | Home services', description: 'Find trusted professionals for your home, on the day and at the time you choose.', canonicalPath: '/', structuredData: [{ '@context': 'https://schema.org', '@type': 'WebSite', name: 'ChezVoust Pro', url: '/', potentialAction: { '@type': 'SearchAction', target: '/servicos?q={search_term_string}', 'query-input': 'required name=search_term_string' } }, { '@context': 'https://schema.org', '@type': 'Organization', name: 'ChezVoust Pro', url: '/' }] } }, loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent) },
-  { path: 'servicos', title: 'Services | Pro', data: { seo: { title: 'Home services | Pro', description: 'Find home services, compare options and request a time with approved professionals.', canonicalPath: '/servicos' } }, loadComponent: () => import('./pages/catalog/catalog.component').then((m) => m.CatalogComponent) },
-  { path: 'servicos/categoria/:category', title: 'Services by category | Pro', data: { seo: { title: 'Home services | Pro', description: 'Compare home services and choose the option that fits your routine.', canonicalPath: '/servicos' } }, loadComponent: () => import('./pages/catalog/catalog.component').then((m) => m.CatalogComponent) },
-  { path: 'servicos/:slug', title: 'Service details | Pro', data: { seo: { title: 'Service details | Pro', description: 'Review the service details and request a time with confidence.' } }, loadComponent: () => import('./pages/service-detail/service-detail.component').then((m) => m.ServiceDetailComponent) },
-  { path: 'produtos', title: 'Produtos para casa | Pro', data: { seo: { title: 'Produtos para casa | Pro', description: 'Encontre utilidades selecionadas para cuidar, organizar e manter sua casa.', canonicalPath: '/produtos' } }, loadComponent: () => import('./pages/products/products.component').then((m) => m.ProductsComponent) },
-  { path: 'profissionais', title: 'Professionals | Pro', data: { seo: { title: 'Home professionals | Pro', description: 'Discover approved professionals, booking reviews and experience so you can hire with confidence.', canonicalPath: '/profissionais' } }, loadComponent: () => import('./pages/professionals/professionals.component').then((m) => m.ProfessionalsComponent) },
-  { path: 'profissionais/:id/:slug', title: 'Professional profile | Pro', data: { seo: { title: 'Professional profile | Pro', description: 'Review this professional’s experience, services and verified reviews.' } }, loadComponent: () => import('./pages/provider-detail/provider-detail.component').then((m) => m.ProviderDetailComponent) },
-  { path: 'profissionais/:id', title: 'Professional profile | Pro', data: { seo: { title: 'Professional profile | Pro', description: 'Review this professional’s experience, services and verified reviews.' } }, loadComponent: () => import('./pages/provider-detail/provider-detail.component').then((m) => m.ProviderDetailComponent) },
-  { path: 'agendar/:serviceId', title: 'Agendar serviço | ChezVoust Pro', canActivate: [authGuard, roleGuard('customer')], data: { seo: { noindex: true } }, loadComponent: () => import('../booking/pages/booking-wizard/booking-wizard.component').then((m) => m.BookingWizardComponent) },
-  { path: 'como-funciona', title: 'How it works | Pro', data: { page: 'how', seo: { title: 'How it works | Pro', description: 'Learn how to find, book and manage services for your home.', canonicalPath: '/como-funciona' } }, loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent) },
-  { path: 'seguranca', title: 'Safety | Pro', data: { page: 'safety', seo: { title: 'Safety | Pro', description: 'See how reviews, profiles and in-platform communication help you hire safely.', canonicalPath: '/seguranca' } }, loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent) },
-  { path: 'ajuda', title: 'Help center | Pro', data: { page: 'help', seo: { title: 'Help center | Pro', description: 'Find guidance for using Pro and managing your services.', canonicalPath: '/ajuda' } }, loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent) },
-  { path: 'termos', title: 'Terms of use | Pro', data: { page: 'terms', seo: { title: 'Terms of use | Pro', description: 'Read the conditions for using the Pro platform.', canonicalPath: '/termos' } }, loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent) },
-  { path: 'privacidade', title: 'Privacy | Pro', data: { page: 'privacy', seo: { title: 'Privacy | Pro', description: 'Learn about the privacy notice and the data used by the platform.', canonicalPath: '/privacidade' } }, loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent) }
+  {
+    path: '',
+    title: 'Pro | Home services',
+    data: {
+      seo: {
+        title: 'Pro | Home services',
+        description:
+          'Find trusted professionals for your home, on the day and at the time you choose.',
+        canonicalPath: '/',
+        structuredData: [
+          {
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'ChezVoust Pro',
+            url: '/',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: '/servicos?q={search_term_string}',
+              'query-input': 'required name=search_term_string'
+            }
+          },
+          {
+            '@context': 'https://schema.org',
+            '@type': 'Organization',
+            name: 'ChezVoust Pro',
+            url: '/'
+          }
+        ]
+      }
+    },
+    loadComponent: () => import('./pages/home/home.component').then((m) => m.HomeComponent)
+  },
+  {
+    path: 'servicos',
+    title: 'Services | Pro',
+    data: {
+      seo: {
+        title: 'Home services | Pro',
+        description:
+          'Find home services, compare options and request a time with approved professionals.',
+        canonicalPath: '/servicos'
+      }
+    },
+    loadComponent: () => import('./pages/catalog/catalog.component').then((m) => m.CatalogComponent)
+  },
+  {
+    path: 'servicos/categoria/:category',
+    title: 'Services by category | Pro',
+    data: {
+      seo: {
+        title: 'Home services | Pro',
+        description: 'Compare home services and choose the option that fits your routine.',
+        canonicalPath: '/servicos'
+      }
+    },
+    loadComponent: () => import('./pages/catalog/catalog.component').then((m) => m.CatalogComponent)
+  },
+  {
+    path: 'servicos/:slug',
+    title: 'Service details | Pro',
+    data: {
+      seo: {
+        title: 'Service details | Pro',
+        description: 'Review the service details and request a time with confidence.'
+      }
+    },
+    loadComponent: () =>
+      import('./pages/service-detail/service-detail.component').then(
+        (m) => m.ServiceDetailComponent
+      )
+  },
+  {
+    path: 'produtos',
+    title: 'Produtos para casa | Pro',
+    data: {
+      seo: {
+        title: 'Produtos para casa | Pro',
+        description: 'Encontre utilidades selecionadas para cuidar, organizar e manter sua casa.',
+        canonicalPath: '/produtos'
+      }
+    },
+    loadComponent: () =>
+      import('./pages/products/products.component').then((m) => m.ProductsComponent)
+  },
+  {
+    path: 'profissionais',
+    title: 'Professionals | Pro',
+    data: {
+      seo: {
+        title: 'Home professionals | Pro',
+        description:
+          'Discover approved professionals, booking reviews and experience so you can hire with confidence.',
+        canonicalPath: '/profissionais'
+      }
+    },
+    loadComponent: () =>
+      import('./pages/professionals/professionals.component').then((m) => m.ProfessionalsComponent)
+  },
+  {
+    path: 'profissionais/:id/:slug',
+    title: 'Professional profile | Pro',
+    data: {
+      seo: {
+        title: 'Professional profile | Pro',
+        description: 'Review this professional’s experience, services and verified reviews.'
+      }
+    },
+    loadComponent: () =>
+      import('./pages/provider-detail/provider-detail.component').then(
+        (m) => m.ProviderDetailComponent
+      )
+  },
+  {
+    path: 'profissionais/:id',
+    title: 'Professional profile | Pro',
+    data: {
+      seo: {
+        title: 'Professional profile | Pro',
+        description: 'Review this professional’s experience, services and verified reviews.'
+      }
+    },
+    loadComponent: () =>
+      import('./pages/provider-detail/provider-detail.component').then(
+        (m) => m.ProviderDetailComponent
+      )
+  },
+  {
+    path: 'agendar/:serviceId',
+    title: 'Agendar serviço | ChezVoust Pro',
+    canActivate: [authGuard, roleGuard('customer')],
+    data: { seo: { noindex: true } },
+    loadComponent: () =>
+      import('../booking/pages/booking-wizard/booking-wizard.component').then(
+        (m) => m.BookingWizardComponent
+      )
+  },
+  {
+    path: 'como-funciona',
+    title: 'How it works | Pro',
+    data: {
+      page: 'how',
+      seo: {
+        title: 'How it works | Pro',
+        description: 'Learn how to find, book and manage services for your home.',
+        canonicalPath: '/como-funciona'
+      }
+    },
+    loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent)
+  },
+  {
+    path: 'seguranca',
+    title: 'Safety | Pro',
+    data: {
+      page: 'safety',
+      seo: {
+        title: 'Safety | Pro',
+        description:
+          'See how reviews, profiles and in-platform communication help you hire safely.',
+        canonicalPath: '/seguranca'
+      }
+    },
+    loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent)
+  },
+  {
+    path: 'ajuda',
+    title: 'Help center | Pro',
+    data: {
+      page: 'help',
+      seo: {
+        title: 'Help center | Pro',
+        description: 'Find guidance for using Pro and managing your services.',
+        canonicalPath: '/ajuda'
+      }
+    },
+    loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent)
+  },
+  {
+    path: 'termos',
+    title: 'Terms of use | Pro',
+    data: {
+      page: 'terms',
+      seo: {
+        title: 'Terms of use | Pro',
+        description: 'Read the conditions for using the Pro platform.',
+        canonicalPath: '/termos'
+      }
+    },
+    loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent)
+  },
+  {
+    path: 'privacidade',
+    title: 'Privacy | Pro',
+    data: {
+      page: 'privacy',
+      seo: {
+        title: 'Privacy | Pro',
+        description: 'Learn about the privacy notice and the data used by the platform.',
+        canonicalPath: '/privacidade'
+      }
+    },
+    loadComponent: () => import('./pages/info/info-page.component').then((m) => m.InfoPageComponent)
+  }
 ];

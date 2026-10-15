@@ -11,7 +11,9 @@ export function parseBookingDate(value: string): Date | null {
 
   const [, year, month, day] = match;
   const date = new Date(Number(year), Number(month) - 1, Number(day));
-  return date.getFullYear() === Number(year) && date.getMonth() === Number(month) - 1 && date.getDate() === Number(day)
+  return date.getFullYear() === Number(year) &&
+    date.getMonth() === Number(month) - 1 &&
+    date.getDate() === Number(day)
     ? date
     : null;
 }
@@ -23,7 +25,11 @@ export function bookingDateKey(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-export function bookingCalendarDays(year: number, month: number, minimumDate: string): BookingCalendarDay[] {
+export function bookingCalendarDays(
+  year: number,
+  month: number,
+  minimumDate: string
+): BookingCalendarDay[] {
   const firstOfMonth = new Date(year, month, 1);
   const leadingDays = (firstOfMonth.getDay() + 6) % 7;
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -33,6 +39,11 @@ export function bookingCalendarDays(year: number, month: number, minimumDate: st
     const date = new Date(year, month, index - leadingDays + 1);
     const key = bookingDateKey(date);
     const inCurrentMonth = date.getMonth() === month;
-    return { date: key, day: date.getDate(), inCurrentMonth, disabled: !inCurrentMonth || key < minimumDate };
+    return {
+      date: key,
+      day: date.getDate(),
+      inCurrentMonth,
+      disabled: !inCurrentMonth || key < minimumDate
+    };
   });
 }

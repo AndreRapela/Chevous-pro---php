@@ -27,7 +27,11 @@ final class PostalCodeController extends Controller
         $this->rateLimiter->check('postal-code:' . $request->ip, 30, 60);
         $handle = curl_init('https://viacep.com.br/ws/' . $cep . '/json/');
         if ($handle === false) {
-            throw new ApiException(503, 'POSTAL_CODE_UNAVAILABLE', 'A consulta de CEP está indisponível. Preencha o endereço manualmente.');
+            throw new ApiException(
+                503,
+                'POSTAL_CODE_UNAVAILABLE',
+                'A consulta de CEP está indisponível. Preencha o endereço manualmente.',
+            );
         }
         curl_setopt_array($handle, [
             CURLOPT_RETURNTRANSFER => true,
@@ -40,13 +44,25 @@ final class PostalCodeController extends Controller
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
         curl_close($handle);
         if (!is_string($body) || $status !== 200) {
-            throw new ApiException(503, 'POSTAL_CODE_UNAVAILABLE', 'A consulta de CEP está indisponível. Preencha o endereço manualmente.');
+            throw new ApiException(
+                503,
+                'POSTAL_CODE_UNAVAILABLE',
+                'A consulta de CEP está indisponível. Preencha o endereço manualmente.',
+            );
         }
         $address = json_decode($body, true);
         if (!is_array($address) || !empty($address['erro'])) {
-            throw new ApiException(404, 'POSTAL_CODE_NOT_FOUND', 'CEP não encontrado. Confira os números ou preencha o endereço manualmente.');
+            throw new ApiException(
+                404,
+                'POSTAL_CODE_NOT_FOUND',
+                'CEP não encontrado. Confira os números ou preencha o endereço manualmente.',
+            );
         }
-        $clean = static fn (string $key, int $limit): string => mb_substr(trim(strip_tags((string) ($address[$key] ?? ''))), 0, $limit);
+        $clean = static fn(string $key, int $limit): string => mb_substr(
+            trim(strip_tags((string) ($address[$key] ?? ''))),
+            0,
+            $limit,
+        );
         return Response::data([
             'postalCode' => substr($cep, 0, 5) . '-' . substr($cep, 5),
             'street' => $clean('logradouro', 180),

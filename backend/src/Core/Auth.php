@@ -8,11 +8,7 @@ use PDO;
 
 final class Auth
 {
-    public function __construct(
-        private readonly PDO $db,
-        private readonly Jwt $jwt
-    ) {
-    }
+    public function __construct(private readonly PDO $db, private readonly Jwt $jwt) {}
 
     public function requireUser(Request $request, array $roles = []): array
     {
@@ -38,7 +34,7 @@ final class Auth
                AND s.public_id = :session
                AND s.revoked_at IS NULL
                AND s.expires_at > UTC_TIMESTAMP()
-             LIMIT 1'
+             LIMIT 1',
         );
         $statement->execute(['subject' => $subject, 'session' => $sessionId]);
         $user = $statement->fetch();

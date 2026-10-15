@@ -1,0 +1,243 @@
+<section class="portal-page">
+  <cvp-page-header
+    [eyebrow]="config.eyebrow"
+    [title]="config.title"
+    [description]="config.description"
+  >
+    @if (config.demo) {
+      <span class="chip chip-soft">Demonstração</span>
+    }
+  </cvp-page-header>
+  @if (success()) {
+    <div class="alert alert-success" role="status">{{ success() }}</div>
+  }
+  @if (actionError()) {
+    <div class="alert alert-error" role="alert">{{ actionError() }}</div>
+  }
+  @if (key === 'catalog') {
+    <details class="portal-card admin-create-panel">
+      <summary>Adicionar serviço ao catálogo</summary>
+      <form class="inline-action-form" (submit)="createService($event)">
+        <div class="form-grid">
+          <label>
+            Categoria
+            <select name="categoryId" required>
+              <option value="">Selecione</option>
+              @for (category of categories(); track category.id) {
+                <option [value]="category.id">{{ category.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            Nome
+            <input name="name" required minlength="2" maxlength="120" />
+          </label>
+          <label>
+            Modelo de preço
+            <select name="pricingType" required>
+              <option value="fixed">Valor fixo</option>
+              <option value="hourly">Por hora</option>
+              <option value="area">Por m²</option>
+            </select>
+          </label>
+          <label>
+            Preço-base ({{ localization.currency() }})
+            <input
+              name="price"
+              type="number"
+              [min]="minimumDisplayPrice()"
+              [max]="maximumDisplayPrice()"
+              step="0.01"
+              required
+            />
+          </label>
+          <label>
+            Duração padrão (min)
+            <input
+              name="duration"
+              type="number"
+              min="30"
+              max="1440"
+              step="30"
+              value="120"
+              required
+            />
+          </label>
+          <label class="span-two">
+            Descrição curta
+            <input name="description" maxlength="250" />
+          </label>
+        </div>
+        <button class="btn btn-primary btn-small" type="submit" [disabled]="acting()">
+          Criar serviço
+        </button>
+      </form>
+    </details>
+  }
+  <section class="portal-card admin-table-card">
+    <div class="admin-filters">
+      <label class="search-field">
+        <span aria-hidden="true">⌕</span>
+        <span class="sr-only">Buscar</span>
+        <input [(ngModel)]="query" placeholder="Buscar nos resultados carregados" />
+      </label>
+      <select [(ngModel)]="status" aria-label="Filtrar por status">
+        <option value="">Todos os status</option>
+        <option value="success">Ativos e concluídos</option>
+        <option value="warning">Pendentes</option>
+        <option value="danger">Atenção</option>
+      </select>
+      <button class="btn btn-secondary btn-small" type="button" (click)="load()">Atualizar</button>
+    </div>
+    @if (loading()) {
+      <cvp-state-panel kind="loading" />
+    } @else if (error()) {
+      <cvp-state-panel
+        kind="error"
+        title="Dados indisponíveis"
+        [message]="error()"
+        (retry)="load()"
+      />
+    } @else if (!filteredRows().length) {
+      <cvp-state-panel
+        kind="empty"
+        title="Nenhum resultado"
+        message="Ajuste a busca ou remova os filtros."
+      />
+    } @else {
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              @for (column of config.columns; track column) {
+                <th>{{ column }}</th>
+              }
+              <th>Status</th>
+              <th><span class="sr-only">Ações</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of filteredRows(); track row.id) {
+              <tr>
+                <td>
+                  <strong
+                    [attr.data-cvp-no-localize]="key === 'providers' || key === 'customers' ? '' : null"
+                  >
+                    {{ row.primary }}
+                  </strong>
+                  <small>{{ row.secondary }}</small>
+                </td>
+                @for (cell of row.cells; track $index) {
+                  <td [attr.data-cvp-no-localize]="personalCell($index) ? '' : null">{{ cell }}</td>
+                }
+                <td>
+                  <span class="admin-status" [class]="'admin-status ' + row.tone">
+                    {{ row.status }}
+                  </span>
+                </td>
+                <td>
+                  @if (key === 'providers') {
+                    <div class="card-actions">
+                      <button
+                        class="btn btn-primary btn-small"
+                        type="button"
+                        (click)="requestAction(row, 'approved')"
+                      >
+                        Aprovar
+                      </button>
+                      <button
+                        class="btn btn-danger btn-small"
+                        type="button"
+                        (click)="requestAction(row, 'rejected')"
+                      >
+                        Rejeitar
+                      </button>
+                    </div>
+                  } @else if (key === 'customers') {
+                    <button
+                      class="btn btn-secondary btn-small"
+                      type="button"
+                      (click)="requestAction(row, row.rawStatus === 'suspended' ? 'active' : 'suspended')"
+                    >
+                      {{ row.rawStatus === 'suspended' ? 'Ativar' : 'Suspender' }}
+                    </button>
+                  } @else if (key === 'support' && row.rawStatus === 'pending') {
+                    <div class="card-actions">
+                      <button
+                        class="btn btn-danger btn-small"
+                        type="button"
+                        (click)="requestAction(row, 'hide')"
+                      >
+                        Ocultar
+                      </button>
+                      <button
+                        class="btn btn-secondary btn-small"
+                        type="button"
+                        (click)="requestAction(row, 'retain')"
+                      >
+                        Manter
+                      </button>
+                    </div>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>
+          Mostrando {{ filteredRows().length }} de {{ total() }} registros · página {{ page() }} de
+          {{ lastPage() }}
+        </span>
+        @if (lastPage() > 1) {
+          <div class="card-actions">
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              [disabled]="page() <= 1"
+              (click)="goTo(page() - 1)"
+            >
+              Anterior
+            </button>
+            <button
+              class="btn btn-secondary btn-small"
+              type="button"
+              [disabled]="page() >= lastPage()"
+              (click)="goTo(page() + 1)"
+            >
+              Próxima
+            </button>
+          </div>
+        }
+      </div>
+    }
+    @if (pendingAction(); as pending) {
+      <form class="inline-action-form admin-confirm-action" (submit)="confirmAction($event)">
+        <h2>Confirmar: {{ actionLabel(pending.status) }}</h2>
+        <p>Esta ação será registrada no histórico administrativo.</p>
+        <label>
+          Justificativa
+          <textarea
+            required
+            minlength="3"
+            maxlength="1000"
+            placeholder="Explique o motivo da alteração"
+          ></textarea>
+        </label>
+        <div class="card-actions">
+          <button
+            class="btn btn-secondary btn-small"
+            type="button"
+            (click)="pendingAction.set(null)"
+          >
+            Voltar
+          </button>
+          <button class="btn btn-danger btn-small" type="submit">Confirmar ação</button>
+        </div>
+      </form>
+    }
+  </section>
+</section>

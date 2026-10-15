@@ -21,7 +21,16 @@ export class BookingDraftStorageService {
       const raw = sessionStorage.getItem(this.key);
       if (!raw) return null;
       const stored = JSON.parse(raw) as StoredBookingDraft;
-      const valid = stored.version === 2 && stored.serviceId === serviceId && Number.isInteger(stored.step) && stored.step >= 0 && stored.step <= 4 && typeof stored.savedAt === 'number' && Date.now() - stored.savedAt <= 24 * 60 * 60 * 1000 && stored.value && typeof stored.value === 'object';
+      const valid =
+        stored.version === 2 &&
+        stored.serviceId === serviceId &&
+        Number.isInteger(stored.step) &&
+        stored.step >= 0 &&
+        stored.step <= 4 &&
+        typeof stored.savedAt === 'number' &&
+        Date.now() - stored.savedAt <= 24 * 60 * 60 * 1000 &&
+        stored.value &&
+        typeof stored.value === 'object';
       if (!valid) this.clear();
       return valid ? stored : null;
     } catch {
@@ -33,10 +42,20 @@ export class BookingDraftStorageService {
   save(serviceId: string, step: number, value: BookingFormValue): void {
     if (!isPlatformBrowser(this.platformId)) return;
     const draft: StoredBookingDraft = { version: 2, serviceId, step, value, savedAt: Date.now() };
-    try { sessionStorage.setItem(this.key, JSON.stringify(draft)); } catch { /* A reserva continua mesmo sem armazenamento local. */ }
+    try {
+      sessionStorage.setItem(this.key, JSON.stringify(draft));
+    } catch {
+      /* A reserva continua mesmo sem armazenamento local. */
+    }
   }
 
   clear(): void {
-    if (isPlatformBrowser(this.platformId)) { try { sessionStorage.removeItem(this.key); } catch { /* armazenamento indisponível */ } }
+    if (isPlatformBrowser(this.platformId)) {
+      try {
+        sessionStorage.removeItem(this.key);
+      } catch {
+        /* armazenamento indisponível */
+      }
+    }
   }
 }

@@ -1,0 +1,89 @@
+@media (min-width: 64rem) {
+  .booking-detail-lower-grid {
+    grid-template-columns: minmax(0, 1.6fr) minmax(17rem, 0.8fr);
+  }
+  :root {
+    --header-height: 5.25rem;
+  }
+  .site-header .brand {
+    gap: 0.6rem;
+    font-size: 1.12rem;
+  }
+  .site-header .brand-mark {
+    width: 2.15rem;
+    height: 2.15rem;
+  }
+  .desktop-only {
+    display: inline-flex !important;
+  }
+  .desktop-nav {
+    display: flex;
+    align-items: center;
+    gap: 1.75rem;
+    margin-left: auto;
+  }
+  .desktop-nav a {
+    position: relative;
+    padding: 1.92rem 0;
+    color: var(--ink-600);
+    font-size: 0.86rem;
+    font-weight: 700;
+  }
+  .desktop-nav a::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1.28rem;
+    height: 2px;
+    transform: scaleX(0);
+    border-radius: 2px;
+    background: var(--brand-600);
+    transition: transform 0.18s;
+  }
+  .desktop-nav a:hover,
+  .desktop-nav a.active {
+    color: var(--brand-800);
+  }
+  .desktop-nav a.active::after {
+    transform: scaleX(1);
+  }
+  .header-actions .btn {
+    min-height: 2.82rem;
+    padding-inline: 1.05rem;
+    font-size: 0.83rem;
+  }
+  .site-header .locale-trigger {
+    min-height: 2.7rem;
+    padding-inline: 0.68rem;
+  }
+  .site-header .locale-trigger-value {
+    font-size: 0.82rem;
+  }
+  .menu-button,
+  .public-bottom-nav {
+    display: none;
+  }
+  .site-footer {
+    padding: 1.75rem 0 1.25rem;
+  }
+  .hero-section {
+    padding: 1.1rem 0 1.4rem;
+  }
+  .hero-stack {
+    display: none;
+  }
+  .desktop-home-hero {
+    width: min(calc(100% - 3rem), 68rem);
+    display: grid;
+    position: relative;
+    gap: 0.6rem;
+  }
+  .desktop-hero-top {
+    min-height: 15.5rem;
+    display: grid;
+    grid-template-columns: minmax(21rem, 0.92fr) minmax(24rem, 1.08fr);
+    align-items: center;
+    gap: 1.5rem;
+  }
+}

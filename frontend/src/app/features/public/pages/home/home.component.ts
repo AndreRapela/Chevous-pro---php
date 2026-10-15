@@ -2,7 +2,12 @@ import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@ang
 import { Router, RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Promotion, ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
-import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
+import {
+  ProviderCardComponent,
+  ServiceCardComponent,
+  ServiceIconComponent,
+  StatePanelComponent
+} from '../../../../shared/components';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
 import { SeoService } from '../../../../core/seo/seo.service';
@@ -11,83 +16,16 @@ import { HomeHeroComponent } from '../../components/home-hero/home-hero.componen
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
-  template: `
-    <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
-    <section class="section home-section home-deals" aria-labelledby="discounts-title">
-      <div class="container">
-        <div class="home-deals-heading">
-          <span class="eyebrow">Loja ChezVoust</span>
-          <h2 id="discounts-title">Produtos e ofertas especiais</h2>
-        </div>
-        <a class="home-discount-banner" [attr.href]="promotion().ctaUrl" [attr.aria-label]="'Abrir oferta: ' + promotion().title" [style.--promo-bg]="promotion().backgroundColor" [style.--promo-text]="promotion().textColor">
-          <div class="home-discount-copy">
-            <span class="home-discount-pill">{{ promotion().badgeText }}</span>
-            <h3>{{ promotion().title }}</h3>
-            <p>{{ promotion().subtitle }}</p>
-            <span class="btn home-discount-cta">{{ promotion().ctaLabel }} <span aria-hidden="true">→</span></span>
-          </div>
-          <div class="home-discount-art" aria-hidden="true">
-            @if (promotion().imageUrl) { <img [src]="promotion().imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
-          </div>
-        </a>
-        @if (promotion().termsText) { <p class="home-discount-terms">{{ promotion().termsText }}</p> }
-      </div>
-    </section>
-
-    <section class="section home-section home-categories" aria-labelledby="categorias-title">
-      <div class="container">
-        <div class="section-heading"><div><span class="eyebrow">Tudo em um só lugar</span><h2 id="categorias-title">Nossos serviços</h2></div><a class="text-link" routerLink="/servicos">Ver todos <span aria-hidden="true">→</span></a></div>
-        @if (loading()) { <cvp-state-panel kind="loading" message="Buscando os melhores serviços para você." /> }
-        @else if (error()) { <cvp-state-panel kind="error" title="Não conseguimos carregar os serviços" [message]="error()" (retry)="load()" /> }
-        @else {
-          <div class="category-grid" cvpHorizontalScroll aria-label="Nossos serviços. Deslize horizontalmente para ver mais categorias.">
-            @for (category of categories(); track category.id) {
-              <a class="category-card" [routerLink]="categoryPath(category)">
-                <span class="category-symbol" aria-hidden="true"><cvp-service-icon [category]="category.id" [serviceSlug]="category.slug" [icon]="category.symbol" /></span><strong>{{ category.shortName }}</strong>
-              </a>
-            }
-          </div>
-          <p class="mobile-scroll-hint" aria-hidden="true">Deslize para ver mais <span>→</span></p>
-        }
-      </div>
-    </section>
-
-    @if (popularServices().length) {
-      <section class="section section-mint home-section home-popular" aria-labelledby="popular-title">
-        <div class="container">
-          <div class="section-heading"><div><span class="eyebrow">Escolhas populares</span><h2 id="popular-title">Serviços mais procurados</h2></div></div>
-          <div class="service-grid" cvpHorizontalScroll aria-label="Serviços mais procurados. Deslize horizontalmente para ver mais serviços.">
-            @for (service of popularServices(); track service.id) { <cvp-service-card [service]="service" /> }
-          </div>
-          <p class="mobile-scroll-hint" aria-hidden="true">Deslize para ver mais <span>→</span></p>
-        </div>
-      </section>
-    }
-
-    @if (providers().length) {
-      <section class="section home-section home-providers" aria-labelledby="recommendations-title">
-        <div class="container">
-          <div class="section-heading"><div><span class="eyebrow">Selecionados para você</span><h2 id="recommendations-title">Profissionais bem avaliados</h2></div><a class="text-link" routerLink="/profissionais">Ver todos <span aria-hidden="true">→</span></a></div>
-          <div class="provider-grid" cvpHorizontalScroll aria-label="Profissionais bem avaliados. Deslize horizontalmente para ver mais profissionais.">
-            @for (provider of providers().slice(0, 3); track provider.id) { <cvp-provider-card [provider]="provider" /> }
-          </div>
-          <p class="mobile-scroll-hint" aria-hidden="true">Deslize para ver mais <span>→</span></p>
-        </div>
-      </section>
-    }
-
-    <section class="section home-section home-provider-cta" aria-labelledby="provider-cta-title">
-      <div class="container provider-cta">
-        <div class="provider-cta-copy"><span class="eyebrow">Para profissionais</span><h2 id="provider-cta-title">Ofereça seus serviços com autonomia.</h2><p>Organize sua agenda e receba oportunidades pela plataforma.</p></div>
-        <div class="provider-cta-actions">
-          <span><b aria-hidden="true">✓</b>Defina sua disponibilidade</span>
-          <span><b aria-hidden="true">✓</b>Escolha as oportunidades</span>
-          <a class="btn btn-primary" routerLink="/cadastro" [queryParams]="{ tipo: 'profissional' }">Quero ser profissional</a>
-        </div>
-      </div>
-    </section>
-  `,
+  imports: [
+    HomeHeroComponent,
+    HorizontalScrollDirective,
+    ProviderCardComponent,
+    RouterLink,
+    ServiceCardComponent,
+    ServiceIconComponent,
+    StatePanelComponent
+  ],
+  templateUrl: './home.component.html',
   styleUrl: './home.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -100,9 +38,16 @@ export class HomeComponent implements OnInit {
   readonly popularServices = signal<Service[]>([]);
   readonly providers = signal<ProviderProfile[]>([]);
   readonly promotion = signal<Promotion>({
-    id: 'default', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
-    ctaLabel: 'Conhecer a loja', ctaUrl: '/produtos', imageUrl: '/images/promo-laundry-discount-v1.webp', badgeText: 'Novidades na loja',
-    termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.', backgroundColor: '#096653', textColor: '#FFFFFF'
+    id: 'default',
+    title: 'Produtos para cuidar melhor da sua casa',
+    subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
+    ctaLabel: 'Conhecer a loja',
+    ctaUrl: '/produtos',
+    imageUrl: '/images/promo-laundry-discount-v1.webp',
+    badgeText: 'Novidades na loja',
+    termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.',
+    backgroundColor: '#096653',
+    textColor: '#FFFFFF'
   });
   readonly loading = signal(true);
   readonly error = signal('');
@@ -116,7 +61,8 @@ export class HomeComponent implements OnInit {
   ngOnInit(): void {
     this.seo.update({
       title: 'Pro | Home services',
-      description: 'Find trusted professionals for your home, on the day and at the time you choose.',
+      description:
+        'Find trusted professionals for your home, on the day and at the time you choose.',
       canonicalPath: '/',
       structuredData: [
         {
@@ -124,22 +70,40 @@ export class HomeComponent implements OnInit {
           '@type': 'WebSite',
           name: 'ChezVoust Pro',
           url: '/',
-          potentialAction: { '@type': 'SearchAction', target: '/servicos?q={search_term_string}', 'query-input': 'required name=search_term_string' }
+          potentialAction: {
+            '@type': 'SearchAction',
+            target: '/servicos?q={search_term_string}',
+            'query-input': 'required name=search_term_string'
+          }
         },
-        { '@context': 'https://schema.org', '@type': 'Organization', name: 'ChezVoust Pro', url: '/' }
+        {
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'ChezVoust Pro',
+          url: '/'
+        }
       ]
     });
     this.load();
   }
 
   load(): void {
-    this.loading.set(true); this.error.set('');
+    this.loading.set(true);
+    this.error.set('');
     this.marketplace.categories().subscribe({
-      next: (categories) => { this.categories.set(categories); this.loading.set(false); },
-      error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
+      next: (categories) => {
+        this.categories.set(categories);
+        this.loading.set(false);
+      },
+      error: (failure: Error) => {
+        this.error.set(failure.message);
+        this.loading.set(false);
+      }
     });
     this.marketplace.home().subscribe({
-      next: (content) => { if (content.promotions[0]) this.promotion.set(content.promotions[0]); },
+      next: (content) => {
+        if (content.promotions[0]) this.promotion.set(content.promotions[0]);
+      },
       error: () => undefined
     });
     this.marketplace.servicesPage({ perPage: 4 }).subscribe({

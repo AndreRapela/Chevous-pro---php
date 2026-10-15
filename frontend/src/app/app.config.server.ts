@@ -22,8 +22,9 @@ function serverLocalization(): () => void {
 
 function forwardedOrigin(): string {
   const request = inject(REQUEST, { optional: true });
-  const host = request?.headers.get('x-forwarded-host')?.split(',')[0]?.trim()
-    ?? request?.headers.get('host')?.trim();
+  const host =
+    request?.headers.get('x-forwarded-host')?.split(',')[0]?.trim() ??
+    request?.headers.get('host')?.trim();
   const protocol = request?.headers.get('x-forwarded-proto')?.split(',')[0]?.trim();
   return resolveSeoOrigin(
     process.env['SITE_URL'],

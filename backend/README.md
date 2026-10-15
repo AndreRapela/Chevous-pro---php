@@ -80,10 +80,13 @@ Ele processa a outbox em modo de log ou entrega transacional configurada.
 - RBAC `customer`, `provider` e `admin`, mais verificação de propriedade/participação.
 - PDO com prepared statements reais, validação por lista permitida, CORS explícito e rate limit em MySQL.
 - Locks transacionais por profissional/dia para evitar dupla reserva.
+- Política de horários compartilhada entre catálogo e reservas, com precedência de bloqueios.
+- JSON limitado a 1 MiB/64 níveis e validação estrita de números e datas explícitas.
 - Auditoria administrativa, request ID, idempotência e mensagens sem HTML.
 
 ## Testes
 
-Os testes foram mantidos fora das etapas de construção e executados somente na fase
-final. A partir da raiz, consulte `tests/README.md` para os comandos. A validação com
-MySQL real deve ser executada pelo ambiente Compose antes da homologação.
+Os testes devem acompanhar alterações de regra e contrato, não ficar restritos ao
+fim da construção. A partir da raiz, consulte `tests/README.md` para os comandos.
+Há testes centrais sem banco e fluxos HTTP em MySQL real, executados em Compose
+local/isolado. Evidências e limites estão em `docs/CODE_AUDIT_2026-10-13.md`.

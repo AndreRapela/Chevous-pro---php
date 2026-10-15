@@ -6,15 +6,37 @@ export function assertHomeServiceCard(html) {
   assert.match(card[0], /aria-label="Featured services"/);
   const links = [...card[1].matchAll(/<a\b[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g)];
   assert.equal(links.length, 5, 'The card must contain exactly five service shortcuts.');
-  for (const [index, [label, query]] of [['Cleaning', 'limpeza'], ['Laundry', 'lavagem'], ['Repairs', 'reparo'], ['Painting', 'pintura'], ['Garden', 'jardim']].entries()) {
+  for (const [index, [label, query]] of [
+    ['Cleaning', 'limpeza'],
+    ['Laundry', 'lavagem'],
+    ['Repairs', 'reparo'],
+    ['Painting', 'pintura'],
+    ['Garden', 'jardim']
+  ].entries()) {
     assert.equal(links[index][1], `/servicos?q=${query}`);
     assert.ok(links[index][2].includes(label), `Missing ${label} shortcut.`);
     assert.match(links[index][2], /<svg\b/, `${label} must retain its service icon.`);
-    assert.match(links[index][2], /aria-hidden="true"/, 'Decorative icons must not duplicate accessible link names.');
+    assert.match(
+      links[index][2],
+      /aria-hidden="true"/,
+      'Decorative icons must not duplicate accessible link names.'
+    );
   }
   assert.ok(!card[1].includes('<aside'));
-  assert.ok(html.includes('desktop-promo-card'), 'The confidence card must be restored to the desktop hero.');
-  assert.ok(html.includes('desktop-booking-preview'), 'The compact booking preview must be restored to the desktop hero.');
-  assert.ok(html.includes('Reviewed and approved profiles'), 'The confidence card must be localized and readable.');
-  assert.ok(html.includes('Ana Clara'), 'The booking preview must retain the featured professional.');
+  assert.ok(
+    html.includes('desktop-promo-card'),
+    'The confidence card must be restored to the desktop hero.'
+  );
+  assert.ok(
+    html.includes('desktop-booking-preview'),
+    'The compact booking preview must be restored to the desktop hero.'
+  );
+  assert.ok(
+    html.includes('Reviewed and approved profiles'),
+    'The confidence card must be localized and readable.'
+  );
+  assert.ok(
+    html.includes('Ana Clara'),
+    'The booking preview must retain the featured professional.'
+  );
 }

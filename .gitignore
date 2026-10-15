@@ -18,6 +18,9 @@ backend/storage/uploads/*
 
 # Local environment
 .env
+.env.*
+!.env.example
+!.env.production.example
 .idea/
 .vscode/
 .tools/
@@ -36,3 +39,9 @@ playwright-report/
 .data/
 *.sql.gz
 *.dump
+backup.sql
+*.backup.sql
+*.sql.enc
+*.dump.enc
+*.sql.age
+*.dump.age

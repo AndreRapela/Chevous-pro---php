@@ -16,14 +16,16 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
       if (failure instanceof HttpErrorResponse && isApiErrorBody(failure.error)) {
         const body = failure.error.error;
         return throwError(
-          () => new ApiClientError(body.code, body.message, failure.status, body.fields, body.requestId)
+          () =>
+            new ApiClientError(body.code, body.message, failure.status, body.fields, body.requestId)
         );
       }
 
       const status = failure instanceof HttpErrorResponse ? failure.status : 0;
-      const message = failure instanceof HttpErrorResponse && failure.status > 0
-        ? `A solicitação falhou (${failure.status}). Tente novamente.`
-        : 'Não foi possível conectar. Verifique sua internet e tente novamente.';
+      const message =
+        failure instanceof HttpErrorResponse && failure.status > 0
+          ? `A solicitação falhou (${failure.status}). Tente novamente.`
+          : 'Não foi possível conectar. Verifique sua internet e tente novamente.';
       return throwError(() => new ApiClientError('network_error', message, status));
     })
   );

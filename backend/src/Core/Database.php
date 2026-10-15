@@ -17,7 +17,7 @@ final class Database
             'mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4',
             $config['host'],
             $config['port'],
-            $config['name']
+            $config['name'],
         );
 
         $this->pdo = new PDO($dsn, $config['username'], $config['password'], [

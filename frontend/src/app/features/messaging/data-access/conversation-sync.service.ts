@@ -60,10 +60,11 @@ export class ConversationSyncService {
       let initial = true;
       let nextDelay = 0;
 
-      const nextBatch = () => (initial
+      const nextBatch = () =>
+        (initial
           ? this.messagesLatest(conversationId)
           : this.messagesAfter(conversationId, cursor)
-      ).pipe(
+        ).pipe(
           map((messages): ConversationMessageBatch => {
             cursor = Math.max(cursor, ...messages.map((message) => message.sequence));
             return { messages, initial };
@@ -81,9 +82,8 @@ export class ConversationSyncService {
         );
 
       const fallback = this.visibleState().pipe(
-        switchMap((visible) => visible
-          ? defer(nextBatch).pipe(repeat({ delay: () => timer(nextDelay) }))
-          : NEVER
+        switchMap((visible) =>
+          visible ? defer(nextBatch).pipe(repeat({ delay: () => timer(nextDelay) })) : NEVER
         )
       );
       // SSE entrega imediatamente; a consulta incremental continua como
@@ -91,8 +91,11 @@ export class ConversationSyncService {
       // A conexão também é abortada em segundo plano para não gastar bateria
       // e workers enquanto a conversa não está visível.
       const realtime = this.visibleState().pipe(
-        switchMap((visible) => visible ? this.liveStream(conversationId, () => cursor) : NEVER),
-        map((message): ConversationMessageBatch => { cursor = Math.max(cursor, message.sequence); return { messages: [message], initial: false }; }),
+        switchMap((visible) => (visible ? this.liveStream(conversationId, () => cursor) : NEVER)),
+        map((message): ConversationMessageBatch => {
+          cursor = Math.max(cursor, message.sequence);
+          return { messages: [message], initial: false };
+        }),
         catchError(() => EMPTY)
       );
       return merge(fallback, realtime);
@@ -104,10 +107,27 @@ export class ConversationSyncService {
       let initial = true;
 
       return this.visibleTicks(CONVERSATION_POLL_INTERVAL_MS, refresh).pipe(
-        exhaustMap(() => this.marketplace.conversationsPage().pipe(
-          map((response): ConversationListBatch => ({ conversations: response.data, initial, page: pageFromMeta(response.meta, 'page'), lastPage: pageFromMeta(response.meta, 'lastPage'), total: totalFromMeta(response.meta) })),
-          catchError((failure: unknown) => of({ conversations: [], initial, page: 1, lastPage: 1, total: 0, error: this.toError(failure) }))
-        )),
+        exhaustMap(() =>
+          this.marketplace.conversationsPage().pipe(
+            map((response): ConversationListBatch => ({
+              conversations: response.data,
+              initial,
+              page: pageFromMeta(response.meta, 'page'),
+              lastPage: pageFromMeta(response.meta, 'lastPage'),
+              total: totalFromMeta(response.meta)
+            })),
+            catchError((failure: unknown) =>
+              of({
+                conversations: [],
+                initial,
+                page: 1,
+                lastPage: 1,
+                total: 0,
+                error: this.toError(failure)
+              })
+            )
+          )
+        ),
         tap((batch) => {
           if (!batch.error) initial = false;
         })
@@ -133,12 +153,20 @@ export class ConversationSyncService {
       let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
       const connect = async (): Promise<void> => {
         const token = this.auth.accessToken();
-        if (!token || stopped) { subscriber.complete(); return; }
+        if (!token || stopped) {
+          subscriber.complete();
+          return;
+        }
         controller = new AbortController();
         try {
-          const response = await fetch(`/api/v1/conversations/${encodeURIComponent(conversationId)}/stream?after=${cursor()}`, {
-            headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' }, credentials: 'same-origin', signal: controller.signal
-          });
+          const response = await fetch(
+            `/api/v1/conversations/${encodeURIComponent(conversationId)}/stream?after=${cursor()}`,
+            {
+              headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+              credentials: 'same-origin',
+              signal: controller.signal
+            }
+          );
           if (!response.ok || !response.body) throw new Error('Fluxo em tempo real indisponível.');
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
@@ -147,9 +175,13 @@ export class ConversationSyncService {
             const chunk = await reader.read();
             if (chunk.done) break;
             buffer += decoder.decode(chunk.value, { stream: true });
-            const events = buffer.split('\n\n'); buffer = events.pop() ?? '';
+            const events = buffer.split('\n\n');
+            buffer = events.pop() ?? '';
             for (const event of events) {
-              const data = event.split('\n').find((line) => line.startsWith('data: '))?.slice(6);
+              const data = event
+                .split('\n')
+                .find((line) => line.startsWith('data: '))
+                ?.slice(6);
               if (!data || data === '{}') continue;
               const rawMessage = JSON.parse(data) as ChatMessage;
               const message: ChatMessage = { ...rawMessage, sequence: Number(rawMessage.sequence) };
@@ -166,15 +198,21 @@ export class ConversationSyncService {
         }
       };
       void connect();
-      return () => { stopped = true; controller?.abort(); if (reconnectTimer) clearTimeout(reconnectTimer); };
+      return () => {
+        stopped = true;
+        controller?.abort();
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+      };
     });
   }
 
-  private visibleTicks(intervalMs: number, refresh: Observable<unknown> = EMPTY): Observable<unknown> {
+  private visibleTicks(
+    intervalMs: number,
+    refresh: Observable<unknown> = EMPTY
+  ): Observable<unknown> {
     return this.visibleState().pipe(
-      switchMap((visible) => visible
-        ? merge(of(undefined), timer(intervalMs, intervalMs), refresh)
-        : NEVER
+      switchMap((visible) =>
+        visible ? merge(of(undefined), timer(intervalMs, intervalMs), refresh) : NEVER
       )
     );
   }
@@ -188,7 +226,8 @@ export class ConversationSyncService {
   }
 
   private toError(failure: unknown): Error {
-    return failure instanceof Error ? failure : new Error('Não foi possível sincronizar as mensagens.');
+    return failure instanceof Error
+      ? failure
+      : new Error('Não foi possível sincronizar as mensagens.');
   }
-
 }

@@ -11,7 +11,10 @@ export function serviceNameKey(value: string): string {
     .toLocaleLowerCase('pt-BR');
 }
 
-export function serviceNameExists(value: string, services: ReadonlyArray<{ name: string }>): boolean {
+export function serviceNameExists(
+  value: string,
+  services: ReadonlyArray<{ name: string }>
+): boolean {
   const key = serviceNameKey(value);
   return Boolean(key) && services.some((service) => serviceNameKey(service.name) === key);
 }

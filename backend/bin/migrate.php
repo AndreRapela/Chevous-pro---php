@@ -35,14 +35,16 @@ try {
             migration VARCHAR(190) NOT NULL,
             applied_at DATETIME NOT NULL,
             PRIMARY KEY (migration)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci'
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     );
 
     $directory = dirname(__DIR__, 2) . '/database/migrations';
     $files = is_dir($directory) ? glob($directory . '/*.sql') : [];
     sort($files, SORT_STRING);
     $alreadyApplied = $pdo->prepare('SELECT 1 FROM schema_migrations WHERE migration = :migration');
-    $record = $pdo->prepare('INSERT INTO schema_migrations (migration, applied_at) VALUES (:migration, UTC_TIMESTAMP())');
+    $record = $pdo->prepare(
+        'INSERT INTO schema_migrations (migration, applied_at) VALUES (:migration, UTC_TIMESTAMP())',
+    );
     foreach ($files as $file) {
         $migration = basename($file);
         $alreadyApplied->execute(['migration' => $migration]);

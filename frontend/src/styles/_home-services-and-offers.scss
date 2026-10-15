@@ -1,0 +1,378 @@
+/* Compact illustrated service choices: a soft image tile and its label only. */
+.home-categories .category-grid {
+  align-items: start;
+  gap: clamp(0.55rem, 1.4vw, 1.1rem);
+  padding: 0.35rem 0 0.65rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.home-categories .category-card {
+  --category-accent: #087e66;
+  --category-soft: #e6f7ee;
+  min-height: 6.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.2rem;
+  border: 0;
+  border-radius: 0.9rem;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+}
+.home-categories .category-card:nth-child(2) {
+  --category-accent: #167c91;
+  --category-soft: #e6f6f5;
+}
+.home-categories .category-card:nth-child(3) {
+  --category-accent: #087e66;
+  --category-soft: #e6f7ee;
+}
+.home-categories .category-card:nth-child(4) {
+  --category-accent: #b06b08;
+  --category-soft: #fff6dc;
+}
+.home-categories .category-card:nth-child(5) {
+  --category-accent: #56813c;
+  --category-soft: #edf8e8;
+}
+.home-categories .category-card:nth-child(6) {
+  --category-accent: #237d98;
+  --category-soft: #e8f5f8;
+}
+.home-categories .category-card:nth-child(7) {
+  --category-accent: #9d4e6d;
+  --category-soft: #f9eaf0;
+}
+.home-categories .category-card:nth-child(8) {
+  --category-accent: #426b96;
+  --category-soft: #eaf1f9;
+}
+.home-categories .category-card::before,
+.home-categories .category-card::after {
+  display: none;
+}
+.home-categories .category-card:hover {
+  transform: translateY(-3px);
+  box-shadow: none;
+}
+.home-categories .category-card .category-symbol,
+.home-categories .category-card:nth-child(3n + 2) .category-symbol,
+.home-categories .category-card:nth-child(3n + 3) .category-symbol {
+  width: 4.2rem;
+  height: 4.2rem;
+  flex: 0 0 auto;
+  border: 1px solid rgba(22, 125, 91, 0.08);
+  border-radius: 1.15rem;
+  color: var(--category-accent) !important;
+  background: var(--category-soft) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 5px 11px rgba(40, 78, 62, 0.08);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.home-categories .category-card:hover .category-symbol,
+.home-categories .category-card:focus-visible .category-symbol {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.92),
+    0 9px 18px rgba(40, 78, 62, 0.14);
+}
+.home-categories .service-icon {
+  width: 2.65rem;
+  height: 2.65rem;
+  overflow: visible;
+}
+body .home-categories .category-card strong {
+  display: block;
+  align-self: center;
+  max-width: 100%;
+  margin: 0;
+  color: var(--ink-900);
+  font-size: 0.84rem !important;
+  font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
+  hyphens: auto;
+  overflow-wrap: anywhere;
+}
+@media (min-width: 64rem) {
+  .home-categories {
+    padding-block: 2.4rem 0.9rem;
+  }
+  .home-popular {
+    padding-top: 2rem;
+  }
+}
+@media (max-width: 63.99rem) {
+  .home-categories .category-card {
+    flex: 0 0 6.25rem;
+    min-height: 6.35rem;
+  }
+}
+
+/* A compact promotional strip inspired by retail specials, adapted to the site palette. */
+.home-deals {
+  padding-block: 0.75rem 0.85rem;
+  background: var(--page-background);
+}
+.home-deals-heading {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.55rem;
+}
+.home-deals-heading .eyebrow {
+  display: none;
+}
+.home-deals-heading h2 {
+  margin: 0;
+  font-size: clamp(0.82rem, 1.2vw, 0.95rem);
+  font-weight: 900;
+  letter-spacing: 0.015em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+.home-discount-banner {
+  position: relative;
+  isolation: isolate;
+  min-height: 12rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(12rem, 0.7fr);
+  overflow: hidden;
+  border: 1px solid rgba(5, 87, 68, 0.2);
+  border-radius: 1.25rem;
+  background: linear-gradient(
+    112deg,
+    var(--promo-bg, #096653) 0%,
+    color-mix(in srgb, var(--promo-bg, #096653) 86%, white) 60%,
+    #dff4ec 60%,
+    #f6fbf9 100%
+  );
+  box-shadow: 0 14px 32px rgba(22, 73, 61, 0.14);
+  cursor: pointer;
+  transition:
+    translate 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.home-discount-banner:hover {
+  translate: 0 -0.12rem;
+  box-shadow: 0 18px 38px rgba(22, 73, 61, 0.2);
+}
+.home-discount-banner:focus-visible {
+  outline: 3px solid var(--brand-500);
+  outline-offset: 3px;
+}
+.home-discount-banner::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: -4.5rem;
+  left: 42%;
+  width: 11rem;
+  height: 11rem;
+  border-radius: 50%;
+  background: #f5c84c;
+  opacity: 0.96;
+}
+.home-discount-copy {
+  position: relative;
+  z-index: 2;
+  align-self: center;
+  max-width: 42rem;
+  display: grid;
+  justify-items: start;
+  gap: 0.3rem;
+  padding: 0.95rem clamp(1rem, 2.2vw, 1.75rem);
+  color: var(--promo-text, #fff);
+}
+.home-discount-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  padding: 0.28rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.17);
+  backdrop-filter: blur(5px);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.home-discount-copy h3 {
+  max-width: 24ch;
+  margin: 0;
+  color: var(--promo-text, #fff);
+  font-size: clamp(1.35rem, 2.4vw, 2.1rem);
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+body .home-discount-copy p {
+  max-width: 32rem;
+  margin: 0;
+  color: var(--promo-text, #fff);
+  font-size: 0.76rem !important;
+  line-height: 1.3;
+}
+.home-discount-cta {
+  min-height: 2.1rem;
+  margin-top: 0.1rem;
+  padding: 0.38rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: var(--brand-900);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(3, 61, 47, 0.18);
+  font-size: 0.74rem;
+}
+.home-discount-banner:hover .home-discount-cta,
+.home-discount-banner:focus-visible .home-discount-cta {
+  color: #fff;
+  background: var(--brand-800);
+}
+.home-discount-art {
+  position: relative;
+  min-width: 0;
+  min-height: 12rem;
+}
+.home-discount-art img {
+  position: absolute;
+  z-index: 2;
+  right: 0.45rem;
+  bottom: -0.35rem;
+  width: min(22.5rem, 112%);
+  height: auto;
+  filter: drop-shadow(0 14px 16px rgba(26, 60, 51, 0.2));
+}
+.home-discount-bubble {
+  position: absolute;
+  z-index: 3;
+  top: 1.05rem;
+  left: -0.9rem;
+  width: 4.7rem;
+  height: 4.7rem;
+  display: grid;
+  place-content: center;
+  border: 0.3rem solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  color: #fff;
+  background: var(--brand-700);
+  box-shadow: 0 10px 22px rgba(70, 27, 23, 0.24);
+  text-align: center;
+  transform: rotate(5deg);
+}
+.home-discount-bubble strong {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.home-discount-bubble small {
+  font-size: 0.6rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+.home-discount-terms {
+  margin: 0.3rem 0.2rem 0;
+  color: var(--ink-500);
+  font-size: 0.68rem !important;
+}
+@media (max-width: 47.99rem) {
+  .home-deals {
+    padding-block: 0.9rem 1.25rem;
+  }
+  .home-deals-heading {
+    margin-bottom: 0.65rem;
+  }
+  .home-discount-banner {
+    min-height: 11.75rem;
+    grid-template-columns: minmax(0, 1.25fr) minmax(7.5rem, 0.75fr);
+    border-radius: 1rem;
+    background: linear-gradient(
+      112deg,
+      var(--promo-bg, #096653) 0%,
+      color-mix(in srgb, var(--promo-bg, #096653) 86%, white) 68%,
+      #e8f6f1 68%,
+      #f7fcfa 100%
+    );
+  }
+  .home-discount-banner::before {
+    top: -5rem;
+    left: 50%;
+    width: 9rem;
+    height: 9rem;
+  }
+  .home-discount-copy {
+    gap: 0.3rem;
+    padding: 0.9rem 0.25rem 0.9rem 1rem;
+  }
+  .home-discount-pill {
+    min-height: 1.45rem;
+    padding: 0.2rem 0.48rem;
+    font-size: 0.58rem;
+  }
+  .home-discount-copy h3 {
+    max-width: 10ch;
+    font-size: clamp(1.45rem, 7.2vw, 2rem);
+  }
+  body .home-discount-copy p {
+    max-width: 15rem;
+    font-size: 0.78rem !important;
+    line-height: 1.35;
+  }
+  .home-discount-cta {
+    min-height: 2.2rem;
+    padding: 0.4rem 0.68rem;
+    font-size: 0.74rem;
+  }
+  .home-discount-art {
+    min-height: 11.75rem;
+  }
+  .home-discount-art img {
+    right: -3.8rem;
+    bottom: 0.15rem;
+    width: 14.5rem;
+    max-width: none;
+  }
+  .home-discount-bubble {
+    top: 0.75rem;
+    left: -0.55rem;
+    width: 3.5rem;
+    height: 3.5rem;
+    border-width: 0.22rem;
+  }
+  .home-discount-bubble strong {
+    font-size: 0.95rem;
+  }
+  .home-discount-bubble small {
+    font-size: 0.48rem;
+  }
+}
+
+/* A featured link should remain distinct against the white hero strip. */
+@media (min-width: 64rem) {
+  .desktop-service-strip a:hover,
+  .desktop-service-strip a:focus-visible {
+    color: var(--brand-900);
+    background: var(--brand-100);
+    box-shadow: inset 0 0 0 1px var(--brand-200);
+  }
+  .desktop-service-strip a:active {
+    background: var(--brand-200);
+  }
+}
+
+/* The independent feed should finish level with the full profile rail. */
+@media (min-width: 64rem) {
+  cvp-provider-detail .profile-detail-layout {
+    align-items: stretch;
+  }
+  cvp-provider-detail .detail-main {
+    height: 0;
+    min-height: 100%;
+    max-height: none;
+  }
+}

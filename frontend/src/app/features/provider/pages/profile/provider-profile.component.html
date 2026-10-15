@@ -1,0 +1,469 @@
+<section class="portal-page provider-operations-page provider-profile-page">
+  <cvp-page-header
+    eyebrow="Sua vitrine"
+    title="Perfil profissional"
+    description="Apresente experiência, formação e serviços para conquistar novos clientes."
+  />
+  @if (success()) {
+    <div class="alert alert-success" role="status">{{ success() }}</div>
+  }
+  @if (actionError()) {
+    <div class="alert alert-error" role="alert">{{ actionError() }}</div>
+  }
+  @if (loading()) {
+    <cvp-state-panel kind="loading" />
+  } @else if (loadError()) {
+    <cvp-state-panel
+      kind="error"
+      title="Perfil indisponível"
+      [message]="loadError()"
+      (retry)="load()"
+    />
+  } @else {
+    <cvp-account-identity />
+    <div class="settings-layout provider-settings-layout showcase-settings-layout">
+      <section class="portal-card settings-form provider-settings-form">
+        <div class="settings-section-heading">
+          <div>
+            <span class="eyebrow">Vitrine pública</span>
+            <h2>Como clientes encontram você</h2>
+          </div>
+          <span class="profile-completeness">{{ profileCompleteness() }}% completo</span>
+        </div>
+        <label>
+          Título profissional
+          <input
+            #headline
+            maxlength="160"
+            [value]="field('headline')"
+            placeholder="Ex.: Especialista em limpeza residencial"
+          />
+        </label>
+        <label>
+          Sobre você
+          <textarea
+            #bio
+            rows="4"
+            maxlength="3000"
+            [value]="field('bio')"
+            placeholder="Conte como você trabalha, seus diferenciais e o que o cliente pode esperar."
+          ></textarea>
+        </label>
+        <div class="form-grid provider-profile-fields expanded">
+          <label>
+            Anos de experiência
+            <input
+              #years
+              type="number"
+              min="0"
+              max="60"
+              [value]="numberField('yearsExperience', 0)"
+            />
+          </label>
+          <label>
+            Cidade-base
+            <input #city [value]="field('baseCity')" />
+          </label>
+          <label>
+            Estado
+            <input #state maxlength="2" [value]="field('baseState')" />
+          </label>
+          <label>
+            Raio (km)
+            <input
+              #radius
+              type="number"
+              min="1"
+              max="300"
+              [value]="numberField('serviceRadiusKm', 10)"
+            />
+          </label>
+        </div>
+        <button
+          class="btn btn-primary btn-small profile-save-button"
+          type="button"
+          [disabled]="acting()"
+          (click)="saveProfile(headline.value, bio.value, years.value, city.value, state.value, radius.value)"
+        >
+          {{ acting() ? 'Salvando…' : 'Salvar vitrine' }}
+        </button>
+      </section>
+      <aside
+        class="portal-card verification-card provider-verification-card"
+        [class.warning-card]="verificationStatus() === 'pending'"
+      >
+        <span class="success-mark small">
+          {{ verificationStatus() === 'approved' ? '✓' : '!' }}
+        </span>
+        <div>
+          <h2>{{ verificationTitle() }}</h2>
+          <p>{{ verificationDescription() }}</p>
+        </div>
+      </aside>
+    </div>
+
+    <section class="portal-card professional-record-card">
+      <div class="card-title-row">
+        <div>
+          <span class="eyebrow">Credibilidade</span>
+          <h2>Experiência profissional</h2>
+          <p>
+            Mostre trabalhos e funções relevantes. Estas informações aparecem no seu perfil público.
+          </p>
+        </div>
+      </div>
+      @if (experiences().length) {
+        <div class="credential-list">
+          @for (experience of experiences(); track experience.id) {
+            <article>
+              <div>
+                <strong>{{ experience.role }}</strong>
+                <span>
+                  {{ experience.company }} · {{ experience.startedAt | slice:0:4 }} –
+                  {{ experience.current ? 'atual' : (experience.endedAt | slice:0:4) }}
+                </span>
+                @if (experience.description) {
+                  <p>{{ experience.description }}</p>
+                }
+              </div>
+              <div class="credential-actions">
+                <details class="credential-edit">
+                  <summary>Editar</summary>
+                  <div class="credential-edit-fields">
+                    <label>
+                      Função
+                      <input #editExperienceRole maxlength="120" [value]="experience.role" />
+                    </label>
+                    <label>
+                      Empresa ou atuação
+                      <input #editExperienceCompany maxlength="120" [value]="experience.company" />
+                    </label>
+                    <label>
+                      Data de início
+                      <input #editExperienceStart type="date" [value]="experience.startedAt" />
+                    </label>
+                    <label>
+                      Término
+                      <span class="optional">em branco = atual</span>
+                      <input #editExperienceEnd type="date" [value]="experience.endedAt ?? ''" />
+                    </label>
+                    <label class="span-two">
+                      Descrição
+                      <span class="optional">opcional</span>
+                      <textarea
+                        #editExperienceDescription
+                        rows="2"
+                        maxlength="1000"
+                        [value]="experience.description ?? ''"
+                      ></textarea>
+                    </label>
+                    <button
+                      class="btn btn-secondary btn-small span-two"
+                      type="button"
+                      [disabled]="acting()"
+                      (click)="updateExperience(experience, editExperienceRole.value, editExperienceCompany.value, editExperienceStart.value, editExperienceEnd.value, editExperienceDescription.value)"
+                    >
+                      Salvar alterações
+                    </button>
+                  </div>
+                </details>
+                <button
+                  class="text-button"
+                  type="button"
+                  [disabled]="acting()"
+                  (click)="removeExperience(experience)"
+                >
+                  Remover
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="muted">
+          Adicione sua primeira experiência para fortalecer a confiança no perfil.
+        </p>
+      }
+      <div class="inline-action-form credential-form">
+        <h3>Adicionar experiência</h3>
+        <div class="form-grid">
+          <label>
+            Função
+            <input #experienceRole maxlength="120" placeholder="Ex.: Diarista e organizadora" />
+          </label>
+          <label>
+            Empresa ou atuação
+            <input #experienceCompany maxlength="120" placeholder="Autônoma, empresa ou projeto" />
+          </label>
+          <label>
+            Data de início
+            <input #experienceStart type="date" />
+          </label>
+          <label>
+            Término
+            <span class="optional">opcional</span>
+            <input #experienceEnd type="date" />
+          </label>
+          <label class="span-two">
+            Descrição
+            <span class="optional">opcional</span>
+            <textarea
+              #experienceDescription
+              rows="2"
+              maxlength="1000"
+              placeholder="Principais atividades e resultados."
+            ></textarea>
+          </label>
+        </div>
+        <div class="card-actions">
+          <button
+            class="btn btn-secondary btn-small"
+            type="button"
+            [disabled]="acting()"
+            (click)="addExperience(experienceRole.value, experienceCompany.value, experienceStart.value, experienceEnd.value, experienceDescription.value)"
+          >
+            Adicionar experiência
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="portal-card professional-record-card">
+      <div class="card-title-row">
+        <div>
+          <span class="eyebrow">Formação</span>
+          <h2>Cursos e certificados</h2>
+          <p>Inclua cursos concluídos e links verificáveis de certificados quando houver.</p>
+        </div>
+      </div>
+      @if (courses().length) {
+        <div class="credential-list">
+          @for (course of courses(); track course.id) {
+            <article>
+              <div>
+                <strong>{{ course.title }}</strong>
+                <span>
+                  {{ course.institution }}
+                  @if (course.completedAt) {
+                    · {{ course.completedAt | slice:0:4 }}
+                  }
+                </span>
+                @if (course.certificateUrl) {
+                  <a [href]="course.certificateUrl" target="_blank" rel="noopener noreferrer">
+                    Ver certificado
+                  </a>
+                }
+              </div>
+              <div class="credential-actions">
+                <details class="credential-edit">
+                  <summary>Editar</summary>
+                  <div class="credential-edit-fields">
+                    <label>
+                      Curso ou certificado
+                      <input #editCourseTitle maxlength="160" [value]="course.title" />
+                    </label>
+                    <label>
+                      Instituição
+                      <input #editCourseInstitution maxlength="160" [value]="course.institution" />
+                    </label>
+                    <label>
+                      Conclusão
+                      <span class="optional">opcional</span>
+                      <input #editCourseCompleted type="date" [value]="course.completedAt ?? ''" />
+                    </label>
+                    <label>
+                      Link do certificado
+                      <span class="optional">opcional</span>
+                      <input
+                        #editCourseUrl
+                        type="url"
+                        maxlength="500"
+                        [value]="course.certificateUrl ?? ''"
+                      />
+                    </label>
+                    <button
+                      class="btn btn-secondary btn-small span-two"
+                      type="button"
+                      [disabled]="acting()"
+                      (click)="updateCourse(course, editCourseTitle.value, editCourseInstitution.value, editCourseCompleted.value, editCourseUrl.value)"
+                    >
+                      Salvar alterações
+                    </button>
+                  </div>
+                </details>
+                <button
+                  class="text-button"
+                  type="button"
+                  [disabled]="acting()"
+                  (click)="removeCourse(course)"
+                >
+                  Remover
+                </button>
+              </div>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="muted">Ainda não há cursos cadastrados.</p>
+      }
+      <div class="inline-action-form credential-form">
+        <h3>Adicionar curso</h3>
+        <div class="form-grid">
+          <label>
+            Curso ou certificado
+            <input #courseTitle maxlength="160" placeholder="Ex.: NR-10 Segurança em instalações" />
+          </label>
+          <label>
+            Instituição
+            <input #courseInstitution maxlength="160" placeholder="Nome da instituição" />
+          </label>
+          <label>
+            Conclusão
+            <span class="optional">opcional</span>
+            <input #courseCompleted type="date" />
+          </label>
+          <label>
+            Link do certificado
+            <span class="optional">opcional</span>
+            <input #courseUrl type="url" maxlength="500" placeholder="https://" />
+          </label>
+        </div>
+        <div class="card-actions">
+          <button
+            class="btn btn-secondary btn-small"
+            type="button"
+            [disabled]="acting()"
+            (click)="addCourse(courseTitle.value, courseInstitution.value, courseCompleted.value, courseUrl.value)"
+          >
+            Adicionar curso
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="portal-card settings-form provider-settings-form service-management-card">
+      <div class="settings-section-heading">
+        <div>
+          <span class="eyebrow">Catálogo</span>
+          <h2>Serviços oferecidos</h2>
+        </div>
+        <small>Defina preço e disponibilidade</small>
+      </div>
+      <div class="inline-action-form provider-add-service">
+        <label>
+          Novo serviço
+          <select [value]="selectedServiceId()" (change)="selectService($any($event.target).value)">
+            <option value="">Selecione uma opção</option>
+            @for (service of catalog(); track service.id) {
+              <option [value]="service.id" [disabled]="hasService(service.id)">
+                {{ service.name }}{{ hasService(service.id) ? ' — já adicionado' : '' }}
+              </option>
+            }
+            <option [value]="customServiceValue">Outro serviço</option>
+          </select>
+        </label>
+        @if (customServiceMode()) {
+          <label class="custom-service-name">
+            Nome do novo serviço
+            <span class="custom-service-name-field">
+              <span class="custom-service-preview" aria-hidden="true">
+                {{ serviceInitial(customServiceName()) }}
+              </span>
+              <input
+                maxlength="120"
+                [value]="customServiceName()"
+                (input)="customServiceName.set($any($event.target).value)"
+                placeholder="Ex.: Limpeza de aquário"
+                autocomplete="off"
+              />
+            </span>
+            @if (customServiceNameExists()) {
+              <small class="field-error">
+                Esse nome já existe. Selecione o serviço correspondente na lista.
+              </small>
+            } @else {
+              <small>A imagem será criada com a primeira letra do nome.</small>
+            }
+          </label>
+        }
+        <label class="provider-new-service-price">
+          Preço ({{ localization.currency() }})
+          <input
+            #newPrice
+            type="number"
+            [min]="minimumDisplayPrice()"
+            [max]="maximumDisplayPrice()"
+            step="0.01"
+          />
+        </label>
+        <button
+          class="btn btn-secondary btn-small"
+          type="button"
+          [disabled]="acting() || !canAddSelectedService()"
+          (click)="addSelectedService(newPrice.value)"
+        >
+          Adicionar serviço
+        </button>
+      </div>
+      <div class="toggle-list provider-service-list">
+        @for (service of services(); track service.id) {
+          <div class="toggle-row provider-service-row">
+            <span class="provider-service-identity">
+              <span
+                class="provider-service-avatar"
+                [class.provider-service-avatar-initial]="service.isCustom"
+                aria-hidden="true"
+              >
+                @if (service.isCustom) {
+                  {{ serviceInitial(service.name) }}
+                } @else {
+                  <cvp-service-icon [serviceSlug]="service.slug" />
+                }
+              </span>
+              <span class="provider-service-copy">
+                <strong>{{ service.name }}</strong>
+                <small>Catálogo: {{ service.catalogPriceCents / 100 | appMoney:'BRL' }}</small>
+              </span>
+            </span>
+            <label class="service-price-control">
+              <span class="sr-only">Preço de {{ service.name }}</span>
+              <input
+                #price
+                type="number"
+                [min]="minimumDisplayPrice()"
+                [max]="maximumDisplayPrice()"
+                step="0.01"
+                [value]="displayPrice(service.customPriceCents)"
+              />
+            </label>
+            <label class="service-toggle-control">
+              <span class="sr-only">Ativar {{ service.name }}</span>
+              <input #active type="checkbox" [checked]="service.active" />
+            </label>
+            <div class="card-actions">
+              <button
+                class="btn btn-primary btn-small"
+                type="button"
+                [disabled]="acting()"
+                (click)="updateService(service, price.value, active.checked)"
+              >
+                Salvar
+              </button>
+              <button
+                class="text-button"
+                type="button"
+                [disabled]="acting()"
+                (click)="removeService(service)"
+              >
+                Remover
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <p class="muted">Adicione ao menos um serviço para enviar o perfil para análise.</p>
+        }
+      </div>
+    </section>
+    <cvp-account-security />
+  }
+</section>

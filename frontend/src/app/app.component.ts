@@ -31,12 +31,16 @@ export class AppComponent {
       this.localization.language();
       queueMicrotask(() => this.applyStaticRouteSeo());
     });
-    this.router.events.pipe(
-      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe(() => queueMicrotask(() => {
-      this.applyStaticRouteSeo();
-    }));
+    this.router.events
+      .pipe(
+        filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+        takeUntilDestroyed(this.destroyRef)
+      )
+      .subscribe(() =>
+        queueMicrotask(() => {
+          this.applyStaticRouteSeo();
+        })
+      );
     this.applyStaticRouteSeo();
   }
 

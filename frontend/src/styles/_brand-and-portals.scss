@@ -1,0 +1,437 @@
+/* A marca segue a composição oficial: Pro em destaque e assinatura abaixo. */
+.brand {
+  gap: 0;
+  color: var(--brand-700);
+}
+.brand-logo {
+  width: 6.3rem;
+  height: auto;
+  max-height: 3.95rem;
+}
+
+/* O cabeçalho funciona como uma faixa única da marca; a criação de conta é o CTA principal. */
+.site-header {
+  background: var(--brand-700);
+  border-color: var(--brand-700);
+  box-shadow: 0 6px 18px rgba(15, 54, 40, 0.16);
+  backdrop-filter: none;
+}
+.site-header :focus-visible {
+  outline-color: #fff;
+}
+.site-header .desktop-nav a,
+.site-header .header-actions > .btn-ghost,
+.site-header .user-shortcut {
+  color: rgba(255, 255, 255, 0.88);
+}
+.site-header .desktop-nav a:hover,
+.site-header .desktop-nav a.active {
+  color: #fff;
+  background: transparent;
+}
+.site-header .header-actions > .btn-ghost:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.site-header .desktop-nav a::after {
+  background: #fff;
+}
+body .site-header .header-create-account {
+  min-height: 2.65rem;
+  padding-inline: 1.1rem;
+  color: var(--brand-900);
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 8px 22px rgba(15, 54, 40, 0.28);
+  font-weight: 850;
+}
+body .site-header .header-create-account:hover {
+  color: var(--brand-900);
+  background: var(--brand-50);
+  border-color: var(--brand-50);
+  box-shadow: 0 10px 26px rgba(15, 54, 40, 0.34);
+}
+.site-header .locale-trigger {
+  min-height: 2.2rem;
+  gap: 0.3rem;
+  padding: 0.3rem 0.48rem;
+  color: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.34);
+  box-shadow: none;
+}
+.site-header .locale-trigger:hover,
+.site-header .locale-trigger.open {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.17);
+  border-color: rgba(255, 255, 255, 0.58);
+  box-shadow: none;
+}
+body .site-header .locale-trigger-value {
+  font-size: 0.78rem !important;
+}
+.site-header .locale-trigger-icon {
+  width: 0.88rem;
+  height: 0.88rem;
+}
+.site-header .locale-trigger-chevron {
+  width: 0.62rem;
+  height: 0.62rem;
+}
+.site-header .menu-button {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+.site-header .menu-button span {
+  background: #fff;
+}
+
+/* The footer closes the page with the same solid brand treatment as the header. */
+.site-footer {
+  color: #fff;
+  border-color: var(--brand-700);
+  background: var(--brand-700);
+}
+.site-footer :focus-visible {
+  outline-color: #fff;
+}
+.site-footer .footer-group h2,
+.site-footer .footer-group summary {
+  color: #fff;
+}
+.site-footer .footer-grid p,
+.site-footer .footer-grid a:not(.brand),
+.site-footer .footer-bottom {
+  color: rgba(255, 255, 255, 0.82);
+}
+.site-footer .footer-grid a:hover {
+  color: #fff;
+}
+.site-footer .footer-bottom {
+  border-color: rgba(255, 255, 255, 0.24);
+}
+.site-footer .brand-logo {
+  filter: drop-shadow(0 5px 12px rgba(15, 54, 40, 0.18));
+}
+
+/* Ênfase nos dados de escolha sem voltar aos cartões excessivamente grandes. */
+body
+  :is(
+    .provider-card h3,
+    .service-card h3,
+    .provider-card .card-footer strong,
+    .service-card .card-footer strong
+  ) {
+  font-size: 1.0625rem !important;
+  font-weight: 800;
+}
+.customer-dashboard-page td > strong {
+  font-size: 1rem;
+  font-weight: 750;
+}
+.site-footer .footer-grid > div:first-child p {
+  font-weight: 700;
+}
+.info-page-content .help-cta .btn {
+  min-height: 3rem;
+  padding: 0.75rem 1.4rem;
+}
+
+/* A identidade fica agrupada; os controles do painel têm seu próprio respiro. */
+.portal-header .portal-user {
+  gap: 1rem;
+}
+.portal-account {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  white-space: nowrap;
+}
+.portal-user-name {
+  font-weight: 750;
+}
+
+/* Detalhes de uma reserva são conteúdo do painel, não títulos de landing page. */
+.customer-booking-detail-page .portal-page-heading {
+  margin-bottom: 1rem;
+}
+.portal-page.customer-booking-detail-page .portal-page-heading h1 {
+  font-size: clamp(1.5rem, 2vw, 1.8rem);
+}
+.customer-booking-detail-page .portal-card {
+  padding: 1rem 1.1rem;
+}
+.customer-booking-detail-page .portal-card h2 {
+  font-size: 1.125rem;
+  margin-bottom: 0.65rem;
+}
+.customer-booking-detail-page .portal-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+}
+.customer-booking-detail-page .dashboard-grid {
+  align-items: start;
+  gap: 1rem;
+}
+.customer-booking-detail-page .booking-info-grid {
+  margin: 0.6rem 0 0.8rem;
+  padding: 0.75rem 0;
+  gap: 0.7rem 1rem;
+}
+.customer-booking-detail-page .booking-info-grid dt {
+  color: var(--ink-500);
+  font-size: 0.875rem;
+}
+.customer-booking-detail-page .booking-info-grid dd {
+  margin: 0.2rem 0 0;
+  font-size: 1rem;
+}
+body .customer-booking-detail-page .booking-info-grid strong {
+  font-size: 1rem;
+  font-weight: 750;
+}
+.customer-booking-detail-page .booking-summary > p {
+  margin-bottom: 0;
+}
+.customer-booking-detail-page .booking-actions .card-actions {
+  padding-top: 0;
+}
+.customer-booking-detail-page .booking-detail-lower-grid {
+  align-items: start;
+}
+.customer-booking-detail-page .booking-progress ol {
+  margin-top: 0.8rem;
+}
+.customer-booking-detail-page .booking-progress li {
+  min-height: 2.75rem;
+}
+.customer-booking-detail-page .booking-progress li:not(:last-child) > span::after {
+  height: 2rem;
+}
+
+/* Conversas compactas: reduzir áreas vazias e padding, preservando a leitura. */
+body .messages-page .bubble {
+  padding: 0.5rem 0.7rem;
+  font-size: 0.9375rem !important;
+  line-height: 1.4;
+}
+.messages-page .bubble > :is(strong, span) {
+  font-size: 0.9375rem;
+}
+body .messages-page .bubble time {
+  font-size: 0.82rem !important;
+  margin-top: 0.15rem;
+}
+.messages-page .chat-body {
+  gap: 0.6rem;
+  padding: 0.85rem;
+}
+body .messages-page .chat-day {
+  margin: 0.15rem 0 0.4rem;
+  font-size: 0.82rem !important;
+}
+.messages-page .chat-panel > .chat-header {
+  min-height: 4.25rem;
+  padding: 0.65rem 0.85rem;
+}
+.messages-page .enhanced-chat-composer textarea {
+  min-height: 4rem;
+}
+
+@media (min-width: 64rem) {
+  .portal-header .portal-user {
+    gap: 1.25rem;
+  }
+  .messages-page .enhanced-chat-layout {
+    height: clamp(30rem, calc(100dvh - 14rem), 38rem);
+    min-height: 0;
+    grid-template-columns: minmax(16rem, 0.5fr) minmax(0, 1.2fr);
+  }
+}
+
+@media (max-width: 41.99rem) {
+  .portal-header .portal-user {
+    gap: 0.65rem;
+  }
+  .customer-booking-detail-page .portal-card {
+    padding: 0.9rem;
+  }
+  .messages-page .enhanced-chat-layout {
+    height: clamp(28rem, calc(100dvh - 15rem), 36rem);
+    min-height: 0;
+  }
+  .messages-page:has(.chat-has-selection) .portal-page-heading p {
+    display: none;
+  }
+  .messages-page .chat-back-to-list {
+    width: 2.75rem;
+    min-width: 2.75rem;
+    height: 2.75rem;
+    align-self: center;
+    padding: 0;
+  }
+}
+
+@media (max-width: 26rem) {
+  .portal-header > div:first-child {
+    display: none;
+  }
+  .portal-header .portal-user {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .portal-header .portal-user > .btn {
+    white-space: nowrap;
+  }
+}
+
+/* A marca, a navegação e a conta são três grupos, não uma fila encostada à direita. */
+@media (min-width: 64rem) {
+  .site-header .header-inner {
+    gap: 2rem;
+  }
+  .site-header .header-actions {
+    gap: 1.25rem;
+    flex-shrink: 0;
+  }
+  .site-header .user-shortcut {
+    gap: 0.65rem;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 76rem) {
+  .site-header .header-inner {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    column-gap: 2rem;
+  }
+  .site-header .desktop-nav {
+    justify-self: center;
+    margin-left: 0;
+    gap: 2rem;
+    white-space: nowrap;
+  }
+}
+
+/* Não comprimir os links nem a tradução francesa para manter a navegação aberta. */
+@media (min-width: 64rem) and (max-width: 75.99rem) {
+  .site-header .desktop-nav {
+    display: none;
+  }
+  .site-header .menu-button {
+    display: grid;
+  }
+}
+
+/* Símbolos de categoria mais nítidos, com presença suficiente sem inflar os cards. */
+.home-categories .category-symbol {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.76rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 107, 77, 0.06);
+}
+
+.home-categories .service-icon {
+  width: 1.28rem;
+  height: 1.28rem;
+  stroke-width: 2.15;
+}
+
+@media (min-width: 64rem) {
+  .home-categories .category-symbol {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+  .home-categories .service-icon {
+    width: 1.28rem;
+    height: 1.28rem;
+  }
+}
+
+/* Dense choices still use a readable text scale. Icons span both text rows. */
+body .home-categories .category-card strong {
+  font-size: 1.0625rem !important;
+}
+body .home-categories .category-card small {
+  font-size: 0.875rem;
+}
+.home-categories .category-symbol {
+  grid-row: 1 / span 2;
+}
+
+/* Dashboard data belongs to the same scale as the public catalog. */
+body .portal-page table {
+  font-size: 0.9375rem;
+}
+body .portal-page th {
+  font-size: 0.82rem;
+  color: var(--ink-700);
+}
+body .portal-page :is(td > small, .status-pill, .admin-status) {
+  font-size: 0.82rem;
+}
+body .portal-page :is(.dashboard-empty-booking strong, .shortcut-list strong) {
+  font-size: 0.9375rem;
+}
+body
+  .portal-page
+  :is(
+    .dashboard-empty-booking small,
+    .shortcut-list small,
+    .dashboard-shortcuts .card-title-row > small,
+    .next-booking-main small
+  ) {
+  font-size: 0.875rem;
+}
+body .portal-page .card-title-row h2 {
+  font-size: 1.0625rem;
+}
+.customer-dashboard-page .shortcut-list a {
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+}
+.customer-dashboard-page .shortcut-list a:nth-child(n) {
+  background: var(--surface-soft);
+  border-color: var(--ink-200);
+}
+.customer-dashboard-page .shortcut-list a:nth-child(n) .shortcut-action-icon {
+  color: var(--brand-800);
+  background: var(--brand-100);
+}
+
+@media (min-width: 64rem) {
+  .customer-dashboard-page .dashboard-grid {
+    grid-template-columns: minmax(0, 1.65fr) minmax(21rem, 1fr);
+  }
+  .customer-dashboard-page .dashboard-grid .span-two {
+    grid-column: auto;
+  }
+  .customer-dashboard-page .shortcut-list a {
+    padding: 0.55rem;
+    gap: 0.4rem;
+  }
+}
+
+/* Wide feedback areas fit two independent entries rather than one stretched row. */
+@media (min-width: 64rem) {
+  .feedback-section .review-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+  .feedback-section .review-head {
+    display: grid;
+    grid-template-columns: 2.2rem minmax(0, 1fr);
+    gap: 0.25rem 0.65rem;
+  }
+  .feedback-section .review-head .avatar {
+    grid-row: 1 / span 2;
+  }
+  .feedback-section .review-head > div {
+    min-width: 0;
+  }
+  .feedback-section .review-head time {
+    grid-column: 2;
+  }
+}

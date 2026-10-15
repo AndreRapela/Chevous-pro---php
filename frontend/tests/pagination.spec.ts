@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { mergeUniqueById, pageFromMeta, totalFromMeta } from '../src/app/shared/utils/pagination.util.ts';
+import {
+  mergeUniqueById,
+  pageFromMeta,
+  totalFromMeta
+} from '../src/app/shared/utils/pagination.util.ts';
 
 describe('pagination utilities', () => {
   it('normaliza metadados inválidos sem criar páginas inexistentes', () => {
@@ -11,7 +15,25 @@ describe('pagination utilities', () => {
   });
 
   it('anexa páginas sem repetir itens que foram atualizados', () => {
-    const merged = mergeUniqueById([{ id: 'recent', value: 2 }, { id: 'shared', value: 3 }], [{ id: 'shared', value: 1 }, { id: 'older', value: 0 }]);
-    assert.deepEqual(merged, [{ id: 'recent', value: 2 }, { id: 'shared', value: 3 }, { id: 'older', value: 0 }]);
+    const merged = mergeUniqueById(
+      [
+        { id: 'recent', value: 2 },
+        { id: 'shared', value: 3 }
+      ],
+      [
+        { id: 'shared', value: 1 },
+        { id: 'older', value: 0 }
+      ]
+    );
+    assert.deepEqual(merged, [
+      { id: 'recent', value: 2 },
+      { id: 'shared', value: 3 },
+      { id: 'older', value: 0 }
+    ]);
+  });
+  it('deduplicates repeated entries within the new page and rejects unsafe integer metadata', () => {
+    assert.deepEqual(mergeUniqueById([], [{ id: 'same' }, { id: 'same' }]), [{ id: 'same' }]);
+    assert.equal(pageFromMeta({ page: Number.MAX_SAFE_INTEGER + 1 }, 'page'), 1);
+    assert.equal(totalFromMeta({ total: Infinity }), 0);
   });
 });

@@ -5,7 +5,7 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $php = Get-Command php -ErrorAction SilentlyContinue
 
 if ($null -ne $php) {
-    & $php.Source tests/backend_core.php
+    & $php.Source (Join-Path $projectRoot 'tests\backend_core.php')
     if ($LASTEXITCODE -ne 0) { throw 'Os testes centrais do backend falharam.' }
     $files = Get-ChildItem (Join-Path $projectRoot 'backend') -Recurse -Filter *.php |
         Where-Object { $_.FullName -notmatch '[\\/]vendor[\\/]' }

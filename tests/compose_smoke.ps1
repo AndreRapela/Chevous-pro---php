@@ -3,9 +3,11 @@ $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $webUrl = if ($env:CVP_WEB_URL) { $env:CVP_WEB_URL.TrimEnd('/') } else { 'http://localhost:4200' }
+. (Join-Path $PSScriptRoot 'integration_support.ps1')
 Push-Location $projectRoot
 
 try {
+    Assert-IntegrationTarget $webUrl 'web'
     docker compose config --quiet
     if ($LASTEXITCODE -ne 0) {
         throw 'A configuração do Docker Compose é inválida.'
@@ -19,7 +21,7 @@ try {
     }
 
     $appEnvironment = (docker compose exec -T api printenv APP_ENV).Trim()
-    if ($appEnvironment -ne 'local') {
+    if ($appEnvironment -notin @('local', 'testing')) {
         throw "O smoke test só pode limpar rate limits no ambiente local; ambiente atual: '$appEnvironment'."
     }
     $databaseUser = (docker compose exec -T database printenv MYSQL_USER).Trim()

@@ -1,8 +1,8 @@
 # ChezVoust Pro — arquitetura atual e evolução
 
-> Estado reconciliado em 22 de agosto de 2026 por inspeção estática e build Angular. “Implementado”
-> indica que o componente existe no código; desempenho, acessibilidade, segurança e
-> operação ainda dependem da fase final de validação descrita em `ACCEPTANCE.md`.
+> Estado reconciliado em 13 de outubro de 2026. “Implementado” indica que o componente
+> existe no código, não uma certificação de qualidade ou prontidão operacional.
+> Evidências e limites da revisão estão em `CODE_AUDIT_2026-10-13.md`.
 
 ## Visão executável atual
 
@@ -47,9 +47,9 @@ backend/
   src/Core/                       DB, router, request/response, JWT, auth, validação
   src/Modules/
     Auth/                         cadastro, sessão, verificação e recuperação
-    Users/                        endereços
+    Users/                        conta, endereços, avatar e consulta de CEP
     Catalog/                      home, categorias, serviços e profissionais
-    Bookings/                     cotação, reserva, propostas e agenda
+    Bookings/                     cotação, reserva, propostas e política compartilhada de agenda
     Engagement/                   favoritos, conversa, notificações e avaliações
     Professionals/                perfil, oferta, disponibilidade e oportunidades
     Admin/                        operação administrativa básica
@@ -58,7 +58,8 @@ frontend/src/app/
   core/
     auth/                         sessão, serviço, guard e interceptor de token
     http/                         cliente HTTP e normalização de erros
-    data-access/                  fachada de acesso ao marketplace
+    data-access/                  fachada HTTP e mapeamento explícito de DTOs
+    localization/                 serviço, índice de consulta e dicionário EN/FR
     models/                       contratos de domínio compartilhados
     testing/                      API e dados mock para desenvolvimento
   shared/components/              um componente reutilizável por arquivo e barrel público
@@ -74,13 +75,17 @@ frontend/src/app/
 database/
   schema.sql                      schema inicial idempotente para banco vazio
   seed.sql                        dados fictícios; hashes são injetados por seed.php
+  migrations/                     migrações incrementais registradas no banco
+frontend/src/styles/              composição global por responsabilidade e ordem de cascata
 docs/                             produto, arquitetura, API, privacidade e aceite
 ```
 
-Os módulos PHP atuais são organizados por assunto, mas não possuem camadas separadas de
-domínio, repositório e aplicação. Controllers executam SQL parametrizado diretamente e
-orquestram regras. Uma futura separação dessas camadas é evolução, não descrição do código
-presente.
+Os módulos PHP atuais são organizados por assunto. A cotação fica em `PricingService`;
+a decisão de horário fica em `AvailabilityPolicy`, usada pelo catálogo e pela escrita
+de reservas; `ScheduleReservationService` controla o lock e os conflitos dentro da
+transação de reserva. Os demais controllers ainda executam SQL parametrizado e
+orquestram operações. Não há uma camada genérica de repositórios, nem se apresenta
+essa estrutura como Clean Architecture completa.
 
 O frontend usa componentes standalone com `OnPush`, carregamento preguiçoso e arquivos de
 rotas por feature. Cada arquivo declara no máximo um componente. Cabeçalhos de portal,
@@ -89,16 +94,22 @@ Autenticação usa um único `AuthShellComponent`, inclusive na recuperação de
 de reserva mantém efeitos na página orquestradora; as cinco etapas, resumo e confirmação
 são componentes de apresentação, enquanto o rascunho versionado fica em `data-access`.
 
+Templates maiores ficam em arquivos `.component.html`; o TypeScript mantém estado e
+comportamento. `MarketplaceMapper` converte DTOs sem executar HTTP. O dicionário de
+traduções não fica misturado ao algoritmo de localização. `styles.scss` é uma entrada
+de composição; seus módulos preservam a ordem dos refinamentos responsivos existentes.
+Formatação, lint e contratos de dependência/tamanho são gates executáveis do CI.
+
 ## Componentes e status
 
 | Componente | Estado atual | Limite explícito |
 | --- | --- | --- |
-| Angular público | Implementado | Validação visual/a11y fica para a fase final. |
+| Angular público | Implementado | SSR e contratos de layout testados; matriz visual/a11y completa não é certificada. |
 | Autenticação Angular | Implementada | Sessão real depende da API; mock é demonstração. |
 | Reserva Angular | Integrada ao núcleo disponível | Recorrência e recursos sem endpoint ficam ocultos ou marcados como roadmap. |
 | Áreas cliente/prestador/admin | Mistas | Somente ações ligadas a endpoint real são operacionais; fallbacks devem indicar demonstração. |
 | API PHP | Implementada para o núcleo listado em `API.md` | Não equivale ao roadmap completo do marketplace. |
-| MySQL | Schema e seed implementados | Não há sistema de migrações incrementais versionadas. |
+| MySQL | Schema, seed e migrações versionadas implementados | Rollback e restauração precisam de homologação operacional. |
 | E-mail/outbox | Implementado | Worker entrega e-mails via Resend quando configurado; desenvolvimento usa log redigido. |
 | Upload/armazenamento | Implementado para avatar | Foto de perfil autenticada em JPG/PNG/WebP, validada, redimensionada/convertida para WebP e servida por rota pública controlada. Anexos e galeria profissional permanecem roadmap. |
 | KYC, mapas, SMS e seguro | Roadmap | Nenhum fornecedor foi integrado. |
@@ -110,14 +121,15 @@ O schema atual contém estas tabelas:
 - identidade: `users`, `auth_sessions`, `email_verification_tokens`,
   `password_reset_tokens`;
 - prestadores e conta: `professional_profiles`, `addresses`,
-  `professional_services`, `availability_rules`, `availability_exceptions`;
+  `professional_services`, `professional_experiences`, `professional_courses`,
+  `availability_rules`, `availability_exceptions`;
 - catálogo e configuração: `service_categories`, `services`, `service_addons`,
-  `promotions` e `app_settings`;
+  `promotions`, `products` e `app_settings`;
 - reserva e agenda: `bookings`, `booking_items`, `booking_status_history`,
   `booking_offers`, `schedule_day_locks`, `slot_reservations`;
 - idempotência: `idempotency_keys`;
 - relacionamento: `favorites`, `conversations`, `conversation_participants`,
-  `messages`, `notifications`, `reviews`;
+  `messages`, `notifications`, `reviews`, `professional_comments`, `content_reports`;
 - operação: `api_rate_limits`, `audit_logs`, `outbox_events`.
 
 Chaves estrangeiras, unicidades, checks e índices básicos estão definidos no schema.
@@ -143,8 +155,10 @@ Conta simultaneamente cliente e prestador exigirá mudança de modelo no roadmap
 5. Logout revoga uma ou todas as sessões; o usuário pode listar e revogar outros dispositivos.
 6. Verificação e recuperação usam tokens descartáveis e outbox.
 
-O envio externo não está implementado. Em ambiente local/debug, a API pode devolver o
-token de demonstração; o worker processa a outbox sem registrar o segredo no log.
+O worker possui um adaptador Resend para envio externo quando configurado. No ambiente
+local/debug, a API pode devolver o token de demonstração; o driver de log não registra
+esse segredo. A existência do adaptador não comprova entrega, DNS ou configuração do
+fornecedor no ambiente definitivo.
 
 ### Cotação e reserva
 
@@ -160,19 +174,24 @@ token de demonstração; o worker processa a outbox sem registrar o segredo no l
    estados implementados.
 8. Cliente pode reagendar reserva confirmada; prestador pode registrar chegada, início e conclusão.
 
+Catálogo e reserva usam a mesma política de horários. Exceções disponíveis ampliam a
+agenda, bloqueios têm precedência e a janela precisa caber em um único dia de trabalho
+no fuso configurado do profissional. O cliente não altera esse fuso ao enviar a reserva.
+
 Recorrência automática, disputa e política de cancelamento versionada não
 fazem parte desse fluxo atual.
 
 ### Relacionamento
 
 - favoritos pertencem ao cliente;
-- conversas são vinculadas à reserva e limitadas aos participantes;
+- conversas podem iniciar antes da reserva ou ficar vinculadas a ela; acesso é limitado aos participantes;
 - mensagens atuais são texto sem anexo;
 - o cliente Angular inicia a conversa pelos 50 itens mais recentes e solicita histórico
   anterior sob demanda; atualizações posteriores usam `sequence`, sem requisições
-  sobrepostas. A conversa ativa mantém uma única espera autenticada de até 15 segundos
-  e reabre-a assim que ela termina, entregando novas mensagens com latência de até um
-  segundo; a lista é atualizada a cada quinze segundos;
+  sobrepostas. A conversa ativa mantém uma conexão SSE autenticada por até 25 segundos
+  e reconecta ao terminar; quando necessário, o fallback consulta mensagens a cada
+  dez segundos. A lista é atualizada a cada sessenta segundos e por eventos locais.
+  Esses intervalos são configuração, não uma medição de latência em produção;
 - a sincronização é suspensa quando a aba fica oculta e retomada imediatamente ao voltar,
   reduzindo tráfego e trabalho do PHP/MySQL;
 - cada envio recebe uma `Idempotency-Key`: mensagem, atualização da conversa e notificação
@@ -211,6 +230,8 @@ em `database/migrations` e são registradas em `schema_migrations` sob bloqueio 
 - PDO com prepared statements reais e validação de entrada;
 - CORS por allowlist, rate limit em MySQL, request ID e auditoria administrativa;
 - bloqueios transacionais de agenda e chaves de idempotência nas operações cobertas;
+- token enviado apenas à origem e ao caminho da API configurada, sem correspondência por substring;
+- corpo JSON limitado a 1 MiB e 64 níveis, raiz objeto e datas explícitas validadas estritamente;
 - a plataforma não recebe dados de pagamento.
 
 Esses controles não constituem certificação nem prontidão de produção. Permanecem como
@@ -228,9 +249,9 @@ trabalho de liberação:
 Não há PWA ou service worker no frontend atual. Não há KYC documental. Essas capacidades
 não devem aparecer como prontas em documentação ou interface.
 
-## Metas — não medidas nesta entrega
+## Metas de desempenho e acessibilidade
 
-São objetivos de qualidade para a fase final, não resultados já alcançados:
+Metas sujeitas à medição em homologação:
 
 - layout utilizável de 360 a 1440+ px e WCAG 2.2 AA nas jornadas essenciais;
 - API comum com p95 alvo abaixo de 500 ms em ambiente de referência;
@@ -239,16 +260,14 @@ São objetivos de qualidade para a fase final, não resultados já alcançados:
 - operações de agenda idempotentes e auditáveis;
 - falha de notificação sem reversão de reserva já confirmada.
 
-Nenhuma dessas metas é considerada comprovada antes da fase final de testes.
+O aceite dessas metas depende de medição reproduzível no ambiente de referência.
 
 ## Evolução arquitetural priorizada
 
-1. Adaptador real de e-mail, retry/backoff e fila morta para a outbox já agendada.
+1. Homologação do adaptador de e-mail, entrega/reputação e monitoramento da fila morta já implementada.
 2. Pipeline de rollback e validação prévia para as migrations incrementais versionadas.
 3. Contratos OpenAPI e serialização temporal uniforme.
 4. Camadas de aplicação/repositório para reduzir SQL e regra dentro de controllers.
 5. Upload privado apenas quando houver requisito e política de retenção aprovados.
 6. Service areas, recorrência automática, suporte/disputa, privacidade e permissões granulares.
 7. KYC somente após fornecedor, base legal, processo operacional e evidência verificável.
-
-Nenhuma decisão deste documento autoriza publicação ou deploy.

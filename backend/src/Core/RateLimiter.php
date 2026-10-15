@@ -8,9 +8,7 @@ use PDO;
 
 final class RateLimiter
 {
-    public function __construct(private readonly PDO $db)
-    {
-    }
+    public function __construct(private readonly PDO $db) {}
 
     public function check(string $key, int $limit, int $windowSeconds): void
     {
@@ -27,12 +25,18 @@ final class RateLimiter
         $statement = $this->db->prepare($sql);
         $statement->execute(['rate_key' => $rateKey]);
 
-        $read = $this->db->prepare('SELECT hits, TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), expires_at) AS retry_after FROM api_rate_limits WHERE rate_key = :rate_key');
+        $read = $this->db->prepare(
+            'SELECT hits, TIMESTAMPDIFF(SECOND, UTC_TIMESTAMP(), expires_at) AS retry_after FROM api_rate_limits WHERE rate_key = :rate_key',
+        );
         $read->execute(['rate_key' => $rateKey]);
         $bucket = $read->fetch();
         if ($bucket && (int) $bucket['hits'] > $limit) {
             $retry = max(1, (int) $bucket['retry_after']);
-            throw new ApiException(429, 'RATE_LIMITED', "Muitas tentativas. Tente novamente em {$retry} segundos.");
+            throw new ApiException(
+                429,
+                'RATE_LIMITED',
+                "Muitas tentativas. Tente novamente em {$retry} segundos.",
+            );
         }
     }
 }

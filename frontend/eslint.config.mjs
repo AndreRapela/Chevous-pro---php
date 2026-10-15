@@ -24,8 +24,14 @@ export default tseslint.config(
       '@angular-eslint/prefer-standalone': 'error',
       '@angular-eslint/use-pipe-transform-interface': 'error',
       '@angular-eslint/use-lifecycle-interface': 'warn',
-      '@angular-eslint/directive-selector': ['error', { type: 'attribute', prefix: 'cvp', style: 'camelCase' }],
-      '@angular-eslint/component-selector': ['error', { type: 'element', prefix: 'cvp', style: 'kebab-case' }],
+      '@angular-eslint/directive-selector': [
+        'error',
+        { type: 'attribute', prefix: 'cvp', style: 'camelCase' }
+      ],
+      '@angular-eslint/component-selector': [
+        'error',
+        { type: 'element', prefix: 'cvp', style: 'kebab-case' }
+      ],
       '@typescript-eslint/no-explicit-any': 'error'
     }
   },

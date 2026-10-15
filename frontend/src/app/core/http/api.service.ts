@@ -9,7 +9,9 @@ import { SERVER_API_HEADERS } from './server-api-headers.token';
 
 export type ApiQueryValue = string | number | boolean | undefined;
 export type ApiQuery = Record<string, ApiQueryValue>;
-export interface ApiRequestOptions { headers?: Record<string, string>; }
+export interface ApiRequestOptions {
+  headers?: Record<string, string>;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -46,13 +48,25 @@ export class ApiService {
     return this.request<T>('DELETE', path, undefined, {}, options);
   }
 
-  private request<T>(method: string, path: string, body?: unknown, query: ApiQuery = {}, options: ApiRequestOptions = {}): Observable<T> {
+  private request<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    query: ApiQuery = {},
+    options: ApiRequestOptions = {}
+  ): Observable<T> {
     return this.requestEnvelope<T>(method, path, body, query, options).pipe(
       map((envelope) => envelope?.data as T)
     );
   }
 
-  private requestEnvelope<T>(method: string, path: string, body?: unknown, query: ApiQuery = {}, options: ApiRequestOptions = {}): Observable<ApiEnvelope<T>> {
+  private requestEnvelope<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    query: ApiQuery = {},
+    options: ApiRequestOptions = {}
+  ): Observable<ApiEnvelope<T>> {
     const cleanPath = path.replace(/^\//, '');
     const source = environment.useMockApi
       ? this.mock.request<T>(method, cleanPath, body, query)

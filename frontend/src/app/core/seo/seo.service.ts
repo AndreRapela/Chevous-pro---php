@@ -45,9 +45,19 @@ export class SeoService {
   }
 
   private render(page: SeoPage): void {
-    const title = this.clean(page.translateContent === false ? page.title : this.localization.translate(page.title), 60);
-    const description = this.clean(page.translateContent === false ? page.description : this.localization.translate(page.description), 160);
-    const canonical = this.absoluteUrl(page.canonicalPath ?? this.document.location?.pathname ?? '/');
+    const title = this.clean(
+      page.translateContent === false ? page.title : this.localization.translate(page.title),
+      60
+    );
+    const description = this.clean(
+      page.translateContent === false
+        ? page.description
+        : this.localization.translate(page.description),
+      160
+    );
+    const canonical = this.absoluteUrl(
+      page.canonicalPath ?? this.document.location?.pathname ?? '/'
+    );
     const robots = page.noindex ? 'noindex, nofollow' : 'index, follow, max-image-preview:large';
     const type = page.type ?? 'website';
 
@@ -64,7 +74,8 @@ export class SeoService {
     this.setName('twitter:title', title);
     this.setName('twitter:description', description);
 
-    const image = page.imagePath === '' ? '' : this.absoluteUrl(page.imagePath ?? DEFAULT_IMAGE_PATH);
+    const image =
+      page.imagePath === '' ? '' : this.absoluteUrl(page.imagePath ?? DEFAULT_IMAGE_PATH);
     if (image) {
       this.setProperty('og:image', image);
       this.setName('twitter:image', image);
@@ -105,7 +116,9 @@ export class SeoService {
     const script = existing ?? this.document.createElement('script');
     script.id = id;
     script.setAttribute('type', 'application/ld+json');
-    script.textContent = JSON.stringify(data, (key, value) => this.structuredDataValue(key, value)).replace(/</g, '\\u003c');
+    script.textContent = JSON.stringify(data, (key, value) =>
+      this.structuredDataValue(key, value)
+    ).replace(/</g, '\\u003c');
     if (!existing) this.document.head.appendChild(script);
   }
 
@@ -118,7 +131,11 @@ export class SeoService {
   }
 
   private structuredDataValue(key: string, value: unknown): unknown {
-    if (typeof value === 'string' && ['url', 'item', 'target', 'image'].includes(key) && value.startsWith('/')) {
+    if (
+      typeof value === 'string' &&
+      ['url', 'item', 'target', 'image'].includes(key) &&
+      value.startsWith('/')
+    ) {
       return this.absoluteUrl(value);
     }
     return value;
@@ -126,6 +143,8 @@ export class SeoService {
 
   private clean(value: string, maximumLength: number): string {
     const normalized = value.replace(/\s+/g, ' ').trim();
-    return normalized.length > maximumLength ? `${normalized.slice(0, maximumLength - 1).trimEnd()}…` : normalized;
+    return normalized.length > maximumLength
+      ? `${normalized.slice(0, maximumLength - 1).trimEnd()}…`
+      : normalized;
   }
 }

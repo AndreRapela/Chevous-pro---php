@@ -1,5 +1,7 @@
 $ErrorActionPreference = 'Stop'
 $baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
+. (Join-Path $PSScriptRoot 'integration_support.ps1')
+Assert-IntegrationTarget $baseUrl
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }

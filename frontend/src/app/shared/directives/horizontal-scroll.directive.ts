@@ -36,7 +36,12 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
     // gesture is vertical or horizontal. Handling touch here would replace that
     // native behaviour with one synchronous scrollLeft assignment per move.
     if (event.pointerType === 'touch') return;
-    if (!event.isPrimary || event.button !== 0 || this.element.scrollWidth <= this.element.clientWidth) return;
+    if (
+      !event.isPrimary ||
+      event.button !== 0 ||
+      this.element.scrollWidth <= this.element.clientWidth
+    )
+      return;
     this.pointerId = event.pointerId;
     this.originX = event.clientX;
     this.originY = event.clientY;
@@ -63,7 +68,8 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
   @HostListener('pointercancel', ['$event'])
   finish(event: PointerEvent): void {
     if (this.pointerId !== event.pointerId) return;
-    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId);
+    if (this.element.hasPointerCapture(event.pointerId))
+      this.element.releasePointerCapture(event.pointerId);
     this.pointerId = null;
     if (!this.dragging) return;
     this.suppressClick = true;
@@ -80,6 +86,6 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     event.preventDefault();
     const direction = event.key === 'ArrowRight' ? 1 : -1;
-    this.element.scrollBy({ left: direction * this.element.clientWidth * .8, behavior: 'smooth' });
+    this.element.scrollBy({ left: direction * this.element.clientWidth * 0.8, behavior: 'smooth' });
   }
 }

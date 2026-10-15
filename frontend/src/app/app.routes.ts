@@ -12,8 +12,15 @@ export const routes: Routes = [
   {
     path: 'pagamento/:slug',
     title: 'Pagamento | ChezVoust Pro',
-    data: { seo: { title: 'Pagamento | ChezVoust Pro', description: 'Finalize seu pedido com segurança.', noindex: true } },
-    loadComponent: () => import('./features/checkout/pages/payment/payment.component').then((m) => m.PaymentComponent)
+    data: {
+      seo: {
+        title: 'Pagamento | ChezVoust Pro',
+        description: 'Finalize seu pedido com segurança.',
+        noindex: true
+      }
+    },
+    loadComponent: () =>
+      import('./features/checkout/pages/payment/payment.component').then((m) => m.PaymentComponent)
   },
   {
     path: '',
@@ -22,16 +29,39 @@ export const routes: Routes = [
   },
   ...authRoutes,
   {
-    path: 'conta', component: PortalShellComponent, canActivate: [authGuard, roleGuard('customer')], data: { portal: 'customer', seo: { noindex: true } },
+    path: 'conta',
+    component: PortalShellComponent,
+    canActivate: [authGuard, roleGuard('customer')],
+    data: { portal: 'customer', seo: { noindex: true } },
     children: customerRoutes
   },
   {
-    path: 'prestador', component: PortalShellComponent, canActivate: [authGuard, roleGuard('provider')], data: { portal: 'provider', seo: { noindex: true } },
+    path: 'prestador',
+    component: PortalShellComponent,
+    canActivate: [authGuard, roleGuard('provider')],
+    data: { portal: 'provider', seo: { noindex: true } },
     children: providerRoutes
   },
   {
-    path: 'admin', component: PortalShellComponent, canActivate: [authGuard, roleGuard('admin')], data: { portal: 'admin', seo: { noindex: true } },
+    path: 'admin',
+    component: PortalShellComponent,
+    canActivate: [authGuard, roleGuard('admin')],
+    data: { portal: 'admin', seo: { noindex: true } },
     children: adminRoutes
   },
-  { path: '**', title: 'Página não encontrada | ChezVoust Pro', data: { seo: { title: 'Página não encontrada | ChezVoust Pro', description: 'A página solicitada não foi encontrada.', noindex: true } }, loadComponent: () => import('./features/public/pages/not-found/not-found.component').then((m) => m.NotFoundComponent) }
+  {
+    path: '**',
+    title: 'Página não encontrada | ChezVoust Pro',
+    data: {
+      seo: {
+        title: 'Página não encontrada | ChezVoust Pro',
+        description: 'A página solicitada não foi encontrada.',
+        noindex: true
+      }
+    },
+    loadComponent: () =>
+      import('./features/public/pages/not-found/not-found.component').then(
+        (m) => m.NotFoundComponent
+      )
+  }
 ];

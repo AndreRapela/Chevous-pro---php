@@ -6,6 +6,7 @@ namespace ChezVoust\Core;
 
 final class Request
 {
+    private const MAX_JSON_BYTES = 1048576;
     private function __construct(
         public readonly string $method,
         public readonly string $path,
@@ -15,9 +16,8 @@ final class Request
         public readonly array $headers,
         public readonly array $cookies,
         public readonly string $ip,
-        public readonly string $requestId
-    ) {
-    }
+        public readonly string $requestId,
+    ) {}
 
     public static function capture(string $trustedProxySecret = ''): self
     {
@@ -33,7 +33,11 @@ final class Request
             if (!str_starts_with((string) $name, 'HTTP_') || !is_scalar($value)) {
                 continue;
             }
-            $headerName = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr((string) $name, 5)))));
+            $headerName = str_replace(
+                ' ',
+                '-',
+                ucwords(strtolower(str_replace('_', ' ', substr((string) $name, 5)))),
+            );
             if (!array_key_exists($headerName, $headers)) {
                 $headers[$headerName] = (string) $value;
             }
@@ -50,13 +54,16 @@ final class Request
             $body = is_array($_POST) ? $_POST : [];
             $files = is_array($_FILES) ? $_FILES : [];
         } else {
-            $raw = file_get_contents('php://input') ?: '';
+            $raw = file_get_contents('php://input', false, null, 0, self::MAX_JSON_BYTES + 1) ?: '';
+            if (strlen($raw) > self::MAX_JSON_BYTES) {
+                throw new ApiException(
+                    413,
+                    'PAYLOAD_TOO_LARGE',
+                    'O corpo JSON excede o limite permitido.',
+                );
+            }
             if ($raw !== '') {
-                $decoded = json_decode($raw, true);
-                if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE) {
-                    throw new ApiException(400, 'INVALID_JSON', 'O corpo da requisição deve conter JSON válido.');
-                }
-                $body = $decoded;
+                $body = self::decodeJson($raw);
             }
         }
 
@@ -67,16 +74,28 @@ final class Request
         $providedProxySecret = $normalizedHeaders['x-proxy-secret'] ?? '';
         $forwardedIp = trim($normalizedHeaders['x-forwarded-for'] ?? '');
         if (
-            strlen($trustedProxySecret) >= 32
-            && hash_equals($trustedProxySecret, $providedProxySecret)
-            && filter_var($forwardedIp, FILTER_VALIDATE_IP) !== false
+            strlen($trustedProxySecret) >= 32 &&
+            hash_equals($trustedProxySecret, $providedProxySecret) &&
+            filter_var($forwardedIp, FILTER_VALIDATE_IP) !== false
         ) {
             $ip = $forwardedIp;
         }
         $providedRequestId = $normalizedHeaders['x-request-id'] ?? '';
-        $requestId = preg_match('/^[a-zA-Z0-9._-]{8,80}$/', $providedRequestId) ? $providedRequestId : Uuid::v4();
+        $requestId = preg_match('/^[a-zA-Z0-9._-]{8,80}$/', $providedRequestId)
+            ? $providedRequestId
+            : Uuid::v4();
 
-        return new self($method, $path, $_GET, $body, $files, $normalizedHeaders, $_COOKIE, $ip, $requestId);
+        return new self(
+            $method,
+            $path,
+            $_GET,
+            $body,
+            $files,
+            $normalizedHeaders,
+            $_COOKIE,
+            $ip,
+            $requestId,
+        );
     }
 
     public function bearerToken(): ?string
@@ -87,6 +106,34 @@ final class Request
         }
 
         return trim($matches[1]);
+    }
+
+    public static function decodeJson(string $raw): array
+    {
+        if (strlen($raw) > self::MAX_JSON_BYTES) {
+            throw new ApiException(
+                413,
+                'PAYLOAD_TOO_LARGE',
+                'O corpo JSON excede o limite permitido.',
+            );
+        }
+        try {
+            $object = json_decode($raw, false, 64, JSON_THROW_ON_ERROR);
+            if (!($object instanceof \stdClass)) {
+                throw new ApiException(
+                    400,
+                    'INVALID_JSON',
+                    'O corpo da requisição deve conter um objeto JSON válido.',
+                );
+            }
+            return json_decode($raw, true, 64, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            throw new ApiException(
+                400,
+                'INVALID_JSON',
+                'O corpo da requisição deve conter um objeto JSON válido.',
+            );
+        }
     }
 
     public function input(string $key, mixed $default = null): mixed

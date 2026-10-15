@@ -1,19 +1,33 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readSource } from './support/source-reader.mjs';
 import { describe, it } from 'node:test';
 
 // Palette/selector regressions, not a substitute for browser or full WCAG auditing.
-const source = readFileSync(new URL('../src/styles.scss', import.meta.url), 'utf8')
+const source = readSource(new URL('../src/styles.scss', import.meta.url))
   .replace(/\/\*[\s\S]*?\*\//g, '')
   .replace(/^\s*\/\/.*$/gm, '');
-const variables = new Map([...source.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;{}]+);/g)].map(match => [match[1], match[2].trim()]));
-const rules = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(match => ({ selectors: match[1].split(',').map(value => value.trim()), declarations: match[2] }));
+const variables = new Map(
+  [...source.matchAll(/(--[a-z0-9-]+)\s*:\s*([^;{}]+);/g)].map((match) => [
+    match[1],
+    match[2].trim()
+  ])
+);
+const rules = [...source.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+  selectors: match[1].split(',').map((value) => value.trim()),
+  declarations: match[2]
+}));
+
+function assertCssEqual(actual: string, expected: string): void {
+  const normalize = (value: string) => value.replace(/\s+/g, '').replace(/\b0\.(\d+)/g, '.$1');
+  assert.equal(normalize(actual), normalize(expected));
+}
 
 function declaration(selector: string, property: string): string {
   let result = '';
   for (const rule of rules) {
     if (!rule.selectors.includes(selector)) continue;
-    for (const match of rule.declarations.matchAll(/([a-z-]+)\s*:\s*([^;{}]+);/g)) if (match[1] === property) result = match[2].trim();
+    for (const match of rule.declarations.matchAll(/([a-z-]+)\s*:\s*([^;{}]+);/g))
+      if (match[1] === property) result = match[2].trim();
   }
   assert.ok(result, `${selector} must define ${property}`);
   return result;
@@ -30,19 +44,26 @@ function resolve(value: string): string {
 
 function luminance(color: string): number {
   assert.match(color, /^#[0-9a-f]{6}$/i);
-  const values = color.slice(1).match(/../g)!.map(value => parseInt(value, 16) / 255).map(value => value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4);
+  const values = color
+    .slice(1)
+    .match(/../g)!
+    .map((value) => parseInt(value, 16) / 255)
+    .map((value) => (value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4));
   return values[0] * 0.2126 + values[1] * 0.7152 + values[2] * 0.0722;
 }
 
 function contrast(first: string, second: string): number {
-  const a = luminance(resolve(first)), b = luminance(resolve(second));
+  const a = luminance(resolve(first)),
+    b = luminance(resolve(second));
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
 describe('original green brand palette', () => {
   it('keeps the reference logo with aperture P and o, a smaller vector r, and a versioned shared asset', () => {
-    const logo = readFileSync(new URL('../public/pro-logo.svg', import.meta.url), 'utf8');
-    const brand = readFileSync(new URL('../src/app/shared/components/brand/brand.component.ts', import.meta.url), 'utf8');
+    const logo = readSource(new URL('../public/pro-logo.svg', import.meta.url));
+    const brand = readSource(
+      new URL('../src/app/shared/components/brand/brand.component.ts', import.meta.url)
+    );
     assert.match(logo, /viewBox="0 0 220 138"/);
     assert.match(logo, /id="letter-p"[\s\S]*mask="url\(#p-shutter\)"/);
     assert.match(logo, /id="letter-o"[\s\S]*mask="url\(#o-shutter\)"/);
@@ -51,33 +72,72 @@ describe('original green brand palette', () => {
     assert.match(logo, /font-weight="700"[^>]*>Chez vous pro<\/text>/);
     assert.match(brand, /src="\/pro-logo\.svg\?v=20261009-aperture-logo"/);
     assert.match(brand, /alt="" width="220" height="138"/);
-    assert.ok(!logo.includes('<image'), 'The brand must stay vector-based rather than embedding the reference photograph.');
+    assert.ok(
+      !logo.includes('<image'),
+      'The brand must stay vector-based rather than embedding the reference photograph.'
+    );
   });
   it('keeps secondary reading text above 4.5:1 across the main light surfaces', () => {
-    for (const background of ['--surface', '--surface-soft', '--page-background', '--hero-background', '--control-background', '--brand-100', '--coral-100', '--amber-100', '--danger-soft', '--warning-soft']) {
+    for (const background of [
+      '--surface',
+      '--surface-soft',
+      '--page-background',
+      '--hero-background',
+      '--control-background',
+      '--brand-100',
+      '--coral-100',
+      '--amber-100',
+      '--danger-soft',
+      '--warning-soft'
+    ]) {
       for (const foreground of ['--ink-500', '--ink-600', '--ink-700']) {
-        assert.ok(contrast(`var(${foreground})`, `var(${background})`) >= 4.5, `${foreground} must remain readable on ${background}`);
+        assert.ok(
+          contrast(`var(${foreground})`, `var(${background})`) >= 4.5,
+          `${foreground} must remain readable on ${background}`
+        );
       }
     }
-    assert.equal(declaration('input::placeholder', 'color'), 'var(--ink-500)');
-    assert.equal(declaration('input::placeholder', 'opacity'), '1');
-    assert.equal(declaration('textarea::placeholder', 'color'), 'var(--ink-500)');
+    assertCssEqual(declaration('input::placeholder', 'color'), 'var(--ink-500)');
+    assertCssEqual(declaration('input::placeholder', 'opacity'), '1');
+    assertCssEqual(declaration('textarea::placeholder', 'color'), 'var(--ink-500)');
   });
   it('keeps input and search boundaries above 3:1 against their adjacent neutral surfaces', () => {
     for (const selector of ['input', 'textarea', 'select', '.hero-search', '.search-field']) {
       const border = declaration(selector, 'border-color');
-      for (const surface of ['--surface', '--surface-soft', '--page-background', '--hero-background', '--control-background']) {
-        assert.ok(contrast(border, `var(${surface})`) >= 3, `${selector} boundary must be distinguishable on ${surface}`);
+      for (const surface of [
+        '--surface',
+        '--surface-soft',
+        '--page-background',
+        '--hero-background',
+        '--control-background'
+      ]) {
+        assert.ok(
+          contrast(border, `var(${surface})`) >= 3,
+          `${selector} boundary must be distinguishable on ${surface}`
+        );
       }
     }
-    assert.equal(declaration('.search-field input', 'background'), 'transparent');
-    assert.equal(declaration('.hero-search input', 'box-shadow'), 'none');
+    assertCssEqual(declaration('.search-field input', 'background'), 'transparent');
+    assertCssEqual(declaration('.hero-search input', 'box-shadow'), 'none');
   });
   it('uses an opaque brand focus indicator and gives borderless search inputs a wrapper indicator', () => {
-    for (const selector of [':focus-visible', 'input:focus', 'textarea:focus', 'select:focus', '.hero-search:focus-within', '.search-field:focus-within']) {
+    for (const selector of [
+      ':focus-visible',
+      'input:focus',
+      'textarea:focus',
+      'select:focus',
+      '.hero-search:focus-within',
+      '.search-field:focus-within'
+    ]) {
       const outline = declaration(selector, 'outline');
       assert.match(outline, /(?:2|3)px solid var\(--control-focus\)/);
-      for (const surface of ['--surface', '--page-background', '--hero-background', '--control-background']) assert.ok(contrast('var(--control-focus)', `var(${surface})`) >= 3);
+      for (const surface of [
+        '--surface',
+        '--page-background',
+        '--hero-background',
+        '--control-background'
+      ])
+        assert.ok(contrast('var(--control-focus)', `var(${surface})`) >= 3);
     }
   });
   it('restores the original green surfaces and the established readable type scale', () => {
@@ -86,177 +146,339 @@ describe('original green brand palette', () => {
     assert.equal(variables.get('--brand-500'), '#00a874');
     assert.equal(variables.get('--page-background'), '#edf6f1');
     assert.equal(variables.get('--hero-background'), '#dff7ed');
-    assert.equal(declaration('.hero-section', 'background'), 'var(--hero-background)');
+    assertCssEqual(declaration('.hero-section', 'background'), 'var(--hero-background)');
     assert.ok(contrast('var(--hero-background)', 'var(--page-background)') > 1);
     assert.ok(contrast('var(--hero-background)', 'var(--page-background)') < 1.1);
-    assert.equal(declaration('.section-mint', 'background'), 'var(--page-background)');
-    assert.equal(declaration('.home-providers', 'background'), 'var(--page-background)');
+    assertCssEqual(declaration('.section-mint', 'background'), 'var(--page-background)');
+    assertCssEqual(declaration('.home-providers', 'background'), 'var(--page-background)');
     assert.ok(parseFloat(variables.get('--type-meta')!) * 16 >= 13);
     assert.ok(parseFloat(variables.get('--type-ui')!) * 16 >= 14);
     assert.ok(parseFloat(variables.get('--type-body')!) * 16 >= 16);
   });
   it('uses a light keyboard focus indicator on dark hero and authentication surfaces', () => {
-    for (const selector of ['.section-dark :focus-visible', '.hero-banner :focus-visible', '.login-brand-panel :focus-visible', '.register-brand-panel :focus-visible']) {
-      assert.equal(declaration(selector, 'outline-color'), 'var(--control-focus-on-dark)');
-      for (const surface of ['--brand-900', '--brand-800', '--brand-700']) assert.ok(contrast('var(--control-focus-on-dark)', `var(${surface})`) >= 3);
+    for (const selector of [
+      '.section-dark :focus-visible',
+      '.hero-banner :focus-visible',
+      '.login-brand-panel :focus-visible',
+      '.register-brand-panel :focus-visible'
+    ]) {
+      assertCssEqual(declaration(selector, 'outline-color'), 'var(--control-focus-on-dark)');
+      for (const surface of ['--brand-900', '--brand-800', '--brand-700'])
+        assert.ok(contrast('var(--control-focus-on-dark)', `var(${surface})`) >= 3);
     }
   });
   it('turns the public header into a brand bar with one prominent account action', () => {
-    assert.equal(declaration('.site-header', 'background'), 'var(--brand-700)');
-    assert.equal(declaration('.site-header', 'border-color'), 'var(--brand-700)');
-    assert.equal(declaration('body .site-header .header-create-account', 'background'), '#fff');
-    assert.equal(declaration('body .site-header .header-create-account', 'color'), 'var(--brand-900)');
-    assert.equal(declaration('body .site-header .header-create-account', 'font-weight'), '850');
-    assert.equal(declaration('.site-header .locale-trigger', 'min-height'), '2.2rem');
-    assert.equal(declaration('.site-header .locale-trigger', 'box-shadow'), 'none');
-    assert.equal(declaration('body .site-header .locale-trigger-value', 'font-size'), '.78rem !important');
-    assert.equal(declaration('.site-footer', 'background'), 'var(--brand-700)');
-    assert.equal(declaration('.site-footer', 'border-color'), 'var(--brand-700)');
-    assert.equal(declaration('.site-footer .footer-group summary', 'color'), '#fff');
-    assert.equal(declaration('.site-footer .footer-group h2', 'color'), '#fff');
-    assert.equal(declaration('.site-footer .footer-bottom', 'border-color'), 'rgba(255, 255, 255, .24)');
-    const template = readFileSync(new URL('../src/app/layout/public-shell.component.ts', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.site-header', 'background'), 'var(--brand-700)');
+    assertCssEqual(declaration('.site-header', 'border-color'), 'var(--brand-700)');
+    assertCssEqual(declaration('body .site-header .header-create-account', 'background'), '#fff');
+    assertCssEqual(
+      declaration('body .site-header .header-create-account', 'color'),
+      'var(--brand-900)'
+    );
+    assertCssEqual(declaration('body .site-header .header-create-account', 'font-weight'), '850');
+    assertCssEqual(declaration('.site-header .locale-trigger', 'min-height'), '2.2rem');
+    assertCssEqual(declaration('.site-header .locale-trigger', 'box-shadow'), 'none');
+    assertCssEqual(
+      declaration('body .site-header .locale-trigger-value', 'font-size'),
+      '.78rem !important'
+    );
+    assertCssEqual(declaration('.site-footer', 'background'), 'var(--brand-700)');
+    assertCssEqual(declaration('.site-footer', 'border-color'), 'var(--brand-700)');
+    assertCssEqual(declaration('.site-footer .footer-group summary', 'color'), '#fff');
+    assertCssEqual(declaration('.site-footer .footer-group h2', 'color'), '#fff');
+    assertCssEqual(
+      declaration('.site-footer .footer-bottom', 'border-color'),
+      'rgba(255, 255, 255, .24)'
+    );
+    const template = readSource(
+      new URL('../src/app/layout/public-shell.component.ts', import.meta.url)
+    );
     assert.match(template, /class="btn btn-primary header-create-account" routerLink="\/cadastro"/);
-    assert.equal((template.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length, 3);
+    assert.equal(
+      (template.match(/<details class="footer-group footer-mobile-group">/g) ?? []).length,
+      3
+    );
     assert.equal((template.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3);
     assert.doesNotMatch(template, /<details class="footer-group footer-mobile-group" open>/);
   });
   it('places two raised hero cards around a slimmer strip with five balanced service links', () => {
     assert.match(declaration('.desktop-hero-lower', 'grid-template-columns'), /minmax\(0, 1fr\)/);
-    assert.equal(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
-    assert.equal(declaration('.desktop-hero-lower', 'min-height'), '5.5rem');
-    assert.equal(declaration('.desktop-hero-lower', 'padding'), '.25rem .4rem');
-    assert.equal(declaration('.desktop-hero-lower', '--promo-offset'), 'clamp(1.5rem, 2.3vw, 2rem)');
-    assert.equal(declaration('.desktop-hero-lower', '--services-offset'), 'clamp(6.25rem, 9vw, 7rem)');
-    assert.equal(declaration('.desktop-service-links', 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))');
-    assert.equal(declaration('.desktop-service-strip', 'border'), '0');
-    assert.equal(declaration('.desktop-service-strip a', 'min-height'), '2.5rem');
-    assert.equal(declaration('.desktop-service-strip a', 'font-weight'), '750');
-    assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
-    assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
-    assert.equal(declaration('.desktop-promo-card', 'bottom'), '-1.5rem');
-    assert.equal(declaration('.desktop-promo-card', 'left'), 'var(--promo-offset)');
-    assert.equal(declaration('.desktop-service-strip', 'padding'), '0 .1rem 0 var(--services-offset)');
-    assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-2.25rem');
-    assert.equal(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
-    assert.equal(declaration('.desktop-promo-card > div', 'text-align'), 'center');
-    assert.equal(declaration('.desktop-booking-preview .btn', 'min-height'), '2.2rem');
-    assert.equal(declaration('.desktop-hero-tag', 'font-size'), '.7rem');
-    assert.equal(declaration('.desktop-hero-tag', 'background'), 'rgba(255,255,255,.84)');
-    assert.equal(declaration('.desktop-service-strip a:hover', 'background'), 'var(--brand-100)');
-    assert.equal(declaration('.desktop-service-strip a:focus-visible', 'box-shadow'), 'inset 0 0 0 1px var(--brand-200)');
-    const heroTemplate = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.ts', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
+    assertCssEqual(declaration('.desktop-hero-lower', 'min-height'), '5.5rem');
+    assertCssEqual(declaration('.desktop-hero-lower', 'padding'), '.25rem .4rem');
+    assertCssEqual(
+      declaration('.desktop-hero-lower', '--promo-offset'),
+      'clamp(1.5rem, 2.3vw, 2rem)'
+    );
+    assertCssEqual(
+      declaration('.desktop-hero-lower', '--services-offset'),
+      'clamp(6.25rem, 9vw, 7rem)'
+    );
+    assertCssEqual(
+      declaration('.desktop-service-links', 'grid-template-columns'),
+      'repeat(5, minmax(0, 1fr))'
+    );
+    assertCssEqual(declaration('.desktop-service-strip', 'border'), '0');
+    assertCssEqual(declaration('.desktop-service-strip a', 'min-height'), '2.5rem');
+    assertCssEqual(declaration('.desktop-service-strip a', 'font-weight'), '750');
+    assertCssEqual(declaration('.desktop-promo-card', 'position'), 'absolute');
+    assertCssEqual(declaration('.desktop-booking-preview', 'position'), 'absolute');
+    assertCssEqual(declaration('.desktop-promo-card', 'bottom'), '-1.5rem');
+    assertCssEqual(declaration('.desktop-promo-card', 'left'), 'var(--promo-offset)');
+    assertCssEqual(
+      declaration('.desktop-service-strip', 'padding'),
+      '0 .1rem 0 var(--services-offset)'
+    );
+    assertCssEqual(declaration('.desktop-booking-preview', 'bottom'), '-2.25rem');
+    assertCssEqual(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
+    assertCssEqual(declaration('.desktop-promo-card > div', 'text-align'), 'center');
+    assertCssEqual(declaration('.desktop-booking-preview .btn', 'min-height'), '2.2rem');
+    assertCssEqual(declaration('.desktop-hero-tag', 'font-size'), '.7rem');
+    assertCssEqual(declaration('.desktop-hero-tag', 'background'), 'rgba(255,255,255,.84)');
+    assertCssEqual(declaration('.desktop-service-strip a:hover', 'background'), 'var(--brand-100)');
+    assertCssEqual(
+      declaration('.desktop-service-strip a:focus-visible', 'box-shadow'),
+      'inset 0 0 0 1px var(--brand-200)'
+    );
+    const heroTemplate = readSource(
+      new URL(
+        '../src/app/features/public/components/home-hero/home-hero.component.ts',
+        import.meta.url
+      )
+    );
     assert.match(heroTemplate, /q: 'jardim'[\s\S]*category="gardening"[\s\S]*Jardim/);
   });
   it('gives the desktop professional feed its own accessible scroll area', () => {
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'overflow-y'), 'auto');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'overscroll-behavior-y'), 'contain');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'scrollbar-gutter'), 'stable');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'scrollbar-color'), 'var(--brand-400) var(--surface-soft)');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'height'), '0');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'min-height'), '100%');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'max-height'), 'none');
-    assert.equal(declaration('cvp-provider-detail .profile-detail-layout', 'align-items'), 'stretch');
-    const template = readFileSync(new URL('../src/app/features/public/pages/provider-detail/provider-detail.component.ts', import.meta.url), 'utf8');
-    assert.match(template, /class="detail-main" role="region" aria-label="Perfil profissional" tabindex="0"/);
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'overflow-y'), 'auto');
+    assertCssEqual(
+      declaration('cvp-provider-detail .detail-main', 'overscroll-behavior-y'),
+      'contain'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'scrollbar-gutter'), 'stable');
+    assertCssEqual(
+      declaration('cvp-provider-detail .detail-main', 'scrollbar-color'),
+      'var(--brand-400) var(--surface-soft)'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'height'), '0');
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'min-height'), '100%');
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'max-height'), 'none');
+    assertCssEqual(
+      declaration('cvp-provider-detail .profile-detail-layout', 'align-items'),
+      'stretch'
+    );
+    const template = readSource(
+      new URL(
+        '../src/app/features/public/pages/provider-detail/provider-detail.component.ts',
+        import.meta.url
+      )
+    );
+    assert.match(
+      template,
+      /class="detail-main" role="region" aria-label="Perfil profissional" tabindex="0"/
+    );
   });
   it('makes review dividers visible and gives the verified-review note the full card width', () => {
-    assert.equal(declaration('cvp-provider-detail .feedback-section .review-list article', 'border-top-color'), 'var(--ink-300)');
-    assert.equal(declaration('cvp-provider-detail .feedback-section > .feedback-intro', 'max-width'), 'none');
-    const template = readFileSync(new URL('../src/app/features/public/pages/provider-detail/provider-detail.component.ts', import.meta.url), 'utf8');
-    assert.match(template, /<\/div><p class="feedback-intro">Somente clientes que fecharam negócio pela plataforma podem avaliar com estrelas\.<\/p>/);
+    assertCssEqual(
+      declaration('cvp-provider-detail .feedback-section .review-list article', 'border-top-color'),
+      'var(--ink-300)'
+    );
+    assertCssEqual(
+      declaration('cvp-provider-detail .feedback-section > .feedback-intro', 'max-width'),
+      'none'
+    );
+    const template = readSource(
+      new URL(
+        '../src/app/features/public/pages/provider-detail/provider-detail.component.ts',
+        import.meta.url
+      )
+    );
+    assert.match(
+      template,
+      /<\/div><p class="feedback-intro">Somente clientes que fecharam negócio pela plataforma podem avaliar com estrelas\.<\/p>/
+    );
   });
   it('harmonizes portrait decorations with the restored green surfaces', () => {
-    assert.equal(declaration('.desktop-hero-visual::before', 'background'), 'linear-gradient(145deg, var(--brand-600), var(--brand-700))');
-    assert.equal(declaration('.desktop-hero-visual::after', 'background'), 'var(--amber-500)');
-    assert.equal(declaration('.desktop-hero-orb', 'border'), '0');
-    assert.equal(declaration('.desktop-hero-orb.orb-mint', 'background'), 'var(--hero-orb-mint-color)');
-    assert.equal(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--coral-500)');
+    assertCssEqual(
+      declaration('.desktop-hero-visual::before', 'background'),
+      'linear-gradient(145deg, var(--brand-600), var(--brand-700))'
+    );
+    assertCssEqual(declaration('.desktop-hero-visual::after', 'background'), 'var(--amber-500)');
+    assertCssEqual(declaration('.desktop-hero-orb', 'border'), '0');
+    assertCssEqual(
+      declaration('.desktop-hero-orb.orb-mint', 'background'),
+      'var(--hero-orb-mint-color)'
+    );
+    assertCssEqual(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--coral-500)');
     assert.equal(variables.get('--page-background'), '#edf6f1');
   });
   it('uses a visible mint orb and shares slightly faster cycles across Home and service details', () => {
-    const homeStyles = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.scss', import.meta.url), 'utf8');
-    const serviceStyles = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
+    const homeStyles = readSource(
+      new URL(
+        '../src/app/features/public/components/home-hero/home-hero.component.scss',
+        import.meta.url
+      )
+    );
+    const serviceStyles = readSource(
+      new URL(
+        '../src/app/features/public/pages/service-detail/service-detail.component.scss',
+        import.meta.url
+      )
+    );
     assert.equal(variables.get('--hero-orb-mint-color'), 'var(--brand-400)');
     for (const surface of ['--page-background', '--hero-background']) {
-      assert.ok(contrast('var(--hero-orb-mint-color)', `var(${surface})`) > 1.5, 'The decorative mint circle must stay distinguishable from the pale background.');
+      assert.ok(
+        contrast('var(--hero-orb-mint-color)', `var(${surface})`) > 1.5,
+        'The decorative mint circle must stay distinguishable from the pale background.'
+      );
     }
-    for (const [color, oldDuration] of [['mint', 15], ['coral', 14], ['amber', 16], ['small', 13]] as const) {
+    for (const [color, oldDuration] of [
+      ['mint', 15],
+      ['coral', 14],
+      ['amber', 16],
+      ['small', 13]
+    ] as const) {
       const token = `--hero-orb-duration-${color}`;
-      assert.equal(variables.get(token), `${oldDuration * 8 / 10}s`);
+      assert.equal(variables.get(token), `${(oldDuration * 8) / 10}s`);
       assert.ok(homeStyles.includes(`var(${token})`));
       assert.ok(serviceStyles.includes(`var(${token})`));
-      assert.equal(declaration(`cvp-home-hero .mobile-hero-orb-${color}`, '--orb-duration'), `var(${token})`);
+      assertCssEqual(
+        declaration(`cvp-home-hero .mobile-hero-orb-${color}`, '--orb-duration'),
+        `var(${token})`
+      );
     }
-    assert.equal(declaration('.desktop-hero-orb', '--orb-duration'), 'var(--hero-orb-duration-mint)');
-    assert.equal(declaration('.desktop-hero-orb.orb-coral', '--orb-duration'), 'var(--hero-orb-duration-coral)');
-    assert.equal(declaration('.desktop-hero-orb.orb-amber', '--orb-duration'), 'var(--hero-orb-duration-amber)');
+    assertCssEqual(
+      declaration('.desktop-hero-orb', '--orb-duration'),
+      'var(--hero-orb-duration-mint)'
+    );
+    assertCssEqual(
+      declaration('.desktop-hero-orb.orb-coral', '--orb-duration'),
+      'var(--hero-orb-duration-coral)'
+    );
+    assertCssEqual(
+      declaration('.desktop-hero-orb.orb-amber', '--orb-duration'),
+      'var(--hero-orb-duration-amber)'
+    );
     for (const css of [source, homeStyles, serviceStyles]) {
       const timings = [...css.matchAll(/--orb-duration:\s*([^;]+);/g)];
       assert.ok(timings.length > 0);
-      assert.ok(timings.every(match => /^var\(--hero-orb-duration-(?:mint|coral|amber|small)\)$/.test(match[1])), 'Every hero must use the shared animation timings.');
+      assert.ok(
+        timings.every((match) =>
+          /^var\(--hero-orb-duration-(?:mint|coral|amber|small)\)$/.test(match[1])
+        ),
+        'Every hero must use the shared animation timings.'
+      );
     }
-    assert.equal(declaration('cvp-home-hero .mobile-hero-orb-mint', 'background'), 'var(--hero-orb-mint-color)');
-    assert.match(homeStyles, /\.mobile-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s);
-    assert.match(serviceStyles, /\.service-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s);
+    assertCssEqual(
+      declaration('cvp-home-hero .mobile-hero-orb-mint', 'background'),
+      'var(--hero-orb-mint-color)'
+    );
+    assert.match(
+      homeStyles,
+      /\.mobile-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s
+    );
+    assert.match(
+      serviceStyles,
+      /\.service-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s
+    );
   });
   it('uses reading-size professional benefits and a larger invitation button without a fixed card height', () => {
-    assert.equal(declaration('.provider-cta-actions', 'font-size'), '1rem');
-    assert.equal(declaration('body .provider-cta-actions .btn', 'font-size'), '1rem !important');
-    assert.equal(declaration('.provider-cta-actions .btn', 'min-height'), '3rem');
-    assert.equal(declaration('.provider-cta-actions', 'gap'), '.75rem');
-    assert.equal(declaration('.provider-cta', 'min-height'), '12rem');
-    assert.equal(declaration('.provider-cta', 'grid-template-columns'), 'minmax(0, 1.6fr) minmax(18rem, .8fr)');
-    assert.ok(!rules.some(rule => rule.selectors.includes('.provider-cta') && /(?:^|;)\s*height\s*:/.test(rule.declarations)));
-    assert.ok(!rules.some(rule => rule.selectors.includes('.provider-cta') && /overflow:\s*hidden/.test(rule.declarations)));
+    assertCssEqual(declaration('.provider-cta-actions', 'font-size'), '1rem');
+    assertCssEqual(declaration('body .provider-cta-actions .btn', 'font-size'), '1rem !important');
+    assertCssEqual(declaration('.provider-cta-actions .btn', 'min-height'), '3rem');
+    assertCssEqual(declaration('.provider-cta-actions', 'gap'), '.75rem');
+    assertCssEqual(declaration('.provider-cta', 'min-height'), '12rem');
+    assertCssEqual(
+      declaration('.provider-cta', 'grid-template-columns'),
+      'minmax(0, 1.6fr) minmax(18rem, .8fr)'
+    );
+    assert.ok(
+      !rules.some(
+        (rule) =>
+          rule.selectors.includes('.provider-cta') && /(?:^|;)\s*height\s*:/.test(rule.declarations)
+      )
+    );
+    assert.ok(
+      !rules.some(
+        (rule) =>
+          rule.selectors.includes('.provider-cta') && /overflow:\s*hidden/.test(rule.declarations)
+      )
+    );
   });
   it('keeps the catalog search header prominent and responsive', () => {
     assert.ok(
       rules.some(
         (rule) =>
           rule.selectors.includes('.page-hero.catalog-hero') &&
-          rule.declarations.includes('padding-block: clamp(2rem, 3.2vw, 2.75rem)'),
-      ),
+          rule.declarations.includes('padding-block: clamp(2rem, 3.2vw, 2.75rem)')
+      )
     );
-    assert.equal(declaration('.catalog-hero h1', 'font-size'), 'clamp(2rem, 3vw, 2.7rem)');
-    assert.equal(declaration('body .catalog-hero p', 'font-size'), '1rem !important');
-    assert.equal(declaration('.catalog-hero .search-field', 'min-height'), '3.1rem');
-    assert.equal(declaration('.catalog-hero .search-field input', 'font-size'), '1rem !important');
+    assertCssEqual(declaration('.catalog-hero h1', 'font-size'), 'clamp(2rem, 3vw, 2.7rem)');
+    assertCssEqual(declaration('body .catalog-hero p', 'font-size'), '1rem !important');
+    assertCssEqual(declaration('.catalog-hero .search-field', 'min-height'), '3.1rem');
+    assertCssEqual(
+      declaration('.catalog-hero .search-field input', 'font-size'),
+      '1rem !important'
+    );
     assert.ok(source.includes('.page-hero.catalog-hero { padding-block: 2.1rem 2.35rem; }'));
     assert.ok(source.includes('.page-hero.catalog-hero { padding-block: 1.9rem 2.1rem; }'));
   });
   it('shows home categories as compact illustrated tiles with labels only', () => {
-    assert.equal(declaration('.home-categories .category-grid', 'background'), 'transparent');
-    assert.equal(declaration('.home-categories .category-grid', 'border'), '0');
-    assert.equal(declaration('.home-categories .category-grid', 'box-shadow'), 'none');
-    assert.equal(declaration('.home-categories .category-card', 'background'), 'transparent');
-    assert.equal(declaration('.home-categories .category-card', 'border'), '0');
-    assert.equal(declaration('.home-categories .category-card', 'box-shadow'), 'none');
-    assert.equal(declaration('.home-categories .category-card', 'flex-direction'), 'column');
-    assert.equal(declaration('.home-categories .category-card', 'align-items'), 'center');
-    assert.equal(declaration('.home-categories .category-card::after', 'display'), 'none');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'width'), '4.2rem');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'color'), 'var(--category-accent) !important');
-    assert.equal(declaration('.home-categories .category-card .category-symbol', 'background'), 'var(--category-soft) !important');
-    assert.equal(declaration('.home-categories .service-icon', 'width'), '2.65rem');
-    assert.equal(declaration('body .home-categories .category-card strong', 'overflow-wrap'), 'anywhere');
-    assert.equal(declaration('body .home-categories .category-card strong', 'align-self'), 'center');
-    assert.equal(declaration('body .home-categories .category-card strong', 'text-align'), 'center');
-    const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.home-categories .category-grid', 'background'), 'transparent');
+    assertCssEqual(declaration('.home-categories .category-grid', 'border'), '0');
+    assertCssEqual(declaration('.home-categories .category-grid', 'box-shadow'), 'none');
+    assertCssEqual(declaration('.home-categories .category-card', 'background'), 'transparent');
+    assertCssEqual(declaration('.home-categories .category-card', 'border'), '0');
+    assertCssEqual(declaration('.home-categories .category-card', 'box-shadow'), 'none');
+    assertCssEqual(declaration('.home-categories .category-card', 'flex-direction'), 'column');
+    assertCssEqual(declaration('.home-categories .category-card', 'align-items'), 'center');
+    assertCssEqual(declaration('.home-categories .category-card::after', 'display'), 'none');
+    assertCssEqual(
+      declaration('.home-categories .category-card .category-symbol', 'width'),
+      '4.2rem'
+    );
+    assertCssEqual(
+      declaration('.home-categories .category-card .category-symbol', 'color'),
+      'var(--category-accent) !important'
+    );
+    assertCssEqual(
+      declaration('.home-categories .category-card .category-symbol', 'background'),
+      'var(--category-soft) !important'
+    );
+    assertCssEqual(declaration('.home-categories .service-icon', 'width'), '2.65rem');
+    assertCssEqual(
+      declaration('body .home-categories .category-card strong', 'overflow-wrap'),
+      'anywhere'
+    );
+    assertCssEqual(
+      declaration('body .home-categories .category-card strong', 'align-self'),
+      'center'
+    );
+    assertCssEqual(
+      declaration('body .home-categories .category-card strong', 'text-align'),
+      'center'
+    );
+    const template = readSource(
+      new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url)
+    );
     assert.match(template, /class="category-symbol" aria-hidden="true"/);
     assert.ok(!template.includes('{{ category.serviceCount }}'));
   });
   it('adds a responsive product campaign with admin-controlled artwork', () => {
-    assert.equal(declaration('.home-discount-banner', 'display'), 'grid');
-    assert.equal(declaration('.home-discount-banner', 'min-height'), '11.75rem');
+    assertCssEqual(declaration('.home-discount-banner', 'display'), 'grid');
+    assertCssEqual(declaration('.home-discount-banner', 'min-height'), '11.75rem');
     assert.ok(source.includes('min-height: 12rem;'));
-    assert.equal(declaration('.home-discount-banner', 'overflow'), 'hidden');
-    assert.equal(declaration('.home-discount-copy h3', 'color'), 'var(--promo-text, #fff)');
-    assert.equal(declaration('.home-discount-cta', 'background'), '#fff');
-    assert.equal(declaration('.home-discount-art img', 'position'), 'absolute');
-    const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.home-discount-banner', 'overflow'), 'hidden');
+    assertCssEqual(declaration('.home-discount-copy h3', 'color'), 'var(--promo-text, #fff)');
+    assertCssEqual(declaration('.home-discount-cta', 'background'), '#fff');
+    assertCssEqual(declaration('.home-discount-art img', 'position'), 'absolute');
+    const template = readSource(
+      new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url)
+    );
     assert.match(template, /<section class="section home-section home-deals"/);
-    assert.match(template, /<a class="home-discount-banner"[^>]*\[attr\.href\]="promotion\(\)\.ctaUrl"/);
+    assert.match(
+      template,
+      /<a class="home-discount-banner"[^>]*\[attr\.href\]="promotion\(\)\.ctaUrl"/
+    );
     assert.match(template, /<span class="btn home-discount-cta">/);
     assert.ok(!template.includes('<a class="btn home-discount-cta"'));
     assert.match(template, /\[src\]="promotion\(\)\.imageUrl"/);
@@ -264,90 +486,223 @@ describe('original green brand palette', () => {
     assert.match(template, /ctaUrl/);
   });
   it('matches the compact mobile reference without changing the desktop hero', () => {
-    assert.equal(declaration('cvp-home-hero .hero-banner', 'border-radius'), '0');
-    assert.equal(declaration('cvp-home-hero .hero-banner-copy', 'display'), 'none');
-    assert.equal(declaration('cvp-home .home-discount-banner', 'min-height'), '8.4rem');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'display'), 'flex');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'align-items'), 'stretch');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'overflow-x'), 'auto');
-    assert.equal(declaration('body cvp-home .home-categories .category-grid', 'scroll-snap-type'), 'x mandatory');
-    assert.equal(declaration('body cvp-home .home-categories .category-card', 'height'), '4.55rem');
-    assert.equal(declaration('body cvp-home .home-categories .category-card', 'flex'), '0 0 calc((100% - 1.5rem) / 4)');
-    assert.equal(declaration('body cvp-home .home-categories .category-card', 'flex-direction'), 'column');
-    assert.equal(declaration('body cvp-home .home-categories .category-card:nth-child(n) .category-symbol', 'flex-basis'), '2.2rem');
-    assert.equal(declaration('cvp-home .home-categories .mobile-scroll-hint', 'display'), 'flex');
-    assert.ok(!source.includes('body cvp-home .home-categories .category-card:nth-child(n + 5) { display: none; }'));
-    assert.match(source, /cvp-home-hero \.mobile-hero-orb\s*\{[^}]*animation:\s*home-orb-float[^;]*infinite/s);
+    assertCssEqual(declaration('cvp-home-hero .hero-banner', 'border-radius'), '0');
+    assertCssEqual(declaration('cvp-home-hero .hero-banner-copy', 'display'), 'none');
+    assertCssEqual(declaration('cvp-home .home-discount-banner', 'min-height'), '8.4rem');
+    assertCssEqual(declaration('body cvp-home .home-categories .category-grid', 'display'), 'flex');
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-grid', 'align-items'),
+      'stretch'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-grid', 'overflow-x'),
+      'auto'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-grid', 'scroll-snap-type'),
+      'x mandatory'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-card', 'height'),
+      '4.55rem'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-card', 'flex'),
+      '0 0 calc((100% - 1.5rem) / 4)'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-categories .category-card', 'flex-direction'),
+      'column'
+    );
+    assertCssEqual(
+      declaration(
+        'body cvp-home .home-categories .category-card:nth-child(n) .category-symbol',
+        'flex-basis'
+      ),
+      '2.2rem'
+    );
+    assertCssEqual(declaration('cvp-home .home-categories .mobile-scroll-hint', 'display'), 'flex');
+    assert.ok(
+      !source.includes(
+        'body cvp-home .home-categories .category-card:nth-child(n + 5) { display: none; }'
+      )
+    );
+    assert.match(
+      source,
+      /cvp-home-hero \.mobile-hero-orb\s*\{[^}]*animation:\s*home-orb-float[^;]*infinite/s
+    );
   });
   it('keeps the lower mobile home rails compact', () => {
-    assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'flex'), '0 0 11.75rem');
-    assert.equal(declaration('body cvp-home .home-popular cvp-service-card', 'min-width'), '0');
-    assert.equal(declaration('body cvp-home .home-providers cvp-provider-card', 'flex'), '0 0 calc((100% - .55rem) / 2)');
-    assert.equal(declaration('body cvp-home .home-providers .provider-card', 'min-height'), '10rem');
-    assert.equal(declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'), 'column');
-    assert.equal(declaration('body cvp-home .home-providers .provider-name-line', 'justify-items'), 'center');
-    assert.equal(declaration('body cvp-home .home-providers .provider-card .chip-row', 'display'), 'none');
-    assert.equal(declaration('body cvp-home .home-providers .availability', 'display'), 'none');
+    assertCssEqual(
+      declaration('body cvp-home .home-popular cvp-service-card', 'flex'),
+      '0 0 11.75rem'
+    );
+    assertCssEqual(declaration('body cvp-home .home-popular cvp-service-card', 'min-width'), '0');
+    assertCssEqual(
+      declaration('body cvp-home .home-providers cvp-provider-card', 'flex'),
+      '0 0 calc((100% - .55rem) / 2)'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-card', 'min-height'),
+      '10rem'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'),
+      'column'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-name-line', 'justify-items'),
+      'center'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-card .chip-row', 'display'),
+      'none'
+    );
+    assertCssEqual(declaration('body cvp-home .home-providers .availability', 'display'), 'none');
   });
   it('balances the tablet hero and uses profile-first professional cards', () => {
-    const tabletStyles = source.slice(source.indexOf('@media (min-width: 48rem) and (max-width: 63.999rem)'));
+    const tabletStyles = source.slice(
+      source.indexOf('@media (min-width: 48rem) and (max-width: 63.999rem)')
+    );
     const tabletHero = tabletStyles.slice(0, tabletStyles.indexOf('cvp-home .home-providers'));
-    assert.match(tabletHero, /cvp-home-hero \.hero-stack \.hero-mobile-action\s*\{\s*display:\s*none;\s*\}/);
-    assert.equal(declaration('body cvp-home .home-providers .provider-grid', 'grid-template-columns'), 'repeat(3, minmax(0, 1fr))');
-    assert.equal(declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'), 'column');
+    assert.match(
+      tabletHero,
+      /cvp-home-hero \.hero-stack \.hero-mobile-action\s*\{\s*display:\s*none;\s*\}/
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-grid', 'grid-template-columns'),
+      'repeat(3, minmax(0, 1fr))'
+    );
+    assertCssEqual(
+      declaration('body cvp-home .home-providers .provider-card-head', 'flex-direction'),
+      'column'
+    );
   });
   it('uses one compact mobile booking action and removes the home steps section', () => {
-    assert.equal(declaration('.hero-mobile-action', 'display'), 'flex');
-    assert.equal(declaration('.hero-mobile-action .btn', 'border-radius'), '999px');
-    assert.equal(declaration('.hero-mobile-action .btn', 'background'), '#087e66');
-    const hero = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.ts', import.meta.url), 'utf8');
-    const home = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.hero-mobile-action', 'display'), 'flex');
+    assertCssEqual(declaration('.hero-mobile-action .btn', 'border-radius'), '999px');
+    assertCssEqual(declaration('.hero-mobile-action .btn', 'background'), '#087e66');
+    const hero = readSource(
+      new URL(
+        '../src/app/features/public/components/home-hero/home-hero.component.ts',
+        import.meta.url
+      )
+    );
+    const home = readSource(
+      new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url)
+    );
     assert.match(hero, /class="hero-mobile-action"/);
     assert.ok(!hero.includes('id="home-search"'));
     assert.ok(!home.includes('class="section home-section home-steps"'));
   });
   it('does not cover the mobile booking action with the public bottom navigation', () => {
-    assert.equal(declaration('body:has(cvp-booking-wizard .booking-mobile-action-bar) .public-bottom-nav', 'display'), 'none');
+    assertCssEqual(
+      declaration(
+        'body:has(cvp-booking-wizard .booking-mobile-action-bar) .public-bottom-nav',
+        'display'
+      ),
+      'none'
+    );
   });
   it('keeps service cards free of a fixed price', () => {
-    const card = readFileSync(new URL('../src/app/shared/components/service-card/service-card.component.ts', import.meta.url), 'utf8');
+    const card = readSource(
+      new URL(
+        '../src/app/shared/components/service-card/service-card.component.ts',
+        import.meta.url
+      )
+    );
     assert.ok(!card.includes('priceFromCents'));
     assert.ok(!card.includes('A partir de'));
   });
   it('organizes professional identity and booking in a compact lateral rail', () => {
-    assert.equal(declaration('cvp-provider-detail .section-tight', 'padding'), '1rem 0 2rem');
-    assert.equal(declaration('cvp-provider-detail .profile-detail-layout', 'width'), 'min(100% - 2rem, 68rem)');
-    assert.equal(declaration('cvp-provider-detail .profile-sidebar', 'display'), 'grid');
-    assert.equal(declaration('cvp-provider-detail .profile-overview-card', 'display'), 'grid');
-    assert.ok(rules.some(rule => rule.selectors.includes('cvp-provider-detail .profile-intro h1') && rule.declarations.includes('font-size: clamp(1.25rem, 2vw, 1.5rem)')));
-    assert.equal(declaration('body cvp-provider-detail .profile-intro p', 'font-size'), '.9375rem !important');
-    assert.equal(declaration('cvp-provider-detail .profile-summary-tags', 'width'), '100%');
-    assert.equal(declaration('cvp-provider-detail .profile-sidebar-facts', 'display'), 'grid');
-    assert.equal(declaration('cvp-provider-detail .detail-main', 'gap'), '.85rem');
-    assert.equal(declaration('cvp-provider-detail .content-card', 'padding'), '1rem');
-    assert.equal(declaration('cvp-provider-detail .content-card h2', 'font-size'), '1.0625rem');
-    assert.equal(declaration('cvp-provider-detail .compact-service-list', 'grid-template-columns'), 'repeat(3, minmax(0, 1fr))');
-    assert.equal(declaration('cvp-provider-detail .booking-aside', 'padding'), '1rem');
-    assert.equal(declaration('cvp-provider-detail .booking-aside', 'align-self'), 'start');
-    assert.ok(!rules.some(rule => rule.selectors.includes('cvp-provider-detail .booking-aside') && /(?:^|;)\s*(?:height|max-height)\s*:/.test(rule.declarations)));
-    assert.equal(declaration('body p', 'font-size'), '1rem !important');
+    assertCssEqual(declaration('cvp-provider-detail .section-tight', 'padding'), '1rem 0 2rem');
+    assertCssEqual(
+      declaration('cvp-provider-detail .profile-detail-layout', 'width'),
+      'min(100% - 2rem, 68rem)'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .profile-sidebar', 'display'), 'grid');
+    assertCssEqual(declaration('cvp-provider-detail .profile-overview-card', 'display'), 'grid');
+    assert.ok(
+      rules.some(
+        (rule) =>
+          rule.selectors.includes('cvp-provider-detail .profile-intro h1') &&
+          rule.declarations.includes('font-size: clamp(1.25rem, 2vw, 1.5rem)')
+      )
+    );
+    assertCssEqual(
+      declaration('body cvp-provider-detail .profile-intro p', 'font-size'),
+      '.9375rem !important'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .profile-summary-tags', 'width'), '100%');
+    assertCssEqual(declaration('cvp-provider-detail .profile-sidebar-facts', 'display'), 'grid');
+    assertCssEqual(declaration('cvp-provider-detail .detail-main', 'gap'), '.85rem');
+    assertCssEqual(declaration('cvp-provider-detail .content-card', 'padding'), '1rem');
+    assertCssEqual(declaration('cvp-provider-detail .content-card h2', 'font-size'), '1.0625rem');
+    assertCssEqual(
+      declaration('cvp-provider-detail .compact-service-list', 'grid-template-columns'),
+      'repeat(3, minmax(0, 1fr))'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .booking-aside', 'padding'), '1rem');
+    assertCssEqual(declaration('cvp-provider-detail .booking-aside', 'align-self'), 'start');
+    assert.ok(
+      !rules.some(
+        (rule) =>
+          rule.selectors.includes('cvp-provider-detail .booking-aside') &&
+          /(?:^|;)\s*(?:height|max-height)\s*:/.test(rule.declarations)
+      )
+    );
+    assertCssEqual(declaration('body p', 'font-size'), '1rem !important');
   });
   it('keeps service media, profile identity and informational sections proportionate', () => {
-    assert.equal(declaration('.service-detail-grid h1', 'max-width'), 'none');
-    assert.ok(rules.some(rule => rule.selectors.includes('.service-visual') && rule.declarations.includes('min-height: 15rem')));
-    const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
+    assertCssEqual(declaration('.service-detail-grid h1', 'max-width'), 'none');
+    assert.ok(
+      rules.some(
+        (rule) =>
+          rule.selectors.includes('.service-visual') &&
+          rule.declarations.includes('min-height: 15rem')
+      )
+    );
+    const servicePortrait = readSource(
+      new URL(
+        '../src/app/features/public/pages/service-detail/service-detail.component.scss',
+        import.meta.url
+      )
+    );
     assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*object-fit:\s*cover;/s);
-    assert.equal(declaration('.service-detail-provider-grid .provider-card', 'padding'), '.78rem');
-    assert.equal(declaration('cvp-provider-detail .profile-identity-panel', 'display'), 'grid');
-    assert.ok(rules.some(rule => rule.selectors.includes('cvp-provider-detail .profile-identity-panel .avatar-lg') && rule.declarations.includes('width: 5rem')));
-    assert.equal(declaration('cvp-info-page .info-page-hero', 'padding-bottom'), '.6rem');
-    assert.equal(declaration('cvp-info-page .info-page-content', 'padding-top'), '.4rem');
+    assertCssEqual(
+      declaration('.service-detail-provider-grid .provider-card', 'padding'),
+      '.78rem'
+    );
+    assertCssEqual(declaration('cvp-provider-detail .profile-identity-panel', 'display'), 'grid');
+    assert.ok(
+      rules.some(
+        (rule) =>
+          rule.selectors.includes('cvp-provider-detail .profile-identity-panel .avatar-lg') &&
+          rule.declarations.includes('width: 5rem')
+      )
+    );
+    assertCssEqual(declaration('cvp-info-page .info-page-hero', 'padding-bottom'), '.6rem');
+    assertCssEqual(declaration('cvp-info-page .info-page-content', 'padding-top'), '.4rem');
   });
   it('frames service portraits in a round slot instead of a wide crop that hides the face', () => {
-    const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
-    assert.match(servicePortrait, /\.service-visual:not\(\.custom-service-visual\)\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;/s);
-    assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*height:\s*141%;[^}]*object-position:\s*50% 8%;/s);
-    assert.match(servicePortrait, /@media \(min-width: 48rem\)\s*\{\s*\.service-detail-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\);/s);
+    const servicePortrait = readSource(
+      new URL(
+        '../src/app/features/public/pages/service-detail/service-detail.component.scss',
+        import.meta.url
+      )
+    );
+    assert.match(
+      servicePortrait,
+      /\.service-visual:not\(\.custom-service-visual\)\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;/s
+    );
+    assert.match(
+      servicePortrait,
+      /\.service-visual > img\s*\{[^}]*height:\s*141%;[^}]*object-position:\s*50% 8%;/s
+    );
+    assert.match(
+      servicePortrait,
+      /@media \(min-width: 48rem\)\s*\{\s*\.service-detail-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\);/s
+    );
     assert.doesNotMatch(source, /\.service-visual > img\s*\{/);
   });
 });

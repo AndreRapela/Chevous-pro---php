@@ -2,21 +2,44 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { localizeServerContent } from '../src/app/shared/localization/localized-server-content.util.ts';
 
-function text(data: string) { return { nodeType: 3, data, childNodes: [] }; }
-function element(tagName: string, attributes: Record<string, string> = {}, children: unknown[] = []) {
-  return { nodeType: 1, tagName, childNodes: children, attributes,
+function text(data: string) {
+  return { nodeType: 3, data, childNodes: [] };
+}
+function element(
+  tagName: string,
+  attributes: Record<string, string> = {},
+  children: unknown[] = []
+) {
+  return {
+    nodeType: 1,
+    tagName,
+    childNodes: children,
+    attributes,
     hasAttribute: (name: string) => Object.hasOwn(attributes, name),
     getAttribute: (name: string) => attributes[name] ?? null,
-    setAttribute: (name: string, value: string) => { attributes[name] = value; }
+    setAttribute: (name: string, value: string) => {
+      attributes[name] = value;
+    }
   };
 }
-function run(root: unknown) { localizeServerContent(root as Node, value => ({ Buscar: 'Search', Serviço: 'Service' })[value] ?? value); }
+function run(root: unknown) {
+  localizeServerContent(
+    root as Node,
+    (value) => ({ Buscar: 'Search', Serviço: 'Service' })[value] ?? value
+  );
+}
 
 describe('SSR interface localization', () => {
   it('translates text and accessible attributes without replacing nodes', () => {
     const label = text('Buscar');
-    const input = element('INPUT', { placeholder: 'Buscar', 'aria-label': 'Buscar', value: 'Buscar' });
-    const cell = element('TD', { 'data-label': 'Serviço', title: 'Serviço', alt: 'Serviço' }, [text('Serviço')]);
+    const input = element('INPUT', {
+      placeholder: 'Buscar',
+      'aria-label': 'Buscar',
+      value: 'Buscar'
+    });
+    const cell = element('TD', { 'data-label': 'Serviço', title: 'Serviço', alt: 'Serviço' }, [
+      text('Serviço')
+    ]);
     const comment = { nodeType: 8, data: 'Buscar', childNodes: [] };
     const root = element('DIV', {}, [label, input, cell, comment]);
     run(root);
@@ -38,7 +61,9 @@ describe('SSR interface localization', () => {
       assert.equal(value.data, 'Buscar');
     }
     const name = text('Buscar');
-    const privateContent = element('DIV', { 'data-cvp-no-localize': '', title: 'Buscar' }, [element('SPAN', {}, [name])]);
+    const privateContent = element('DIV', { 'data-cvp-no-localize': '', title: 'Buscar' }, [
+      element('SPAN', {}, [name])
+    ]);
     run(privateContent);
     assert.equal(name.data, 'Buscar');
     assert.equal(privateContent.attributes.title, 'Buscar');

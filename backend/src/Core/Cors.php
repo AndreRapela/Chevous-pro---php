@@ -20,7 +20,9 @@ final class Cors
 
         if ($request->method === 'OPTIONS') {
             header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS');
-            header('Access-Control-Allow-Headers: Authorization, Content-Type, Idempotency-Key, X-Request-Id');
+            header(
+                'Access-Control-Allow-Headers: Authorization, Content-Type, Idempotency-Key, X-Request-Id',
+            );
             header('Access-Control-Max-Age: 600');
             return Response::noContent();
         }
