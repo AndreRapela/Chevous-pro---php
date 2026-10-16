@@ -6,7 +6,7 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 ARG BUILD_CONFIGURATION=production
-RUN npm run build -- --configuration=${BUILD_CONFIGURATION} --optimization=true --source-map=false --output-hashing=all
+RUN npm run build -- --configuration=${BUILD_CONFIGURATION} --source-map=false --output-hashing=all
 
 FROM node:22-alpine AS ssr
 

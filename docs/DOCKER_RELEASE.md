@@ -14,6 +14,8 @@ existentes nem publicar `latest` automaticamente. A plataforma desta publicaçã
 
 O servidor web usa `nginx:1.30.6-alpine`, versão estável com as correções listadas
 nos [avisos de segurança do Nginx](https://nginx.org/en/security_advisories.html).
+O build preserva as opções de otimização de `angular.json`, incluindo a política
+de CSS compatível com a CSP; não acrescentar `--optimization=true` ao comando Docker.
 
 ## Preparar e publicar
 

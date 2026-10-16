@@ -1,9 +1,15 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+assert.doesNotMatch(
+  readFileSync(resolve(root, 'frontend/Dockerfile'), 'utf8'),
+  /--optimization(?:=|\s)/,
+  'O build Docker deve respeitar a política de CSS e CSP definida em angular.json.'
+);
 const command = [
   'compose',
   '-f',

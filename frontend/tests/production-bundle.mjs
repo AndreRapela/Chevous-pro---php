@@ -17,6 +17,13 @@ async function files(directory) {
 }
 
 const assets = await files(browserOutput);
+for (const asset of assets.filter((asset) => asset.pathname.endsWith('.html'))) {
+  assert.doesNotMatch(
+    await readFile(asset, 'utf8'),
+    /<link\b[^>]*\bonload\s*=/i,
+    'O CSS de produção não pode depender de um handler inline bloqueado pela CSP.'
+  );
+}
 const source = (
   await Promise.all(
     assets.filter((asset) => asset.pathname.endsWith('.js')).map((asset) => readFile(asset, 'utf8'))
@@ -30,4 +37,4 @@ for (const forbiddenDemoPassword of ['Cliente@123', 'Profissional@123', 'Admin@1
   );
 }
 
-console.log('PASS bundle de produção: sem senhas de demonstração.');
+console.log('PASS bundle de produção: CSS compatível com CSP e sem senhas de demonstração.');
