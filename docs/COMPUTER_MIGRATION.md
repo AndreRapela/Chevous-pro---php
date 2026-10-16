@@ -42,3 +42,7 @@ substitui o backup do banco nem do armazenamento privado.
 
 O fluxo de commit, push, deploy, backup e revisão de migrações está em
 `docs/OPERATIONS.md`.
+
+As imagens da aplicação podem ser recuperadas do Docker Hub conforme
+`docs/DOCKER_RELEASE.md`. Elas não incluem o banco local, credenciais ou uploads
+privados.

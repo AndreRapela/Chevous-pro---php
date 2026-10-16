@@ -25,7 +25,8 @@ para alterações de regra, segurança, contrato ou comportamento assíncrono.
 - `outbox_flow.ps1`: limite de tentativas, diagnóstico e remoção do payload
   sensível de eventos irrecuperáveis.
 - `production_compose.mjs`: garante que o overlay público não publique portas nem
-  entregue segredos desnecessários ao frontend.
+  entregue segredos desnecessários ao frontend; valida também imagens com revisão
+  obrigatória, sem rebuild nem bind de código local no overlay do registry.
 - o build Angular valida TypeScript, templates e estilos;
 - a inspeção manual no navegador complementa os contratos em celular, tablet e desktop;
   não é substituída pelo build ou por uma contagem de testes.

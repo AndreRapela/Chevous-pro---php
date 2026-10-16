@@ -1,0 +1,21 @@
+# Use após compose.production.yaml para executar imagens publicadas no Docker Hub.
+# IMAGE_TAG deve ser a revisão validada; não há tag latest ou fallback local.
+services:
+  api:
+    image: andrerapela/chezvous-pro:api-${IMAGE_TAG:?IMAGE_TAG é obrigatório}
+    build: !reset null
+    volumes: !override
+      - ./database:/var/www/database:ro
+      - api_storage:/var/www/html/storage
+  worker:
+    image: andrerapela/chezvous-pro:api-${IMAGE_TAG:?IMAGE_TAG é obrigatório}
+    build: !reset null
+    volumes: !override
+      - ./database:/var/www/database:ro
+      - api_storage:/var/www/html/storage
+  web:
+    image: andrerapela/chezvous-pro:web-${IMAGE_TAG:?IMAGE_TAG é obrigatório}
+    build: !reset null
+  ssr:
+    image: andrerapela/chezvous-pro:ssr-${IMAGE_TAG:?IMAGE_TAG é obrigatório}
+    build: !reset null

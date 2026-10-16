@@ -21,7 +21,7 @@ COPY --from=build /app/dist/chezvoust-pro/server ./server
 EXPOSE 4000
 CMD ["node", "server/server.mjs"]
 
-FROM nginx:1.27-alpine AS web
+FROM nginx:1.30.6-alpine AS web
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist/chezvoust-pro/browser /usr/share/nginx/html

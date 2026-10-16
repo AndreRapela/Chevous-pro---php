@@ -7,6 +7,10 @@ publicada quando a revisão enviada ao Git corresponde à versão verificada no 
 Falhas de acesso, configuração ou validação devem ser registradas como pendências,
 sem declarar a publicação concluída.
 
+O processo de build, publicação e recuperação das imagens no Docker Hub está em
+`docs/DOCKER_RELEASE.md`. O envio ao registry não inicia serviços nem altera o site
+publicado.
+
 1. Revisar o diff e conferir arquivos novos, segredos, dados pessoais e alterações de
    esquema. Não incluir arquivos locais por meio de `git add --force`.
 2. Executar os gates de qualidade de `tests/README.md` e gerar o build do ambiente
