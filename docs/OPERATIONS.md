@@ -44,6 +44,11 @@ por um canal privado e criptografado, com acesso restrito. Confirmar a restaura�
 antes de descartar a máquina anterior. O push do código não preserva volumes Docker,
 uploads privados, credenciais locais ou backups fora do repositório.
 
+Para preservar o estado local no registry público, use o pacote criptografado de
+`docs/COMPUTER_MIGRATION.md`. O banco e o armazenamento são enviados somente
+cifrados; a chave permanece no `.env`, transferido separadamente. Não restaurar
+esse banco local sobre o banco de produção nem habilitar sessões locais no site público.
+
 ### Demonstração e produção integrada
 
 A demonstração usa dados fictícios no navegador e não comprova persistência no banco,

@@ -27,6 +27,10 @@ para alterações de regra, segurança, contrato ou comportamento assíncrono.
 - `production_compose.mjs`: garante que o overlay público não publique portas nem
   entregue segredos desnecessários ao frontend; valida também imagens com revisão
   obrigatória, sem rebuild nem bind de código local no overlay do registry.
+- `state_backup.mjs`: round-trip do backup criptografado, integridade autenticada,
+  validação de chave e rejeição de caminhos inseguros ou arquivos de ambiente.
+- `state_backup_storage.mjs`: exportação e restauração reais de arquivos binários em
+  volumes Docker descartáveis, bloqueio de sobrescrita e permissões da API.
 - o build Angular valida TypeScript, templates e estilos;
 - a inspeção manual no navegador complementa os contratos em celular, tablet e desktop;
   não é substituída pelo build ou por uma contagem de testes.
@@ -37,6 +41,7 @@ Execução a partir da raiz:
 node tests/structure.mjs
 node tests/architecture.mjs
 node tests/production_compose.mjs
+node --test tests/state_backup.mjs
 pwsh -File tests/backend_check.ps1
 Set-Location frontend
 npm run check

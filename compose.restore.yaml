@@ -1,0 +1,5 @@
+# Usar apenas no computador novo, antes de restaurar em um banco vazio.
+services:
+  database:
+    volumes: !override
+      - mysql_data:/var/lib/mysql

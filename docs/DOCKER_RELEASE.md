@@ -84,3 +84,8 @@ migrações; portanto, não iniciar contra um banco existente sem essa revisão.
 Não publicar `.env`, credenciais, dados de clientes, dumps, arquivos privados,
 logs ou volumes Docker neste repositório público. Esses itens exigem transferência
 privada e criptografada, não `docker push`.
+
+O pacote de migração `state-20261016` é uma exceção somente para o **arquivo
+criptografado**, não para um dump em texto aberto. Ele não é um serviço e não
+substitui as imagens da aplicação. Sua recuperação e verificação estão em
+`docs/COMPUTER_MIGRATION.md`; a chave permanece fora do registry, no `.env` privado.

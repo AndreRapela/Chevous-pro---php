@@ -35,6 +35,7 @@ jobs:
       - run: php tests/backend_core.php
       - run: find backend -name '*.php' -not -path '*/vendor/*' -print0 | xargs -0 -n1 php -l
       - run: node tests/structure.mjs
+      - run: node --test tests/state_backup.mjs
       - run: node tests/production_compose.mjs
   integration:
     runs-on: ubuntu-latest
@@ -58,6 +59,8 @@ jobs:
       - name: Validar jornada completa de reserva
         shell: pwsh
         run: ./tests/booking_flow.ps1
+      - name: Validar backup do armazenamento em volumes isolados
+        run: node tests/state_backup_storage.mjs
       - name: Coletar logs em caso de falha
         if: failure()
         run: docker compose logs --no-color > compose-integration.log
