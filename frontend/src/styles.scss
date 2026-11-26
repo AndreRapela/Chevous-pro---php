@@ -442,9 +442,8 @@ html:has(.mobile-drawer[open]) { overflow: hidden; }
 .benefits-grid h2, .info-grid h2 { font-size: 1.15rem; }
 .benefits-grid p, .info-grid p { font-size: .85rem; }
 .service-detail-providers { padding-block: 2.5rem; background: var(--surface-soft); }
-.service-detail-providers .section-heading { margin-bottom: 1.1rem; }
+.service-detail-providers .section-heading { justify-content: center; margin-bottom: 1.1rem; text-align: center; }
 .service-detail-providers .section-heading :is(h1, h2) { font-size: clamp(1.65rem, 3vw, 2.35rem); margin-bottom: 0; }
-.service-detail-providers .service-detail-provider-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 22rem)); justify-content: start; }
 .service-detail-provider-grid .provider-card { padding: .85rem; }
 .service-detail-provider-grid .provider-card .chip-row { gap: .3rem; margin-top: .7rem; }
 .service-detail-provider-grid .provider-card .chip { padding: .26rem .48rem; font-size: .82rem; }
@@ -3351,6 +3350,7 @@ body .catalog-hero p {
 }
 .service-detail-providers .service-detail-provider-grid {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 20.5rem));
+  justify-content: center;
   gap: .75rem;
 }
 .service-detail-provider-grid .provider-card { padding: .78rem; }
