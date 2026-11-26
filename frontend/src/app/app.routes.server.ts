@@ -1,6 +1,7 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
 
 const privateHeaders = { 'X-Robots-Tag': 'noindex, nofollow' };
+const localizedHeaders = { Vary: 'Cookie' };
 const tokenPageHeaders = { ...privateHeaders, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' };
 
 /**
@@ -8,19 +9,19 @@ const tokenPageHeaders = { ...privateHeaders, 'Cache-Control': 'no-store', 'Refe
  * deliberadamente client-side e recebem noindex também no cabeçalho HTTP.
  */
 export const serverRoutes: ServerRoute[] = [
-  { path: '', renderMode: RenderMode.Server },
-  { path: 'servicos', renderMode: RenderMode.Server },
-  { path: 'servicos/categoria/:category', renderMode: RenderMode.Server },
-  { path: 'servicos/:slug', renderMode: RenderMode.Server },
-  { path: 'produtos', renderMode: RenderMode.Server },
-  { path: 'profissionais', renderMode: RenderMode.Server },
-  { path: 'profissionais/:id/:slug', renderMode: RenderMode.Server },
-  { path: 'profissionais/:id', renderMode: RenderMode.Server },
-  { path: 'como-funciona', renderMode: RenderMode.Server },
-  { path: 'seguranca', renderMode: RenderMode.Server },
-  { path: 'ajuda', renderMode: RenderMode.Server },
-  { path: 'termos', renderMode: RenderMode.Server },
-  { path: 'privacidade', renderMode: RenderMode.Server },
+  { path: '', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'servicos', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'servicos/categoria/:category', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'servicos/:slug', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'produtos', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'profissionais', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'profissionais/:id/:slug', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'profissionais/:id', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'como-funciona', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'seguranca', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'ajuda', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'termos', renderMode: RenderMode.Server, headers: localizedHeaders },
+  { path: 'privacidade', renderMode: RenderMode.Server, headers: localizedHeaders },
   { path: 'entrar', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'cadastro', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'recuperar-senha', renderMode: RenderMode.Client, headers: privateHeaders },
@@ -31,5 +32,5 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'conta/**', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'prestador/**', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'admin/**', renderMode: RenderMode.Client, headers: privateHeaders },
-  { path: '**', renderMode: RenderMode.Server, status: 404, headers: privateHeaders }
+  { path: '**', renderMode: RenderMode.Server, status: 404, headers: { ...privateHeaders, ...localizedHeaders } }
 ];

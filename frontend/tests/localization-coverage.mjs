@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
@@ -73,10 +73,22 @@ for (const [phrase, english, french] of [
   ['Novidades na loja', 'New in store', 'Nouveautés en boutique'],
   ['Preços e disponibilidade podem mudar sem aviso prévio.', 'Prices and availability are subject to change without notice.', 'Les prix et la disponibilité peuvent changer sans préavis.'],
   ['Kit de lavanderia essencial', 'Essential laundry kit', 'Kit de lessive essentiel'],
+  ['Ver produto', 'View product', 'Voir le produit'],
+  ['E-mail ou senha incorretos.', 'Incorrect email or password.', 'Adresse e-mail ou mot de passe incorrect.'],
+  ['Muitas tentativas. Tente novamente em 30 segundos.', 'Too many attempts. Try again in 30 seconds.', 'Trop de tentatives. Réessayez dans 30 secondes.'],
+  ['O valor mínimo é 3.', 'The minimum value is 3.', 'La valeur minimale est de 3.'],
   ['Uma seleção versátil para a manutenção semanal dos ambientes.', 'A versatile selection for weekly home cleaning.', 'Une sélection polyvalente pour l’entretien hebdomadaire de la maison.']
 ]) {
   assert.equal(translators.en.translate(phrase), english);
   assert.equal(translators.fr.translate(phrase), french);
+}
+for (const [source, en, fr] of [
+  ['BLACK FRIDAY OFFER', 'Black Friday offer', 'Offre Black Friday'],
+  ['Ver produto', 'View product', 'Voir le produit'],
+  ['Oferta do produto Casa Nova', 'Oferta do produto Casa Nova', 'Oferta do produto Casa Nova'],
+]) {
+  assert.equal(translators.en.translate(source, true), en);
+  assert.equal(translators.fr.translate(source, true), fr);
 }
 const dictionary = new Set(entries.flatMap(entry => [entry.pt, entry.en, entry.fr]));
 // Currency/language codes, address identifiers and the brand are not translated.
@@ -137,9 +149,27 @@ function inspectDisplayExpression(expression, file) {
     inspectDisplayExpression(expression.right, file);
   }
   if (expression.constructor.name === 'BindingPipe') inspectDisplayExpression(expression.exp, file);
+  if (expression.constructor.name === 'ParenthesizedExpression') inspectDisplayExpression(expression.expression, file);
 }
 function files(directory) {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => entry.isDirectory() ? files(join(directory, entry.name)) : [join(directory, entry.name)]);
+}
+// API errors and success messages shown by screens are also interface text.
+const backend = join(root, '../backend');
+if (existsSync(backend)) {
+  for (const file of [...files(join(backend, 'src')), ...files(join(backend, 'public'))].filter(file => file.endsWith('.php'))) {
+    const contents = readFileSync(file, 'utf8');
+    for (const pattern of [
+      /new ApiException\(\s*\d+,\s*'[^']+',\s*'([^'\n]+)'/g,
+      /['"]message['"]\s*=>\s*'([^'\n]+)'/g,
+      /(?:queryRow|requireRow)\([^;]+,\s*'([^'\n]+[.!])'\)/g,
+    ]) {
+      for (const [, phrase] of contents.matchAll(pattern)) check(phrase, file);
+    }
+    if (file.endsWith('Validator.php')) {
+      for (const [, phrase] of contents.matchAll(/(?:=>|\[\]\s*=)\s*'([^'\n]+\.)'/g)) check(phrase, file);
+    }
+  }
 }
 const interfaceProperties = new Set(['label', 'title', 'description', 'eyebrow', 'placeholder', 'message', 'hint', 'columns', 'primary', 'secondary', 'cells']);
 const feedbackSignals = new Set(['error', 'actionError', 'actionSuccess', 'loadError', 'success', 'passwordError', 'emailError', 'reportError', 'commentError', 'conversationError']);
@@ -169,16 +199,24 @@ for (const file of files(app).filter(file => file.endsWith('.component.ts') || f
       const receiver = node.expression.expression;
       if (ts.isPropertyAccessExpression(receiver) && feedbackSignals.has(receiver.name.text)) {
         for (const argument of node.arguments) {
-          if (ts.isStringLiteral(argument)) check(argument.text, file);
-          if (ts.isConditionalExpression(argument)) {
-            for (const value of [argument.whenTrue, argument.whenFalse]) if (ts.isStringLiteral(value)) check(value.text, file);
-          }
+          inspectFeedback(argument, file);
         }
       }
     }
     ts.forEachChild(node, inspectSource);
   }
   inspectSource(component);
+}
+function inspectFeedback(expression, file) {
+  if (ts.isStringLiteral(expression)) check(expression.text, file);
+  if (ts.isConditionalExpression(expression)) {
+    inspectFeedback(expression.whenTrue, file);
+    inspectFeedback(expression.whenFalse, file);
+  }
+  if (ts.isBinaryExpression(expression) && [ts.SyntaxKind.BarBarToken, ts.SyntaxKind.QuestionQuestionToken].includes(expression.operatorToken.kind)) {
+    inspectFeedback(expression.left, file);
+    inspectFeedback(expression.right, file);
+  }
 }
 const report = [...missing.entries()].map(([phrase, locations]) => ({ phrase, files: [...locations] }));
 assert.ok(templates >= 50 && count >= 1000, 'The audit must keep covering the full interface, not silently skip it');

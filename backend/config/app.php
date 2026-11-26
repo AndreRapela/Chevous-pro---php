@@ -87,7 +87,7 @@ return [
     'url' => rtrim(Env::get('APP_URL', 'http://localhost:8080'), '/'),
     'timezone' => Env::get('APP_TIMEZONE', 'Europe/Brussels'),
     'worker_heartbeat_max_age_seconds' => max(60, Env::int('WORKER_HEARTBEAT_MAX_AGE_SECONDS', 180)),
-    'locale' => Env::get('APP_LOCALE', 'pt-BR'),
+    'locale' => Env::get('APP_LOCALE', 'en-US'),
     'currency' => Env::get('APP_CURRENCY', 'BRL'),
     'currency_rates' => [
         'BRL' => 1.0,

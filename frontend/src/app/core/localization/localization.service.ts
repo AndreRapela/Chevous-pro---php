@@ -1,5 +1,5 @@
-import { DOCUMENT, registerLocaleData } from '@angular/common';
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DOCUMENT, isPlatformBrowser, registerLocaleData } from '@angular/common';
+import { Injectable, PLATFORM_ID, REQUEST, computed, inject, signal } from '@angular/core';
 import { convertReferenceAmount } from './reference-currency.util';
 import { createTranslationCatalog } from './translation-catalog';
 import { patterns, translations } from './translations.en';
@@ -17,6 +17,8 @@ const englishCatalog = createTranslationCatalog(translations, patterns);
 @Injectable({ providedIn: 'root' })
 export class LocalizationService {
   private readonly document = inject(DOCUMENT);
+  private readonly browser = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly request = inject(REQUEST, { optional: true });
   private preferredLanguage: AppLanguage = 'en';
   private translateEnglish = englishCatalog;
   private translateFrench?: typeof englishCatalog;
@@ -30,7 +32,10 @@ export class LocalizationService {
   }
 
   initialize(): Promise<void> | undefined {
-    if (this.readLanguage() === 'fr') return this.setLanguage('fr');
+    const cookie = this.browser ? this.document.cookie : this.request?.headers.get('cookie') ?? '';
+    const savedLanguage = /(?:^|;\s*)cvp\.language=(en|fr)(?=;|$)/u.exec(cookie)?.[1];
+    const language = savedLanguage ?? (this.browser ? this.readLanguage() : 'en');
+    if (language === 'fr') return this.setLanguage(language);
     return undefined;
   }
 
@@ -40,7 +45,13 @@ export class LocalizationService {
     if (language === 'fr' && !(await this.loadFrench())) return;
     if (this.preferredLanguage !== language) return;
     this.language.set(language);
-    this.safeStore(LANGUAGE_KEY, language);
+    if (this.browser) {
+      this.safeStore(LANGUAGE_KEY, language);
+      try {
+        const secure = this.document.location.protocol === 'https:' ? '; Secure' : '';
+        this.document.cookie = `${LANGUAGE_KEY}=${language}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
+      } catch { /* Preference cookies may be restricted. */ }
+    }
     this.applyDocumentLanguage(language);
   }
 
@@ -50,9 +61,9 @@ export class LocalizationService {
     this.safeStore(CURRENCY_KEY, currency);
   }
 
-  translate(source: string): string {
+  translate(source: string, knownOnly = false): string {
     const catalog = this.language() === 'fr' ? this.translateFrench ?? this.translateEnglish : this.translateEnglish;
-    return catalog(source);
+    return catalog(source, knownOnly);
   }
 
   private loadFrench(): Promise<boolean> {

@@ -262,7 +262,7 @@ describe('original green brand palette', () => {
     assert.match(template, /<article class="home-discount-banner"/);
     assert.match(template, /<a class="btn home-discount-cta" \[href\]="campaign\.ctaUrl"/);
     assert.match(template, /<cvp-promotion-media \[src\]="campaign\.imageUrl"/);
-    assert.match(template, /<h3>\{\{ campaign\.title \}\}<\/h3>/);
+    assert.match(template, /<h3[^>]*>\{\{ campaign\.title \| appCatalogText \}\}<\/h3>/);
     assert.doesNotMatch(template, /campaign-arrow|campaign-dots/);
   });
   it('draws promotions by weight every minute while excluding the current campaign', () => {

@@ -3,6 +3,14 @@ import { Pipe, PipeTransform, inject } from '@angular/core';
 import { AppCurrency, LocalizationService } from '../../core/localization/localization.service';
 import { agendaOffset } from '../utils/booking-time.util';
 
+@Pipe({ name: 'appCatalogText', standalone: true, pure: false })
+export class LocalizedCatalogTextPipe implements PipeTransform {
+  private readonly localization = inject(LocalizationService);
+  transform(value: string): string {
+    return this.localization.translate(value, true);
+  }
+}
+
 @Pipe({ name: 'appMoney', standalone: true, pure: false })
 export class LocalizedMoneyPipe implements PipeTransform {
   private readonly localization = inject(LocalizationService);

@@ -20,7 +20,7 @@ test.beforeAll(async () => {
   const app = express();
   app.use('/fixtures', express.static(fixtures));
   app.use(express.static(build, { index: false }));
-  app.get(['/', '/admin/conteudo'], (_request, response) => response.sendFile(pageShell));
+  app.get(['/', '/entrar', '/admin/conteudo'], (_request, response) => response.sendFile(pageShell));
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   origin = `http://127.0.0.1:${server.address().port}`;
@@ -86,6 +86,46 @@ test('os cartões da home abrem detalhes e perfis com clique em telas estreitas'
     await expect(page).toHaveURL(`${origin}${path}`);
     await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
   }
+});
+
+test('a campanha mantém título, botão e selo no idioma selecionado', async ({ page }) => {
+  await stubApi(page, {
+    'GET /api/v1/home': {
+      services: [], categories: [], professionals: [],
+      promotions: [{
+        id: 'offer', active: true, title: 'Ofertas escolhidas para você', ctaUrl: '/produtos', ctaLabel: 'Ver produto',
+        subtitle: 'Find useful products for cleaning, organizing, and home maintenance.', badgeText: 'BLACK FRIDAY OFFER',
+        secondaryLinks: [{ label: 'Ver ofertas', url: '/produtos', placement: 'banner' }],
+      }],
+    },
+  });
+  await page.goto(origin);
+  const campaign = page.locator('.home-discount-banner');
+  await expect(campaign.getByRole('heading')).toHaveText('Special offers picked for you');
+  await expect(campaign.locator('.home-discount-cta')).toHaveText('View product →');
+  await expect(campaign.locator('.home-discount-pill')).toHaveText('Black Friday offer');
+
+  await page.locator('cvp-locale-controls .locale-trigger:visible').first().click();
+  await page.locator('cvp-locale-controls .locale-option:visible').filter({ hasText: 'FR' }).first().click();
+  await expect(page.locator('html')).toHaveAttribute('lang', 'fr-FR');
+  await expect(campaign.getByRole('heading')).toHaveText('Des offres sélectionnées pour vous');
+  await expect(campaign.locator('.home-discount-cta')).toHaveText('Voir le produit →');
+  await expect(campaign.locator('.home-discount-pill')).toHaveText('Offre Black Friday');
+  await expect(campaign.locator('p')).toHaveText('Trouvez des produits utiles pour le nettoyage, le rangement et l’entretien de la maison.');
+  await expect(campaign.getByRole('link', { name: 'Voir les offres' })).toBeVisible();
+});
+
+test('erros de login da API são exibidos no idioma do formulário', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('cvp.language', 'fr'));
+  await page.route('**/api/v1/auth/login', route => route.fulfill({
+    status: 401,
+    json: { error: { code: 'INVALID_CREDENTIALS', message: 'E-mail ou senha incorretos.' } },
+  }));
+  await page.goto(`${origin}/entrar`);
+  await page.locator('input[type=email]').fill('fixture@example.invalid');
+  await page.locator('input[type=password]').fill('fixture-password');
+  await page.locator('form button[type=submit]').click();
+  await expect(page.getByRole('alert').locator('span')).toHaveText('Adresse e-mail ou mot de passe incorrect.');
 });
 
 test('a home mantém cada campanha por um minuto e alterna vídeo e imagem', async ({ page }) => {

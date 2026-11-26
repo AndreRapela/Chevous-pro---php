@@ -62,8 +62,8 @@ export class AppComponent {
       ...DEFAULT_SEO,
       ...seoData,
       noindex,
-      title: this.localization.translate(seoData.title ?? routeTitle),
-      description: this.localization.translate(seoData.description ?? DEFAULT_SEO.description)
+      title: seoData.title ?? routeTitle,
+      description: seoData.description ?? DEFAULT_SEO.description
     };
     this.seo.updateRoute(this.staticSeo);
   }

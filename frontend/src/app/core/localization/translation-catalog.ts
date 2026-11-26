@@ -11,22 +11,29 @@ export function createTranslationCatalog(english: Phrases, patterns: Patterns, f
     target: useFrench ? french?.[index]?.[1] ?? en : en
   }));
   const exact = new Map<string, string>();
+  const knownContent = new Map<string, string>();
+  const normalize = (text: string): string => text.normalize('NFC').replace(/\s+/gu, ' ').toLowerCase();
   // Prefer Portuguese and English source text before French aliases such as “Note”.
   for (const key of ['source', 'en', 'fr'] as const) {
     for (const entry of entries) {
       const term = entry[key];
       if (term && !exact.has(term)) exact.set(term, entry.target);
+      if (term && !knownContent.has(normalize(term))) knownContent.set(normalize(term), entry.target);
     }
   }
   const ordered = [...entries].sort((left, right) => right.source.length - left.source.length);
 
-  return (source: string): string => {
+  return (source: string, knownOnly = false): string => {
     const value = source.trim();
     if (!value) return source;
     const leading = source.match(/^\s*/)?.[0] ?? '';
     const trailing = source.match(/\s*$/)?.[0] ?? '';
     const translatedExact = exact.get(value);
     if (translatedExact !== undefined) return `${leading}${translatedExact}${trailing}`;
+    if (knownOnly) {
+      const translated = knownContent.get(normalize(value));
+      return translated === undefined ? source : `${leading}${translated}${trailing}`;
+    }
 
     const fromPortuguese = ordered.some((entry) => value.includes(entry.source) && replaceTranslationFragment(value, entry.source, '') !== value);
     const sourceKey = fromPortuguese ? 'source' : 'en';

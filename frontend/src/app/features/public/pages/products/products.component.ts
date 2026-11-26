@@ -7,13 +7,13 @@ import { MarketplaceService } from '../../../../core/data-access/marketplace.ser
 import { Product } from '../../../../core/models';
 import { SeoService } from '../../../../core/seo/seo.service';
 import { StatePanelComponent } from '../../../../shared/components';
-import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
+import { LocalizedCatalogTextPipe, LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { pageFromMeta, totalFromMeta } from '../../../../shared/utils/pagination.util';
 
 @Component({
   selector: 'cvp-products',
   standalone: true,
-  imports: [FormsModule, LocalizedMoneyPipe, RouterLink, StatePanelComponent],
+  imports: [FormsModule, LocalizedCatalogTextPipe, LocalizedMoneyPipe, RouterLink, StatePanelComponent],
   template: `
     <section class="page-hero store-hero">
       <div class="container store-hero-inner">
@@ -39,11 +39,11 @@ import { pageFromMeta, totalFromMeta } from '../../../../shared/utils/pagination
                 <div class="product-media">
                   @if (product.imageUrl) { <img [src]="product.imageUrl" [alt]="product.name" width="720" height="480" loading="lazy" decoding="async"> }
                   @else { <span class="product-placeholder" aria-hidden="true">⌂</span> }
-                  @if (product.badgeText) { <span class="product-badge">{{ product.badgeText }}</span> }
+                  @if (product.badgeText) { <span class="product-badge" data-cvp-no-localize>{{ product.badgeText | appCatalogText }}</span> }
                 </div>
                 <div class="product-copy">
-                  <h2>{{ product.name }}</h2>
-                  <p>{{ product.shortDescription }}</p>
+                  <h2 data-cvp-no-localize>{{ product.name | appCatalogText }}</h2>
+                  <p data-cvp-no-localize>{{ product.shortDescription | appCatalogText }}</p>
                   <div class="product-price">
                     @if (product.compareAtPriceCents && product.compareAtPriceCents > product.priceCents) { <del>{{ product.compareAtPriceCents / 100 | appMoney:product.currency }}</del> }
                     <strong>{{ product.priceCents / 100 | appMoney:product.currency }}</strong>

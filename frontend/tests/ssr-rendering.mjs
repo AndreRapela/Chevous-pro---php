@@ -13,8 +13,9 @@ const api = createServer((request, response) => {
   assert.equal(request.method, 'GET', 'SSR fixtures must never receive a write.');
   const categories = [{ id: 'category-test', slug: 'cleaning', name: 'Cleaning', description: 'Home cleaning.', serviceCount: 0 }];
   const service = { id: 'clean-home', categoryId: 'cleaning', slug: 'limpeza-residencial', name: 'Limpeza residencial', description: 'Limpeza completa adaptada ao tamanho da sua casa.', unit: 'serviço', pricingType: 'fixed', priceFromCents: 12000, durationMinutes: 240 };
+  const promotion = { id: 'offer', active: true, title: 'Ofertas escolhidas para você', ctaLabel: 'Ver produto', ctaUrl: '/produtos' };
   const data = {
-    '/api/v1/home': { categories, services: [service], promotions: [], professionals: [] },
+    '/api/v1/home': { categories, services: [service], promotions: [promotion], professionals: [] },
     '/api/v1/categories': categories,
     '/api/v1/services/limpeza-residencial': service
   }[path] ?? [];
@@ -44,11 +45,11 @@ const output = [];
 server.stdout.on('data', (chunk) => output.push(String(chunk)));
 server.stderr.on('data', (chunk) => output.push(String(chunk)));
 
-async function request(path) {
+async function request(path, cookie = '') {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     try {
       return await fetch(`${baseUrl}${path}`, {
-        headers: { 'x-forwarded-host': 'chezvoust.test', 'x-forwarded-proto': 'https' }
+        headers: { 'x-forwarded-host': 'chezvoust.test', 'x-forwarded-proto': 'https', cookie }
       });
     } catch {
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -84,6 +85,14 @@ try {
   assert.ok(!homeHtml.includes('A melhor solução para o seu lar.'));
   const homeData = JSON.parse(homeHtml.match(/<script[^>]+id="chezvoust-structured-data"[^>]*>([\s\S]*?)<\/script>/)?.[1] ?? 'null');
   assert.equal(homeData.find(item => item['@type'] === 'WebSite').name, 'ChezVoust Pro');
+  assert.match(homeHtml, /class="btn home-discount-cta"[^>]*>View product\b/);
+  const french = await request('/', 'cvp.language=fr');
+  const frenchHtml = await french.text();
+  assert.equal(french.status, 200);
+  assert.match(french.headers.get('vary') ?? '', /\bCookie\b/i);
+  assert.match(frenchHtml, /<html lang="fr-FR"/);
+  assert.match(frenchHtml, /property="og:locale" content="fr_FR"/);
+  assert.match(frenchHtml, /class="btn home-discount-cta"[^>]*>Voir le produit\b/);
   assert.equal(homeData.find(item => item['@type'] === 'Organization').name, 'ChezVoust Pro');
 
   const catalog = await request('/servicos');

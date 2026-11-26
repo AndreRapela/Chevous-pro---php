@@ -15,8 +15,9 @@ export const apiErrorInterceptor: HttpInterceptorFn = (request, next) =>
 
       if (failure instanceof HttpErrorResponse && isApiErrorBody(failure.error)) {
         const body = failure.error.error;
+        const message = body.code === 'INTERNAL_ERROR' ? 'Não foi possível processar a solicitação.' : body.message;
         return throwError(
-          () => new ApiClientError(body.code, body.message, failure.status, body.fields, body.requestId)
+          () => new ApiClientError(body.code, message, failure.status, body.fields, body.requestId)
         );
       }
 

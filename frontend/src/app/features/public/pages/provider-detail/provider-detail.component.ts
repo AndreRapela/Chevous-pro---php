@@ -135,8 +135,8 @@ export class ProviderDetailComponent implements OnInit {
 
   private updateSeo(provider: ProviderProfile, reviews: Review[]): void {
     const canonicalPath = providerPublicPath(provider).join('/');
-    const headline = provider.headline;
-    const description = provider.bio || `${provider.name} · ${provider.city}. ${this.localization.translate('Veja experiência, serviços e avaliações de reservas.')}`;
+    const headline = this.localization.translate(provider.headline, true);
+    const description = this.localization.translate(provider.bio, true) || `${provider.name} · ${provider.city}. ${this.localization.translate('Veja experiência, serviços e avaliações de reservas.')}`;
     const title = `${provider.name} | ${headline} | Pro`;
     const person: Record<string, unknown> = {
       '@context': 'https://schema.org',

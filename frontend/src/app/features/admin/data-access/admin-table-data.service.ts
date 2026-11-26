@@ -61,7 +61,16 @@ export class AdminTableDataService {
   }
 
   private bookingRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); return { id: this.text(item, 'id'), primary: this.text(item, 'serviceName', 'Serviço'), secondary: this.shortId(this.text(item, 'id')), cells: [`${this.text(item, 'customerName')} / ${this.text(item, 'professionalName', this.localization.translate('A definir'))}`, this.date(this.text(item, 'scheduledStart'), this.text(item, 'timezone') || undefined), this.money(this.amount(item, 'totalCents'), this.currency(item))], status: this.label(status), tone: this.statusTone(status), rawStatus: status }; }
-  private userRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); return { id: this.text(item, 'id'), primary: this.text(item, 'name'), secondary: this.shortId(this.text(item, 'id')), cells: [this.text(item, 'email'), this.date(this.text(item, 'createdAt')), this.text(item, 'role')], status: this.label(status), tone: this.statusTone(status), rawStatus: status }; }
+  private userRow(value: unknown): AdminRow {
+    const item = this.record(value);
+    const status = this.text(item, 'status');
+    const roles: Record<string, string> = { customer: 'Cliente', provider: 'Profissional', admin: 'Administrador' };
+    return {
+      id: this.text(item, 'id'), primary: this.text(item, 'name'), secondary: this.shortId(this.text(item, 'id')),
+      cells: [this.text(item, 'email'), this.date(this.text(item, 'createdAt')), roles[this.text(item, 'role')] ?? '—'],
+      status: this.label(status), tone: this.statusTone(status), rawStatus: status
+    };
+  }
   private providerRow(value: unknown): AdminRow {
     const item = this.record(value);
     const status = item['status'] === 'suspended' ? 'suspended' : this.text(item, 'verificationStatus', 'active');

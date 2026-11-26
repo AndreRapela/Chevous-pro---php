@@ -6,7 +6,7 @@ import { MarketplaceService } from '../../../../core/data-access/marketplace.ser
 import { Product, Promotion, PromotionLink, PromotionMediaFrame } from '../../../../core/models';
 import { PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
 import { PromotionMediaComponent } from '../../../../shared/components/promotion-media/promotion-media.component';
-import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
+import { LocalizedCatalogTextPipe, LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
 import { DEFAULT_MEDIA_FRAME, promotionLinksAt } from '../../../../shared/utils/promotion-media.util';
 import { MAX_PROMOTION_VIDEOS, NORMAL_ROTATION_WEIGHT } from '../../../../shared/utils/promotion-rotation.util';
 import { CampaignCutoutComponent } from './campaign-cutout.component';
@@ -21,7 +21,7 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
 @Component({
   selector: 'cvp-admin-store',
   standalone: true,
-  imports: [FormsModule, RouterLink, LocalizedMoneyPipe, PageHeaderComponent, PromotionMediaComponent, CampaignCutoutComponent, CampaignPosterComponent, CampaignVideoOptimizerComponent, StatePanelComponent],
+  imports: [FormsModule, RouterLink, LocalizedCatalogTextPipe, LocalizedMoneyPipe, PageHeaderComponent, PromotionMediaComponent, CampaignCutoutComponent, CampaignPosterComponent, CampaignVideoOptimizerComponent, StatePanelComponent],
   template: `
     <section class="portal-page admin-store-page">
       <cvp-page-header eyebrow="Conteúdo do site" title="Site e loja" description="Edite a publicidade da home e todos os produtos exibidos na loja.">
@@ -46,7 +46,7 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
             <ul class="campaign-list">
               @for (campaign of promotions(); track campaign.id) {
                 <li>
-                  <strong data-cvp-no-localize>{{ campaign.title }}</strong>
+                  <strong data-cvp-no-localize>{{ campaign.title | appCatalogText }}</strong>
                   <span class="campaign-order">{{ rotationOptions[(campaign.rotationWeight ?? 3) - 1] }}</span>
                   <span class="admin-status" [class.success]="campaign.active" [class.neutral]="!campaign.active">{{ campaign.active ? 'Ativa' : 'Oculta' }}</span>
                   <button class="btn btn-secondary btn-small" type="button" (click)="editPromotion(campaign)" [disabled]="saving() || editingPromotion()">Editar</button>
@@ -179,16 +179,16 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
               </form>
               <div class="admin-campaign-preview">
                 <span>Prévia</span>
-                <article data-cvp-no-localize [class.has-framed-media]="!!promotionPreviewUrl && !!effectiveMediaFrame"
+                <article [class.has-framed-media]="!!promotionPreviewUrl && !!effectiveMediaFrame"
                   [class.has-media-background]="!!promotionPreviewUrl && effectiveMediaFrame?.layout === 'background'"
                   [style.background]="promotionDraft.backgroundColor" [style.--preview-bg]="promotionDraft.backgroundColor" [style.color]="promotionDraft.textColor">
                   <div>
-                    <small>{{ promotionDraft.badgeText || 'Selo da campanha' }}</small>
-                    <h3>{{ promotionDraft.title || 'Título da campanha' }}</h3>
-                    <p>{{ promotionDraft.subtitle || 'Descrição da publicidade.' }}</p>
-                    @if (promotionDraft.buttonPlacement !== 'below') { <b>{{ promotionDraft.ctaLabel || 'Ver produtos' }} →</b> }
+                    <small data-cvp-no-localize>{{ (promotionDraft.badgeText || 'Selo da campanha') | appCatalogText }}</small>
+                    <h3 data-cvp-no-localize>{{ (promotionDraft.title || 'Título da campanha') | appCatalogText }}</h3>
+                    <p data-cvp-no-localize>{{ (promotionDraft.subtitle || 'Descrição da publicidade.') | appCatalogText }}</p>
+                    @if (promotionDraft.buttonPlacement !== 'below') { <b data-cvp-no-localize>{{ (promotionDraft.ctaLabel || 'Ver produtos') | appCatalogText }} →</b> }
                     @if (previewLinks('banner').length) {
-                      <div class="campaign-preview-inside-links">@for (link of previewLinks('banner'); track $index) { @if (link.label) { <span>{{ link.label }}</span> } }</div>
+                      <div class="campaign-preview-inside-links">@for (link of previewLinks('banner'); track $index) { @if (link.label) { <span data-cvp-no-localize>{{ link.label | appCatalogText }}</span> } }</div>
                     }
                   </div>
                   @if (promotionPreviewUrl) {
@@ -200,8 +200,8 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
                     @else { <img [src]="promotionPreviewUrl" alt="Prévia da imagem da campanha"> }
                   }
                 </article>
-                @if (promotionDraft.buttonPlacement === 'below' || promotionDraft.buttonPlacement === 'both') { <div class="campaign-preview-below"><b>{{ promotionDraft.ctaLabel || 'Ver produtos' }} →</b></div> }
-                @if (previewLinks('below').length) { <nav class="campaign-preview-links" aria-label="Prévia dos links">@for (link of previewLinks('below'); track $index) { @if (link.label) { <span>{{ link.label }}</span> } }</nav> }
+                @if (promotionDraft.buttonPlacement === 'below' || promotionDraft.buttonPlacement === 'both') { <div class="campaign-preview-below"><b data-cvp-no-localize>{{ (promotionDraft.ctaLabel || 'Ver produtos') | appCatalogText }} →</b></div> }
+                @if (previewLinks('below').length) { <nav class="campaign-preview-links" aria-label="Prévia dos links">@for (link of previewLinks('below'); track $index) { @if (link.label) { <span data-cvp-no-localize>{{ link.label | appCatalogText }}</span> } }</nav> }
               </div>
             </div>
           }
@@ -235,7 +235,7 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
               @for (product of products(); track product.id) {
                 <article>
                   <div class="admin-product-thumb" data-cvp-no-localize>@if (product.imageUrl) { <img [src]="product.imageUrl" alt=""> } @else { <span aria-hidden="true">⌂</span> }</div>
-                  <div class="admin-product-info" data-cvp-no-localize><div><strong>{{ product.name }}</strong>@if (product.badgeText) { <span>{{ product.badgeText }}</span> }</div><small>{{ product.shortDescription || 'Sem descrição' }}</small><b>{{ product.priceCents / 100 | appMoney:product.currency }}</b></div>
+                  <div class="admin-product-info" data-cvp-no-localize><div><strong>{{ product.name | appCatalogText }}</strong>@if (product.badgeText) { <span>{{ product.badgeText | appCatalogText }}</span> }</div><small>{{ (product.shortDescription || 'Sem descrição') | appCatalogText }}</small><b>{{ product.priceCents / 100 | appMoney:product.currency }}</b></div>
                   <div class="admin-product-meta"><span class="admin-status" [class]="product.active ? 'admin-status success' : 'admin-status neutral'">{{ product.active ? 'Publicado' : 'Oculto' }}</span><small>{{ product.inventoryCount }} em estoque</small><button class="btn btn-secondary btn-small" type="button" (click)="editProduct(product)">Editar</button></div>
                 </article>
               }

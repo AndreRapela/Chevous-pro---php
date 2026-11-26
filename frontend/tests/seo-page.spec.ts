@@ -56,7 +56,12 @@ function fixture(url = '/servicos/categoria/cleaning') {
   };
   harness.router = { url };
   harness.siteOrigin = 'https://chezvoust.test';
-  harness.localization = { language: () => language, translate: (text: string) => language === 'fr' ? (translations[text] ?? text.replaceAll('Casa', 'Domicile')) : text };
+  harness.localization = {
+    language: () => language,
+    translate: (text: string, knownOnly = false) => language === 'fr'
+      ? (translations[text] ?? (knownOnly ? text : text.replaceAll('Casa', 'Domicile')))
+      : text
+  };
   harness.document = {
     location: { pathname: url.split('?')[0] },
     head: { querySelector: () => nodes.find(node => node.rel === 'canonical') ?? null, appendChild: (node: MetadataNode) => nodes.push(node) },
@@ -165,6 +170,9 @@ describe('dynamic page content metadata', () => {
     assert.equal(view.structured()[0].name, 'Casa');
     assert.equal(view.structured()[0].review[0].reviewBody, 'Casa original review.');
     assert.equal(view.structured()[0].review[0].author.name, 'Casa Author');
+    page.updateSeo({ ...person, headline: 'Cleaning', bio: 'Home cleaning.' }, []);
+    assert.equal(view.title(), 'Casa | Ménage | Pro');
+    assert.equal(view.tags.get('name:description'), 'Ménage à domicile.');
     page.updateSeo({ ...person, bio: '', reviewCount: 0 }, []);
     assert.ok(view.tags.get('name:description')?.startsWith('Casa · Casa City.'));
     assert.equal(view.structured()[0].review, undefined);

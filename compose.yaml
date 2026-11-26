@@ -56,7 +56,7 @@ services:
       OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-local-only-outbox-encryption-key-change-before-public-use-2026}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Brussels}
       WORKER_HEARTBEAT_MAX_AGE_SECONDS: ${WORKER_HEARTBEAT_MAX_AGE_SECONDS:-180}
-      APP_LOCALE: pt-BR
+      APP_LOCALE: ${APP_LOCALE:-en-US}
       APP_CURRENCY: BRL
       USD_PER_BRL: ${USD_PER_BRL:-0.20}
       EUR_PER_BRL: ${EUR_PER_BRL:-0.17}
@@ -141,7 +141,7 @@ services:
       OUTBOX_ENCRYPTION_KEY: ${OUTBOX_ENCRYPTION_KEY:-local-only-outbox-encryption-key-change-before-public-use-2026}
       APP_TIMEZONE: ${APP_TIMEZONE:-Europe/Brussels}
       WORKER_HEARTBEAT_MAX_AGE_SECONDS: ${WORKER_HEARTBEAT_MAX_AGE_SECONDS:-180}
-      APP_LOCALE: pt-BR
+      APP_LOCALE: ${APP_LOCALE:-en-US}
       APP_CURRENCY: BRL
       USD_PER_BRL: ${USD_PER_BRL:-0.20}
       EUR_PER_BRL: ${EUR_PER_BRL:-0.17}

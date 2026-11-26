@@ -10,6 +10,7 @@ import { DEFAULT_MEDIA_FRAME, promotionLinksAt } from '../../../../shared/utils/
 import { nextPromotionIndex, PROMOTION_SLOT_MS } from '../../../../shared/utils/promotion-rotation.util';
 import { SeoService } from '../../../../core/seo/seo.service';
 import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
+import { LocalizedCatalogTextPipe } from '../../../../shared/localization/localized-format.pipe';
 
 const DEFAULT_PROMOTION: Promotion = {
   id: 'default', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
@@ -21,7 +22,7 @@ const DEFAULT_PROMOTION: Promotion = {
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HomeHeroComponent, HorizontalScrollDirective, PromotionMediaComponent, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
+  imports: [HomeHeroComponent, HorizontalScrollDirective, LocalizedCatalogTextPipe, PromotionMediaComponent, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
   template: `
     <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
     @if (promotion(); as campaign) {
@@ -33,13 +34,13 @@ const DEFAULT_PROMOTION: Promotion = {
           </div>
           <article class="home-discount-banner" [class.has-media-background]="!!campaign.imageUrl && campaign.mediaFrame?.layout === 'background'" [style.--promo-bg]="campaign.backgroundColor" [style.--promo-text]="campaign.textColor">
             <div class="home-discount-copy">
-              @if (campaign.badgeText) { <span class="home-discount-pill">{{ campaign.badgeText }}</span> }
-              <h3>{{ campaign.title }}</h3>
-              @if (campaign.subtitle) { <p>{{ campaign.subtitle }}</p> }
-              @if (campaign.buttonPlacement !== 'below') { <a class="btn home-discount-cta" [href]="campaign.ctaUrl">{{ campaign.ctaLabel }} <span aria-hidden="true">→</span></a> }
+              @if (campaign.badgeText) { <span class="home-discount-pill" data-cvp-no-localize>{{ campaign.badgeText | appCatalogText }}</span> }
+              <h3 data-cvp-no-localize>{{ campaign.title | appCatalogText }}</h3>
+              @if (campaign.subtitle) { <p data-cvp-no-localize>{{ campaign.subtitle | appCatalogText }}</p> }
+              @if (campaign.buttonPlacement !== 'below') { <a class="btn home-discount-cta" [href]="campaign.ctaUrl" data-cvp-no-localize>{{ campaign.ctaLabel | appCatalogText }} <span aria-hidden="true">→</span></a> }
               @if (insideLinks().length) {
                 <nav class="campaign-links-inside" aria-label="Mais links da campanha">
-                  @for (link of insideLinks(); track $index) { <a [href]="link.url">{{ link.label }}</a> }
+                  @for (link of insideLinks(); track $index) { <a [href]="link.url" data-cvp-no-localize>{{ link.label | appCatalogText }}</a> }
                 </nav>
               }
             </div>
@@ -53,9 +54,9 @@ const DEFAULT_PROMOTION: Promotion = {
               }
             </div>
           </article>
-          @if (campaign.buttonPlacement === 'below' || campaign.buttonPlacement === 'both') { <div class="home-promotion-actions"><a class="btn btn-primary" [href]="campaign.ctaUrl">{{ campaign.ctaLabel }} <span aria-hidden="true">→</span></a></div> }
-          @if (outsideLinks().length) { <nav class="home-promotion-links" aria-label="Links abaixo da campanha">@for (link of outsideLinks(); track $index) { <a [href]="link.url">{{ link.label }}</a> }</nav> }
-          @if (campaign.termsText) { <p class="home-discount-terms">{{ campaign.termsText }}</p> }
+          @if (campaign.buttonPlacement === 'below' || campaign.buttonPlacement === 'both') { <div class="home-promotion-actions"><a class="btn btn-primary" [href]="campaign.ctaUrl" data-cvp-no-localize>{{ campaign.ctaLabel | appCatalogText }} <span aria-hidden="true">→</span></a></div> }
+          @if (outsideLinks().length) { <nav class="home-promotion-links" aria-label="Links abaixo da campanha">@for (link of outsideLinks(); track $index) { <a [href]="link.url" data-cvp-no-localize>{{ link.label | appCatalogText }}</a> }</nav> }
+          @if (campaign.termsText) { <p class="home-discount-terms" data-cvp-no-localize>{{ campaign.termsText | appCatalogText }}</p> }
         </div>
       </section>
     }
