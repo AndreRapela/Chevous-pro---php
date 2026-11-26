@@ -14,9 +14,6 @@ import { homeSizeRange } from '../../utils/booking-home-size.util';
       @if (sizeRange; as range) {
         <fieldset><legend>Tamanho aproximado da área</legend><div class="range-value"><strong>{{ form.controls.homeSize.value }} m²</strong><span>Entre {{ range.minimum }} m² e {{ range.maximum }} m²</span></div><input class="range" type="range" [min]="range.minimum" [max]="range.maximum" step="1" formControlName="homeSize" aria-label="Área em metros quadrados" [attr.aria-valuetext]="form.controls.homeSize.value + ' m²'" (input)="quoteRequested.emit()"><div class="range-labels"><span>{{ range.minimum }} m²</span><span>{{ range.maximum }} m²</span></div></fieldset>
       }
-      @if (service.pricingType === 'hourly') {
-        <label for="booking-duration">Duração estimada<select id="booking-duration" formControlName="durationMinutes" (change)="quoteRequested.emit()"><option [value]="60">1 hora</option><option [value]="120">2 horas</option><option [value]="180">3 horas</option><option [value]="240">4 horas</option><option [value]="360">6 horas</option><option [value]="480">8 horas</option></select></label>
-      }
       @if (!areaPricing && (service.pricingType === 'hourly' || (service.maximumQuantity || 1) > 1)) {
         <div class="booking-quantity-card" role="group" aria-labelledby="booking-quantity-label" aria-describedby="booking-quantity-hint">
           <div class="booking-quantity-copy">

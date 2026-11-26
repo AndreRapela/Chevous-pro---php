@@ -416,7 +416,12 @@ export class BookingWizardComponent implements OnInit {
   private restoreDraft(serviceId: string): void {
     const stored = this.draftStorage.load(serviceId);
     if (!stored) return;
-    this.form.patchValue(stored.value);
+    const durationMinutes = this.form.controls.durationMinutes.value;
+    this.form.patchValue({ ...stored.value, durationMinutes });
+    if (stored.value.durationMinutes !== durationMinutes) {
+      this.step.set(0);
+      return;
+    }
     const restoredStep = stored.step >= 4 ? 3 : stored.step === 3 ? 2 : 0;
     this.step.set(restoredStep);
   }

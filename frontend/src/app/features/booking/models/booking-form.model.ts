@@ -38,7 +38,8 @@ export function configureBookingFormForService(form: BookingForm, service: Servi
   const areaPricing = service.pricingType === 'area' || service.unit === 'm²';
   form.controls.quantity.setValidators([Validators.required, Validators.min(areaPricing ? 1 : minimum), Validators.max(areaPricing ? 10000 : maximum)]);
   form.controls.quantity.setValue(areaPricing ? 1 : minimum);
-  form.controls.durationMinutes.setValue(Math.min(1440, Math.max(30, service.durationMinutes)));
+  const scheduleDuration = Math.ceil(service.durationMinutes / 30) * 30;
+  form.controls.durationMinutes.setValue(Math.min(1440, Math.max(30, scheduleDuration)));
   form.controls.homeSize.updateValueAndValidity();
   form.controls.quantity.updateValueAndValidity();
   form.controls.durationMinutes.updateValueAndValidity();

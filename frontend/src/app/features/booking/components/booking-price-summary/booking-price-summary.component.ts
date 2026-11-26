@@ -10,7 +10,7 @@ import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-fo
   template: `
     <aside class="price-card" [attr.aria-label]="marketplace ? 'Resumo da estimativa' : 'Resumo do preço'" aria-live="polite">
       <span class="eyebrow">{{ marketplace ? 'Sua solicitação' : 'Seu agendamento' }}</span>
-      <div class="price-service"><span class="service-symbol">{{ service.symbol }}</span><div><strong>{{ service.name }}</strong><small>{{ detailLabel }}</small></div></div>
+      <div class="price-service"><span class="service-symbol">{{ service.symbol }}</span><div><strong>{{ service.name }}</strong>@if (detailLabel; as label) { <small>{{ label }}</small> }</div></div>
       @if (quote; as currentQuote) {
         <dl><div><dt>Referência do serviço</dt><dd>{{ currentQuote.subtotalCents / 100 | appMoney:currentQuote.currency }}</dd></div><div class="price-total"><dt>Estimativa inicial</dt><dd>{{ currentQuote.totalCents / 100 | appMoney:currentQuote.currency }}</dd></div></dl>
         <small>Não há cobrança pela plataforma. Confirme os detalhes e o valor diretamente com o profissional.</small>
@@ -33,10 +33,7 @@ export class BookingPriceSummaryComponent {
 
   get detailLabel(): string {
     if (this.quote?.pricingType === 'area' || this.service.pricingType === 'area') return `${this.quote?.areaSqm ?? this.homeSize} m²`;
-    if (this.quote?.pricingType === 'hourly' || this.service.pricingType === 'hourly') {
-      const hours = (this.quote?.durationMinutes ?? this.service.durationMinutes) / 60;
-      return `${hours} ${this.localization.translate(hours === 1 ? 'hora' : 'horas')}`;
-    }
+    if (this.quote?.pricingType === 'hourly' || this.service.pricingType === 'hourly') return '';
     const quantity = this.quote?.quantity ?? 1;
     return `${quantity} ${this.localization.translate(quantity === 1 ? 'unidade' : 'unidades')}`;
   }

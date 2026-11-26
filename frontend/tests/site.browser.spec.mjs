@@ -24,7 +24,7 @@ test.beforeAll(async () => {
   const app = express();
   app.use('/fixtures', express.static(fixtures));
   app.use(express.static(build, { index: false }));
-  app.get(['/', '/entrar', '/cadastro', '/verificar-email', '/conta', '/admin/conteudo', '/servicos/fixture-electrician'],
+  app.get(['/', '/entrar', '/cadastro', '/verificar-email', '/conta', '/admin/conteudo', '/servicos/fixture-electrician', '/agendar/electrical'],
     (_request, response) => response.sendFile(pageShell));
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -213,6 +213,48 @@ test('o administrador pode salvar uma campanha exclusiva para um serviço', asyn
   await form.getByRole('button', { name: 'Save campaign' }).click();
   await expect(editor.getByText('Campaign saved.', { exact: true })).toBeVisible();
   expect(saved).toMatchObject([{ placement: 'services', serviceId: 'electrical', ctaLabel: null, ctaUrl: null }]);
+});
+
+test('a reserva usa a duração padrão no preço e na agenda sem mostrar horas', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('cvp_has_session', '1');
+    sessionStorage.setItem('cvp_booking_draft', JSON.stringify({
+      version: 2, serviceId: 'electrical', step: 3, savedAt: Date.now(),
+      value: { durationMinutes: 480, notes: 'Saved draft note', date: new Date(Date.now() + 172_800_000).toISOString().slice(0, 10) },
+    }));
+  });
+  const service = { id: 'electrical', slug: 'fixture-electrician', name: 'Fixture electrician', pricingType: 'hourly', defaultDurationMinutes: 75, maximumQuantity: 8 };
+  const provider = { id: 'fixture-provider', name: 'Fixture Provider' };
+  const durations = [];
+  const quantities = [];
+  await stubApi(page, {
+    'POST /api/v1/auth/refresh': { ...adminSession, user: { ...adminSession.user, role: 'customer', emailVerified: true } },
+    'GET /api/v1/services/electrical': service,
+    'GET /api/v1/professionals': [provider],
+    'GET /api/v1/me/addresses': [],
+    'GET /api/v1/professionals/fixture-provider/availability': (request) => {
+      durations.push(new URL(request.url()).searchParams.get('durationMinutes'));
+      return { slots: ['09:00'] };
+    },
+    'POST /api/v1/bookings/quote': (request) => {
+      const { durationMinutes, quantity } = request.postDataJSON();
+      quantities.push({ durationMinutes, quantity });
+      return { serviceId: service.id, pricingType: 'hourly', durationMinutes, quantity, subtotalCents: 1500 * quantity, totalCents: 1500 * quantity, currency: 'EUR' };
+    },
+  });
+  await page.goto(`${origin}/agendar/electrical`);
+  const details = page.locator('cvp-booking-details-step');
+  await expect(details.locator('textarea')).toHaveValue('Saved draft note');
+  await expect(details.locator('#booking-duration')).toHaveCount(0);
+  const summary = page.locator('cvp-booking-price-summary');
+  await expect(summary.locator('.price-service strong')).toHaveText(service.name);
+  await expect(summary.locator('.price-service small')).toHaveCount(0);
+  await expect(page.locator('.time-option')).toContainText('09:00');
+  await expect(summary.locator('.price-total dd')).toHaveText('€15');
+  await details.getByRole('button', { name: 'Increase quantity' }).click();
+  await expect(summary.locator('.price-total dd')).toHaveText('€30');
+  expect(durations).toEqual(['90']);
+  expect(quantities).toEqual([{ durationMinutes: 90, quantity: 1 }, { durationMinutes: 90, quantity: 2 }]);
 });
 
 test('o olho alterna a visibilidade da senha sem apagar o valor ou enviar o formulário', async ({ page }) => {
