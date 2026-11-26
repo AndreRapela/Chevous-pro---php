@@ -24,7 +24,8 @@ test.beforeAll(async () => {
   const app = express();
   app.use('/fixtures', express.static(fixtures));
   app.use(express.static(build, { index: false }));
-  app.get(['/', '/entrar', '/admin/conteudo', '/servicos/fixture-electrician'], (_request, response) => response.sendFile(pageShell));
+  app.get(['/', '/entrar', '/cadastro', '/verificar-email', '/admin/conteudo', '/servicos/fixture-electrician'],
+    (_request, response) => response.sendFile(pageShell));
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   origin = `http://127.0.0.1:${server.address().port}`;
@@ -202,6 +203,103 @@ test('erros de login da API são exibidos no idioma do formulário', async ({ pa
   await page.locator('input[type=password]').fill('fixture-password');
   await page.locator('form button[type=submit]').click();
   await expect(page.getByRole('alert').locator('span')).toHaveText('Adresse e-mail ou mot de passe incorrect.');
+});
+
+for (const [hasSession, description] of [
+  [false, 'depois do cadastro a confirmação usa o endereço cadastrado'],
+  [true, 'um novo cadastro usa o endereço novo quando outra conta está aberta'],
+]) {
+  test(description, async ({ page }) => {
+    if (hasSession) await page.addInitScript(() => localStorage.setItem('cvp_has_session', '1'));
+    const email = 'new-customer@example.invalid';
+    const resend = [];
+    const proof = [];
+    await stubApi(page, {
+      'POST /api/v1/auth/refresh': { ...adminSession, user: { ...adminSession.user, emailVerified: true } },
+      'POST /api/v1/auth/register/customer': {
+        user: { id: 'new-customer', name: 'Fixture Customer', email, role: 'customer', emailVerified: false },
+      },
+      'POST /api/v1/auth/email/resend': (request) => {
+        resend.push(request.postDataJSON());
+        return {};
+      },
+      'POST /api/v1/auth/email/verify': (request) => {
+        proof.push(request.postDataJSON());
+        return {};
+      },
+    });
+    await page.goto(`${origin}/cadastro`);
+    const register = page.locator('cvp-register form');
+    await register.locator('[name=name]').fill('Fixture Customer');
+    await register.locator('[name=email]').fill(email);
+    await register.locator('[name=phone]').fill('+32 471 23 45 67');
+    await register.locator('[name=password]').fill('Fixture!8pass');
+    await register.locator('[name=confirmation]').fill('Fixture!8pass');
+    await register.locator('[name=terms]').check();
+    await register.locator('[type=submit]').click();
+    await expect(page).toHaveURL(`${origin}/verificar-email`);
+    await page.reload();
+
+    const confirmation = page.locator('cvp-verify-email');
+    await expect(confirmation.locator('.verification-address')).toHaveText(email);
+    await expect(confirmation.locator('input')).toHaveCount(1);
+    await confirmation.getByRole('button', { name: 'Resend verification email' }).click();
+    await expect(confirmation.getByRole('status')).toHaveText('New code and link requested.');
+    expect(resend).toMatchObject([{ email }]);
+
+    await confirmation.getByRole('textbox', { name: 'Confirmation code' }).fill('012345');
+    await confirmation.getByRole('button', { name: 'Confirm code' }).click();
+    await expect(confirmation.getByRole('heading', { name: 'Email verified', exact: true })).toBeVisible();
+    expect(proof).toEqual([{ email, code: '012345' }]);
+    await expect(confirmation.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/entrar');
+  });
+}
+
+test('a confirmação direta leva ao login e usa a conta pendente da sessão', async ({ page }) => {
+  const user = { id: 'pending-customer', name: 'Pending Customer', email: 'pending@example.invalid', role: 'customer', emailVerified: false };
+  const session = { user, accessToken: 'verification-fixture', tokenType: 'Bearer', expiresIn: 900 };
+  const proof = [];
+  await stubApi(page, {
+    'POST /api/v1/auth/login': session,
+    'POST /api/v1/auth/refresh': session,
+    'POST /api/v1/auth/email/verify': (request) => {
+      proof.push(request.postDataJSON());
+      return {};
+    },
+    'GET /api/v1/me': { ...user, emailVerified: true },
+  });
+  await page.goto(`${origin}/verificar-email`);
+  await expect(page).toHaveURL(`${origin}/entrar`);
+  const login = page.locator('cvp-login form');
+  await login.locator('input[type=email]').fill(user.email);
+  await login.locator('input[type=password]').fill('Fixture!8pass');
+  await login.locator('button[type=submit]').click();
+  await expect(page).toHaveURL(`${origin}/verificar-email`);
+  await page.reload();
+
+  const confirmation = page.locator('cvp-verify-email');
+  await expect(confirmation.locator('.verification-address')).toHaveText(user.email);
+  await expect(confirmation.locator('input')).toHaveCount(1);
+  await confirmation.getByRole('textbox', { name: 'Confirmation code' }).fill('735001');
+  await confirmation.getByRole('button', { name: 'Confirm code' }).click();
+  await expect(confirmation.getByRole('link', { name: 'Open my account' })).toHaveAttribute('href', '/conta');
+  expect(proof).toEqual([{ email: user.email, code: '735001' }]);
+});
+
+test('o link de confirmação funciona fora da sessão de cadastro ou login', async ({ page }) => {
+  const token = 'a'.repeat(64);
+  const proof = [];
+  await stubApi(page, {
+    'POST /api/v1/auth/email/verify': (request) => {
+      proof.push(request.postDataJSON());
+      return {};
+    },
+  });
+  await page.goto(`${origin}/verificar-email#token=${token}`);
+  const confirmation = page.locator('cvp-verify-email');
+  await expect(confirmation.getByRole('heading', { name: 'Email verified', exact: true })).toBeVisible();
+  await expect(confirmation.locator('input')).toHaveCount(0);
+  expect(proof).toEqual([{ token }]);
 });
 
 test('a home mantém cada campanha por um minuto e alterna vídeo e imagem', async ({ page }) => {

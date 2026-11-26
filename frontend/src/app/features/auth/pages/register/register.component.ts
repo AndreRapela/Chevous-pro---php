@@ -261,7 +261,7 @@ export class RegisterComponent implements OnInit {
         next: ({ user, debugVerificationToken, debugVerificationCode }) => {
           this.form.reset();
           void this.router.navigate(['/verificar-email'], {
-            state: { verificationEmail: user.email },
+            state: { verificationEmail: user.email, verificationSource: 'registration' },
             info: environment.production ? undefined : { debugVerificationToken, debugVerificationCode }
           });
         },

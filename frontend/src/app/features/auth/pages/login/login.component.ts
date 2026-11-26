@@ -107,7 +107,7 @@ export class LoginComponent {
     this.auth.login({ email: email.trim().toLocaleLowerCase('pt-BR'), password, remember }).subscribe({
       next: (user) => {
         if (user.emailVerified === false) {
-          void this.router.navigate(['/verificar-email'], { state: { verificationEmail: user.email } });
+          void this.router.navigateByUrl('/verificar-email');
           return;
         }
         const requested = this.route.snapshot.queryParamMap.get('returnUrl');
