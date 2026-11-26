@@ -24,7 +24,7 @@ test.beforeAll(async () => {
   const app = express();
   app.use('/fixtures', express.static(fixtures));
   app.use(express.static(build, { index: false }));
-  app.get(['/', '/entrar', '/cadastro', '/verificar-email', '/admin/conteudo', '/servicos/fixture-electrician'],
+  app.get(['/', '/entrar', '/cadastro', '/verificar-email', '/conta', '/admin/conteudo', '/servicos/fixture-electrician'],
     (_request, response) => response.sendFile(pageShell));
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
@@ -248,6 +248,48 @@ test('o olho alterna a visibilidade da senha sem apagar o valor ou enviar o form
       await expect(page).toHaveURL(`${origin}${path}`);
     }
   }
+});
+
+for (const [role, portal] of [['customer', '/conta'], ['provider', '/prestador'], ['admin', '/admin']]) {
+  test(`o login de ${role} abre a página inicial correspondente ao perfil`, async ({ page }) => {
+    const email = `${role}@example.invalid`;
+    const user = { id: role, name: 'Fixture User', email, role, emailVerified: true };
+    await stubApi(page, {
+      'POST /api/v1/auth/login': { ...adminSession, user },
+      'GET /api/v1/home': { services: [], categories: [], professionals: [], promotions: [] },
+      'GET /api/v1/admin/dashboard': {},
+      'GET /api/v1/notifications': [],
+    });
+    await page.goto(`${origin}/entrar`);
+    await page.locator('cvp-login input[type=email]').fill(email);
+    await page.locator('#login-password').fill('Fixture!8pass');
+    await page.locator('cvp-login button[type=submit]').click();
+
+    if (role === 'admin') {
+      await expect(page).toHaveURL(`${origin}${portal}`);
+      await expect(page.locator('cvp-admin-dashboard')).toBeVisible();
+    } else {
+      await expect(page).toHaveURL(`${origin}/`);
+      await expect(page.locator('cvp-home')).toBeVisible();
+      await expect(page.locator('.site-header .user-shortcut')).toHaveAttribute('href', portal);
+    }
+  });
+}
+
+test('o login retorna à área de cliente quando ela foi solicitada diretamente', async ({ page }) => {
+  const user = { id: 'customer', name: 'Fixture User', email: 'customer@example.invalid', role: 'customer', emailVerified: true };
+  await stubApi(page, {
+    'POST /api/v1/auth/login': { ...adminSession, user },
+    'GET /api/v1/bookings': [],
+    'GET /api/v1/notifications': [],
+  });
+  await page.goto(`${origin}/conta`);
+  await expect(page).toHaveURL(/\/entrar\?returnUrl=/);
+  await page.locator('cvp-login input[type=email]').fill(user.email);
+  await page.locator('#login-password').fill('Fixture!8pass');
+  await page.locator('cvp-login button[type=submit]').click();
+  await expect(page).toHaveURL(`${origin}/conta`);
+  await expect(page.locator('cvp-customer-dashboard')).toBeVisible();
 });
 
 test('erros de login da API são exibidos no idioma do formulário', async ({ page }) => {

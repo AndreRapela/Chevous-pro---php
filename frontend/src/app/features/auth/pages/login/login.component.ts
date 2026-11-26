@@ -116,7 +116,8 @@ export class LoginComponent {
           return;
         }
         const requested = this.route.snapshot.queryParamMap.get('returnUrl');
-        const target = requested?.startsWith('/') && !requested.startsWith('//') ? requested : this.auth.homeFor(user);
+        const landingPage = user.role === 'admin' ? this.auth.homeFor(user) : '/';
+        const target = requested?.startsWith('/') && !requested.startsWith('//') ? requested : landingPage;
         void this.router.navigateByUrl(target);
       },
       error: (failure: ApiClientError) => this.error.set(failure.message)
