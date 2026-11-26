@@ -5,6 +5,7 @@ export type PromotionDraft = Omit<Promotion, 'id'> & { id?: string };
 
 export function promotionPayload(draft: PromotionDraft): Record<string, unknown> {
   return {
+    placement: draft.placement ?? 'home', serviceId: draft.placement === 'services' ? draft.serviceId || null : null,
     title: draft.title.trim(), subtitle: draft.subtitle.trim() || null,
     ctaLabel: draft.ctaLabel.trim() || null, ctaUrl: draft.ctaUrl.trim() || null,
     imageUrl: draft.imageUrl?.trim() || null, mediaType: draft.mediaType ?? 'image',

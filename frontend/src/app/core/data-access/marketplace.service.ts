@@ -17,6 +17,11 @@ import {
 type UnknownRecord = Record<string, unknown>;
 const HOME_STATE = makeStateKey<HomeContent | null>('cvp.public-home');
 
+
+function normalizeDate(value: string): string {
+  return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value) ? `${value.replace(' ', 'T')}Z` : value;
+}
+
 @Injectable({ providedIn: 'root' })
 export class MarketplaceService {
   private readonly api = inject(ApiService);
@@ -127,7 +132,7 @@ export class MarketplaceService {
   sendMessage(id: string, body: string, idempotencyKey: string) { return this.api.post<unknown>(`conversations/${encodeURIComponent(id)}/messages`, { body }, { headers: { 'Idempotency-Key': idempotencyKey } }).pipe(map((item) => this.chatMessageModel(item))); }
   markConversationRead(id: string, lastSequence: number) { return this.api.post<void>(`conversations/${id}/read`, { lastSequence }); }
 
-  notifications(query: ApiQuery = {}) { return this.api.getEnvelope<AppNotification[]>('me/notifications', query).pipe(map((response) => ({ ...response, data: response.data.map((item) => ({ ...item, createdAt: this.normalizeDate(item.createdAt), readAt: item.readAt ? this.normalizeDate(item.readAt) : item.readAt })) }))); }
+  notifications(query: ApiQuery = {}) { return this.api.getEnvelope<AppNotification[]>('me/notifications', query).pipe(map((response) => ({ ...response, data: response.data.map((item) => ({ ...item, createdAt: normalizeDate(item.createdAt), readAt: item.readAt ? normalizeDate(item.readAt) : item.readAt })) }))); }
   readNotification(id: string) { return this.api.post<void>(`me/notifications/${encodeURIComponent(id)}/read`, {}); }
   readAllNotifications() { return this.api.post<void>('me/notifications/read-all', {}); }
 
@@ -173,8 +178,8 @@ export class MarketplaceService {
   providerAvailabilityExceptions() { return this.api.get<AvailabilityException[]>('provider/availability-exceptions'); }
   createProviderAvailabilityException(payload: Omit<AvailabilityException, 'id'>) { return this.api.post<AvailabilityException>('provider/availability-exceptions', payload); }
   removeProviderAvailabilityException(id: string) { return this.api.delete<void>(`provider/availability-exceptions/${encodeURIComponent(id)}`); }
-  providerJobs() { return this.api.get<ProviderJob[]>('provider/jobs').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: this.normalizeDate(item.scheduledStart), scheduledEnd: item.scheduledEnd ? this.normalizeDate(item.scheduledEnd) : undefined })))); }
-  providerOpenRequests() { return this.api.get<ProviderRequest[]>('provider/open-requests').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: this.normalizeDate(item.scheduledStart), createdAt: this.normalizeDate(item.createdAt) })))); }
+  providerJobs() { return this.api.get<ProviderJob[]>('provider/jobs').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: normalizeDate(item.scheduledStart), scheduledEnd: item.scheduledEnd ? normalizeDate(item.scheduledEnd) : undefined })))); }
+  providerOpenRequests() { return this.api.get<ProviderRequest[]>('provider/open-requests').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: normalizeDate(item.scheduledStart), createdAt: normalizeDate(item.createdAt) })))); }
   createOffer(bookingId: string, amountCents: number, message: string) { return this.api.post<unknown>(`provider/bookings/${bookingId}/offers`, { amountCents, message }); }
 
   adminDashboard() { return this.api.get<Record<string, unknown>>('admin/dashboard'); }
@@ -218,7 +223,19 @@ export class MarketplaceService {
     const unitLabel = this.string(item['unit'] ?? item['unitLabel'], pricingType === 'area' ? 'm²' : 'serviço').toLocaleLowerCase('pt-BR');
     const unit: Service['unit'] = pricingType === 'area' || unitLabel.includes('m²') ? 'm²' : unitLabel.includes('hora') ? 'hora' : unitLabel.includes('diária') ? 'diária' : 'serviço';
     const rawAddons = Array.isArray(item['addons']) ? item['addons'] : [];
-    return { id: this.string(item['id']), categoryId: this.string(item['categoryId']), slug: this.string(item['slug']), name, description: this.string(item['description'] ?? item['shortDescription']), symbol: this.string(item['symbol'], this.initials(name)), priceFromCents: this.number(item['priceFromCents'] ?? item['priceCents']), unit, pricingType, durationMinutes: this.number(item['durationMinutes'] ?? item['defaultDurationMinutes'], 120), minimumQuantity: this.number(item['minimumQuantity'], 1), maximumQuantity: this.number(item['maximumQuantity'], 10000), addons: rawAddons.map((raw) => { const addon = this.record(raw); return { id: this.string(addon['id']), name: this.string(addon['name']), description: this.string(addon['description']), priceCents: this.number(addon['priceCents']), pricingType: this.string(addon['pricingType'], 'fixed') as 'fixed' | 'hourly' | 'quantity' }; }), popular: this.boolean(item['popular']), isCustom: this.boolean(item['isCustom']) };
+    return {
+      id: this.string(item['id']), categoryId: this.string(item['categoryId']), categorySlug: this.string(item['categorySlug']),
+      slug: this.string(item['slug']), name, description: this.string(item['description'] ?? item['shortDescription']),
+      symbol: this.string(item['symbol'], this.initials(name)), priceFromCents: this.number(item['priceFromCents'] ?? item['priceCents']), unit, pricingType,
+      durationMinutes: this.number(item['durationMinutes'] ?? item['defaultDurationMinutes'], 120),
+      minimumQuantity: this.number(item['minimumQuantity'], 1), maximumQuantity: this.number(item['maximumQuantity'], 10000),
+      addons: rawAddons.map((raw) => {
+        const addon = this.record(raw);
+        return { id: this.string(addon['id']), name: this.string(addon['name']), description: this.string(addon['description']), priceCents: this.number(addon['priceCents']), pricingType: this.string(addon['pricingType'], 'fixed') as 'fixed' | 'hourly' | 'quantity' };
+      }),
+      popular: this.boolean(item['popular']), isCustom: this.boolean(item['isCustom']),
+      promotions: this.array(item['promotions']).map((promotion) => this.promotionModel(promotion, 'services'))
+    };
   }
 
   private providerServiceModel(value: ProviderService): ProviderService {
@@ -226,12 +243,15 @@ export class MarketplaceService {
     return { ...normalized, active: this.boolean(value.active), isCustom: this.boolean(value.isCustom) };
   }
 
-  private promotionModel(value: unknown): Promotion {
+  private promotionModel(value: unknown, defaultPlacement: NonNullable<Promotion['placement']> = 'home'): Promotion {
     const item = this.record(value);
+    const placement = item['placement'] === 'services' || item['placement'] === 'home' ? item['placement'] : defaultPlacement;
+    const home = placement === 'home';
     return {
-      id: this.string(item['id']), title: this.string(item['title'], 'Produtos para sua casa'),
-      subtitle: this.string(item['subtitle']), ctaLabel: this.string(item['ctaLabel'], 'Ver produtos'),
-      ctaUrl: this.string(item['ctaUrl'], '/produtos'), imageUrl: this.string(item['imageUrl']) || null,
+      id: this.string(item['id']), placement, serviceId: this.string(item['serviceId']) || null,
+      title: this.string(item['title'], home ? 'Produtos para sua casa' : ''),
+      subtitle: this.string(item['subtitle']), ctaLabel: this.string(item['ctaLabel'], home ? 'Ver produtos' : ''),
+      ctaUrl: this.string(item['ctaUrl'], home ? '/produtos' : ''), imageUrl: this.string(item['imageUrl']) || null,
       mediaType: this.string(item['mediaType'], 'image') === 'video' ? 'video' : 'image',
       mediaFrame: this.promotionFrame(item['mediaFrame']),
       videoDurationMs: this.number(item['videoDurationMs']) || null,
@@ -247,7 +267,7 @@ export class MarketplaceService {
             };
           }).filter((link) => link.label && link.url).slice(0, 3)
         : [],
-      badgeText: this.string(item['badgeText'], 'Novidades na loja'), termsText: this.string(item['termsText']),
+      badgeText: this.string(item['badgeText'], home ? 'Novidades na loja' : ''), termsText: this.string(item['termsText']),
       backgroundColor: this.string(item['backgroundColor'], '#096653'), textColor: this.string(item['textColor'], '#FFFFFF'),
       active: item['active'] === undefined ? true : Boolean(Number(item['active'])),
       startsAt: this.string(item['startsAt']) || null, endsAt: this.string(item['endsAt']) || null,
@@ -316,7 +336,7 @@ export class MarketplaceService {
 
   private commentModel(value: unknown): ProfessionalComment {
     const item = this.record(value); const author = this.string(item['author'], 'Membro da comunidade');
-    return { id: this.string(item['id']), author, initials: this.string(item['initials'], this.initials(author)), comment: this.string(item['comment']), createdAt: this.normalizeDate(this.string(item['createdAt'])) };
+    return { id: this.string(item['id']), author, initials: this.string(item['initials'], this.initials(author)), comment: this.string(item['comment']), createdAt: normalizeDate(this.string(item['createdAt'])) };
   }
 
   private experienceModel(value: unknown): ProfessionalExperience {
@@ -335,12 +355,12 @@ export class MarketplaceService {
     const professionalName = this.string(item['professionalName'], 'Profissional a definir'); const pricing = this.record(item['pricingSnapshot']);
     const totalCents = this.number(item['totalCents'] ?? pricing['totalCents']); const address = this.record(item['addressSnapshot']);
     const actions = Array.isArray(item['allowedActions']) ? item['allowedActions'].map(String) : [];
-    const history = Array.isArray(item['history']) ? item['history'].map((entry) => { const row = this.record(entry); return { fromStatus: this.string(row['fromStatus']) || null, toStatus: this.bookingStatus(this.string(row['toStatus'])), reason: this.string(row['reason']), createdAt: this.normalizeDate(this.string(row['createdAt'])) }; }) : [];
+    const history = Array.isArray(item['history']) ? item['history'].map((entry) => { const row = this.record(entry); return { fromStatus: this.string(row['fromStatus']) || null, toStatus: this.bookingStatus(this.string(row['toStatus'])), reason: this.string(row['reason']), createdAt: normalizeDate(this.string(row['createdAt'])) }; }) : [];
     return {
       id: this.string(item['id']), code: this.string(item['code'], `CVP-${this.string(item['id']).slice(0, 8).toUpperCase()}`),
       service: { id: this.string(item['serviceId']), categoryId: '', slug: '', name: serviceName, description: '', symbol: this.initials(serviceName), priceFromCents: totalCents, unit: 'serviço', durationMinutes: this.number(item['durationMinutes'], 120) },
       provider: { id: this.string(item['professionalId']), name: professionalName, initials: this.initials(professionalName), headline: '', bio: '', city: '', neighborhood: '', verified: true, rating: 5, reviewCount: 0, completedJobs: 0, responseTime: '', priceFromCents: 0, serviceIds: [], qualities: [], nextAvailability: '', reviews: [] },
-      customerName: this.string(item['customerName'], 'Cliente'), status, scheduledAt: this.normalizeDate(this.string(item['scheduledAt'] ?? item['scheduledStart'])),
+      customerName: this.string(item['customerName'], 'Cliente'), status, scheduledAt: normalizeDate(this.string(item['scheduledAt'] ?? item['scheduledStart'])),
       timezone: this.string(item['timezone']) || BOOKING_TIMEZONE, agendaTimezone: this.string(item['agendaTimezone']) || BOOKING_TIMEZONE,
       addressLabel: [this.string(address['neighborhood']), this.string(address['city'])].filter(Boolean).join(', ') || 'Endereço da reserva', notes: this.string(item['notes']),
       price: { subtotalCents: this.number(item['subtotalCents'] ?? pricing['subtotalCents'], totalCents), serviceFeeCents: this.number(item['serviceFeeCents'] ?? pricing['serviceFeeCents']), discountCents: this.number(item['discountCents'] ?? pricing['discountCents']), totalCents, currency: this.currency(item['currency'] ?? pricing['currency']) },
@@ -409,21 +429,17 @@ export class MarketplaceService {
 
   private conversationModel(value: unknown): Conversation {
     const item = this.record(value);
-    return { id: this.string(item['id']), bookingId: this.string(item['bookingId']), bookingStatus: this.string(item['bookingStatus']), serviceName: this.string(item['serviceName'], 'Serviço'), contactName: this.string(item['contactName']) || undefined, contactId: this.string(item['contactId']) || undefined, contactAvatarUrl: this.string(item['contactAvatarUrl']) || null, updatedAt: this.normalizeDate(this.string(item['updatedAt'])), lastMessage: this.string(item['lastMessage'], 'Conversa iniciada.'), unreadCount: this.number(item['unreadCount']) };
+    return { id: this.string(item['id']), bookingId: this.string(item['bookingId']), bookingStatus: this.string(item['bookingStatus']), serviceName: this.string(item['serviceName'], 'Serviço'), contactName: this.string(item['contactName']) || undefined, contactId: this.string(item['contactId']) || undefined, contactAvatarUrl: this.string(item['contactAvatarUrl']) || null, updatedAt: normalizeDate(this.string(item['updatedAt'])), lastMessage: this.string(item['lastMessage'], 'Conversa iniciada.'), unreadCount: this.number(item['unreadCount']) };
   }
 
   private chatMessageModel(value: unknown): ChatMessage {
     const item = this.record(value);
-    return { id: this.string(item['id']), sequence: this.number(item['sequence']), senderId: this.string(item['senderId']), senderName: this.string(item['senderName'], 'Usuário'), body: this.string(item['body']), messageType: this.string(item['messageType'], 'text'), createdAt: this.normalizeDate(this.string(item['createdAt'])) };
+    return { id: this.string(item['id']), sequence: this.number(item['sequence']), senderId: this.string(item['senderId']), senderName: this.string(item['senderName'], 'Usuário'), body: this.string(item['body']), messageType: this.string(item['messageType'], 'text'), createdAt: normalizeDate(this.string(item['createdAt'])) };
   }
 
   private offerModel(value: unknown): BookingOffer {
     const item = this.record(value);
-    return { id: this.string(item['id']), amountCents: this.number(item['amountCents']), message: this.string(item['message']), status: this.string(item['status'], 'pending'), expiresAt: this.normalizeDate(this.string(item['expiresAt'])), createdAt: this.normalizeDate(this.string(item['createdAt'])), professionalId: this.string(item['professionalId']), professionalName: this.string(item['professionalName'], 'Profissional'), rating: this.number(item['rating']), reviewsCount: this.number(item['reviewsCount']) };
-  }
-
-  private normalizeDate(value: string): string {
-    return /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value) ? `${value.replace(' ', 'T')}Z` : value;
+    return { id: this.string(item['id']), amountCents: this.number(item['amountCents']), message: this.string(item['message']), status: this.string(item['status'], 'pending'), expiresAt: normalizeDate(this.string(item['expiresAt'])), createdAt: normalizeDate(this.string(item['createdAt'])), professionalId: this.string(item['professionalId']), professionalName: this.string(item['professionalName'], 'Profissional'), rating: this.number(item['rating']), reviewsCount: this.number(item['reviewsCount']) };
   }
 
   private allPages<T>(path: string, query: ApiQuery = {}): Observable<T[]> {

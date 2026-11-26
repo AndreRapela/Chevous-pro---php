@@ -45,6 +45,7 @@ export interface ServiceCategory {
 export interface Service {
   id: string;
   categoryId: string;
+  categorySlug?: string;
   slug: string;
   name: string;
   description: string;
@@ -58,6 +59,7 @@ export interface Service {
   addons?: ServiceAddon[];
   popular?: boolean;
   isCustom?: boolean;
+  promotions?: Promotion[];
 }
 
 export interface ServiceAddon {
@@ -68,8 +70,12 @@ export interface ServiceAddon {
   pricingType: 'fixed' | 'hourly' | 'quantity';
 }
 
+export type PromotionPlacement = 'home' | 'services';
+
 export interface Promotion {
   id: string;
+  placement?: PromotionPlacement;
+  serviceId?: string | null;
   title: string;
   subtitle: string;
   ctaLabel: string;

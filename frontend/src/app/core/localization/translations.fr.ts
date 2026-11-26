@@ -1812,6 +1812,17 @@ export const translations: ReadonlyArray<readonly [source: string, translation: 
   ['Mídia online ou arquivo atual', 'Média en ligne ou fichier actuel'],
   ['Nenhum arquivo escolhido', 'Aucun fichier sélectionné'],
   ['Prévia da imagem da campanha', 'Aperçu de l’image de la campagne'],
+  ["Edite as campanhas da home e dos serviços e gerencie os produtos da loja.", "Modifiez les campagnes de l’accueil et des pages de services, et gérez les produits de la boutique."],
+  ["Campanhas do site", "Campagnes du site"],
+  ["Onde exibir a campanha", "Où afficher la campagne"],
+  ["Página inicial", "Accueil"],
+  ["Páginas de serviço", "Pages de services"],
+  ["Serviço específico", "Service précis"],
+  ["O site alterna automaticamente entre os profissionais do serviço.", "Le site fait défiler automatiquement les professionnels qui proposent ce service."],
+  ["Deixe o texto e o destino em branco para manter o botão do serviço.", "Laissez le libellé et la destination vides pour conserver le bouton du service."],
+  ["A mídia fica no fundo, atrás do texto e da foto do profissional.", "Le média apparaît en arrière-plan, derrière le texte et la photo du professionnel."],
+  ["Os links aparecem abaixo do botão, dentro do banner.", "Les liens s’affichent sous le bouton, dans la bannière."],
+  ["Exibir esta campanha", "Afficher cette campagne"],
 ];
 
 export const patterns: ReadonlyArray<readonly [pattern: RegExp, replacement: string]> = [

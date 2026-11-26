@@ -177,9 +177,8 @@ describe('original green brand palette', () => {
     assert.equal(declaration('.desktop-hero-orb.orb-coral', 'background'), 'var(--coral-500)');
     assert.equal(variables.get('--page-background'), '#edf6f1');
   });
-  it('uses a visible mint orb and shares slightly faster cycles across Home and service details', () => {
+  it('uses a visible mint orb and shared animation timings on the home page', () => {
     const homeStyles = readFileSync(new URL('../src/app/features/public/components/home-hero/home-hero.component.scss', import.meta.url), 'utf8');
-    const serviceStyles = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
     assert.equal(variables.get('--hero-orb-mint-color'), 'var(--brand-400)');
     for (const surface of ['--page-background', '--hero-background']) {
       assert.ok(contrast('var(--hero-orb-mint-color)', `var(${surface})`) > 1.5, 'The decorative mint circle must stay distinguishable from the pale background.');
@@ -188,20 +187,18 @@ describe('original green brand palette', () => {
       const token = `--hero-orb-duration-${color}`;
       assert.equal(variables.get(token), `${oldDuration * 8 / 10}s`);
       assert.ok(homeStyles.includes(`var(${token})`));
-      assert.ok(serviceStyles.includes(`var(${token})`));
       assert.equal(declaration(`cvp-home-hero .mobile-hero-orb-${color}`, '--orb-duration'), `var(${token})`);
     }
     assert.equal(declaration('.desktop-hero-orb', '--orb-duration'), 'var(--hero-orb-duration-mint)');
     assert.equal(declaration('.desktop-hero-orb.orb-coral', '--orb-duration'), 'var(--hero-orb-duration-coral)');
     assert.equal(declaration('.desktop-hero-orb.orb-amber', '--orb-duration'), 'var(--hero-orb-duration-amber)');
-    for (const css of [source, homeStyles, serviceStyles]) {
+    for (const css of [source, homeStyles]) {
       const timings = [...css.matchAll(/--orb-duration:\s*([^;]+);/g)];
       assert.ok(timings.length > 0);
       assert.ok(timings.every(match => /^var\(--hero-orb-duration-(?:mint|coral|amber|small)\)$/.test(match[1])), 'Every hero must use the shared animation timings.');
     }
     assert.equal(declaration('cvp-home-hero .mobile-hero-orb-mint', 'background'), 'var(--hero-orb-mint-color)');
     assert.match(homeStyles, /\.mobile-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s);
-    assert.match(serviceStyles, /\.service-hero-orb-mint\s*\{[^}]*background:\s*var\(--hero-orb-mint-color\)/s);
   });
   it('uses reading-size professional benefits and a larger invitation button without a fixed card height', () => {
     assert.equal(declaration('.provider-cta-actions', 'font-size'), '1rem');
@@ -346,20 +343,18 @@ describe('original green brand palette', () => {
   });
   it('keeps service media, profile identity and informational sections proportionate', () => {
     assert.equal(declaration('.service-detail-grid h1', 'max-width'), 'none');
-    assert.ok(rules.some(rule => rule.selectors.includes('.service-visual') && rule.declarations.includes('min-height: 15rem')));
     const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
-    assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*object-fit:\s*cover;/s);
+    assert.match(servicePortrait, /\.service-banner-portrait img\s*\{[^}]*object-fit:\s*cover;/s);
     assert.equal(declaration('.service-detail-provider-grid .provider-card', 'padding'), '.78rem');
     assert.equal(declaration('cvp-provider-detail .profile-identity-panel', 'display'), 'grid');
     assert.ok(rules.some(rule => rule.selectors.includes('cvp-provider-detail .profile-identity-panel .avatar-lg') && rule.declarations.includes('width: 5rem')));
     assert.equal(declaration('cvp-info-page .info-page-hero', 'padding-bottom'), '.6rem');
     assert.equal(declaration('cvp-info-page .info-page-content', 'padding-top'), '.4rem');
   });
-  it('frames service portraits in a round slot instead of a wide crop that hides the face', () => {
+  it('keeps the square professional portrait beside the compact service banner copy', () => {
     const servicePortrait = readFileSync(new URL('../src/app/features/public/pages/service-detail/service-detail.component.scss', import.meta.url), 'utf8');
-    assert.match(servicePortrait, /\.service-visual:not\(\.custom-service-visual\)\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:\s*50%;/s);
-    assert.match(servicePortrait, /\.service-visual > img\s*\{[^}]*height:\s*141%;[^}]*object-position:\s*50% 8%;/s);
-    assert.match(servicePortrait, /@media \(min-width: 48rem\)\s*\{\s*\.service-detail-grid\s*\{\s*grid-template-columns:\s*minmax\(0, 1\.1fr\) minmax\(0, \.9fr\);/s);
-    assert.doesNotMatch(source, /\.service-visual > img\s*\{/);
+    assert.match(servicePortrait, /\.service-banner-portrait\s*\{[^}]*aspect-ratio:\s*1;[^}]*border-radius:/s);
+    assert.match(servicePortrait, /\.service-banner-portrait img\s*\{[^}]*object-fit:\s*cover;[^}]*object-position:\s*center;/s);
+    assert.match(servicePortrait, /\.service-detail-grid\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) minmax\(5rem, 33%\);/s);
   });
 });

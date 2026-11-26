@@ -1812,6 +1812,17 @@ export const translations: ReadonlyArray<readonly [source: string, translation: 
   ['Mídia online ou arquivo atual', 'Online media or current file'],
   ['Nenhum arquivo escolhido', 'No file selected'],
   ['Prévia da imagem da campanha', 'Campaign image preview'],
+  ["Edite as campanhas da home e dos serviços e gerencie os produtos da loja.", "Edit campaigns for the home and service pages and manage store products."],
+  ["Campanhas do site", "Site campaigns"],
+  ["Onde exibir a campanha", "Where to display the campaign"],
+  ["Página inicial", "Home"],
+  ["Páginas de serviço", "Service pages"],
+  ["Serviço específico", "Specific service"],
+  ["O site alterna automaticamente entre os profissionais do serviço.", "The site automatically rotates through the professionals offering this service."],
+  ["Deixe o texto e o destino em branco para manter o botão do serviço.", "Leave the label and destination blank to keep the service button."],
+  ["A mídia fica no fundo, atrás do texto e da foto do profissional.", "The media appears behind the text and the professional’s photo."],
+  ["Os links aparecem abaixo do botão, dentro do banner.", "Links appear below the button, inside the banner."],
+  ["Exibir esta campanha", "Show this campaign"],
 ];
 
 export const patterns: ReadonlyArray<readonly [pattern: RegExp, replacement: string]> = [

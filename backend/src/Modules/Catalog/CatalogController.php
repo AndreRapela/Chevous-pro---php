@@ -107,17 +107,33 @@ final class CatalogController extends Controller
     public function home(Request $request, array $params, ?array $auth): Response
     {
         $categories = $this->publicCategories();
-        $promotions = $this->db->query(
+        $promotions = $this->activePromotions();
+        $services = $this->serviceCards(ServiceVisibility::inCatalog() . ' AND c.active = 1', [], 4, 0);
+        $professionals = $this->professionalCards(
+            '', "u.status = 'active' AND p.verification_status = 'approved'",
+            'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC', [], 8, 0
+        );
+        return $this->catalogData(compact('promotions', 'categories', 'services', 'professionals'));
+    }
+
+    private function activePromotions(?string $serviceId = null): array
+    {
+        $placement = $serviceId === null
+            ? "placement = 'home'"
+            : "placement = 'services' AND (service_public_id IS NULL OR service_public_id = :service_id)";
+        $statement = $this->db->prepare(
             'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
                     image_url AS imageUrl, media_type AS mediaType, media_frame AS mediaFrame, button_placement AS buttonPlacement,
                     video_duration_ms AS videoDurationMs, rotation_weight AS rotationWeight,
                     secondary_links AS secondaryLinks, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor
-             FROM promotions WHERE active = 1
+             FROM promotions WHERE active = 1 AND ' . $placement . '
                AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
                AND (ends_at IS NULL OR ends_at >= UTC_TIMESTAMP())
              ORDER BY sort_order, created_at DESC, promotions.id DESC'
-        )->fetchAll();
+        );
+        $statement->execute($serviceId === null ? [] : ['service_id' => $serviceId]);
+        $promotions = $statement->fetchAll();
         $videoCount = 0;
         $promotions = array_values(array_filter($promotions, static function (array $promotion) use (&$videoCount): bool {
             return !PromotionVideo::hasSource($promotion['mediaType'], $promotion['imageUrl'])
@@ -130,12 +146,7 @@ final class CatalogController extends Controller
                 : [];
         }
         unset($promotion);
-        $services = $this->serviceCards(ServiceVisibility::inCatalog() . ' AND c.active = 1', [], 4, 0);
-        $professionals = $this->professionalCards(
-            '', "u.status = 'active' AND p.verification_status = 'approved'",
-            'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC', [], 8, 0
-        );
-        return $this->catalogData(compact('promotions', 'categories', 'services', 'professionals'));
+        return $promotions;
     }
 
     public function products(Request $request, array $params, ?array $auth): Response
@@ -245,7 +256,7 @@ final class CatalogController extends Controller
                     s.price_cents AS priceCents, s.unit_label AS unitLabel,
                     s.default_duration_minutes AS defaultDurationMinutes,
                     s.minimum_quantity AS minimumQuantity, s.maximum_quantity AS maximumQuantity,
-                    c.public_id AS categoryId, c.name AS categoryName, (c.slug = 'outros') AS isCustom
+                    c.public_id AS categoryId, c.name AS categoryName, c.slug AS categorySlug, (c.slug = 'outros') AS isCustom
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
              WHERE (s.public_id = :public_id OR s.slug = :slug) AND {$visibility} AND c.active = 1",
             ['public_id' => $params['id'], 'slug' => $params['id']],
@@ -258,6 +269,7 @@ final class CatalogController extends Controller
         $addons->execute(['service_id' => $service['internalId']]);
         unset($service['internalId']);
         $service['addons'] = $addons->fetchAll();
+        $service['promotions'] = $this->activePromotions($service['id']);
         return $this->catalogData($service);
     }
 

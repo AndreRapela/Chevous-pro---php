@@ -436,10 +436,6 @@ html:has(.mobile-drawer[open]) { overflow: hidden; }
 .service-detail-grid h1 { max-width: 13ch; margin-bottom: .8rem; font-size: clamp(2.35rem, 4.5vw, 3.8rem); }
 .service-detail-grid p { max-width: 38rem; margin-bottom: 1rem; font-size: 1rem; }
 .hero-actions { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
-.service-visual { position: relative; min-height: 14rem; border-radius: 1.5rem; background: var(--brand-700); overflow: hidden; }
-.service-visual > span { position: absolute; z-index: 2; inset: 50% auto auto 50%; transform: translate(-50%,-50%); width: 4.75rem; height: 4.75rem; display: grid; place-items: center; border-radius: 1.15rem; color: var(--brand-900); background: #fff; font-size: 1.35rem; font-weight: 900; box-shadow: var(--shadow-md); }
-.service-visual i { position: absolute; width: 7rem; height: 7rem; border-radius: 50%; background: var(--coral-500); right: -1.5rem; top: -1.5rem; }
-.service-visual i:last-child { width: 5.5rem; height: 5.5rem; background: var(--amber-500); left: -1.5rem; top: auto; bottom: -1.5rem; }
 .benefits-grid { display: grid; align-items: start; gap: .85rem; }
 .benefits-grid article { min-height: 10rem; padding: 1.15rem; border: 1px solid var(--ink-100); border-radius: var(--radius-md); }
 .benefits-grid article > span, .info-symbol { width: 2.4rem; height: 2.4rem; display: grid; place-items: center; border-radius: .7rem; color: var(--brand-800); background: var(--brand-100); font-weight: 900; margin-bottom: .75rem; }
@@ -1348,7 +1344,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .booking-aside small { color: var(--ink-500); text-align: center; }
   .mobile-sticky-action { display: none; }
   .service-detail-grid { grid-template-columns: 1.1fr .9fr; gap: 3rem; }
-  .service-visual { min-height: 16.5rem; }
   .info-grid { grid-template-columns: repeat(2, 1fr); }
   .auth-page { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .auth-brand-panel { min-height: 100svh; display: grid; grid-template-rows: auto minmax(4.5rem, 13vh) auto; align-content: stretch; gap: .45rem; padding: .95rem; }
@@ -2589,8 +2584,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .service-detail-grid { gap: 1.6rem; }
   .service-detail-grid h1 { font-size: clamp(2.25rem, 3.15vw, 2.8rem); }
   .service-detail-grid p { margin-bottom: .85rem; font-size: .9rem; }
-  .service-visual { min-height: 12.75rem; border-radius: 1.25rem; }
-  .service-visual > span { width: 4rem; height: 4rem; border-radius: 1rem; font-size: 1.15rem; }
   .benefits-grid article { min-height: 10.5rem; padding: 1.1rem; }
   .benefits-grid h2,
   .info-grid h2 { font-size: 1.05rem; }
@@ -2716,7 +2709,6 @@ cvp-provider-card { display: block; height: 100%; }
 /* Auditoria final de densidade: cada contexto usa a mesma escala, sem
    transformar o perfil ou os ícones em elementos de destaque desnecessário. */
 .service-icon { display: block; width: var(--service-icon-size, 1.18rem); height: var(--service-icon-size, 1.18rem); stroke-width: 2; vector-effect: non-scaling-stroke; }
-.service-visual .service-icon { width: 2rem; height: 2rem; }
 
 @media (min-width: 64rem) {
   /* Categorias: informação suficiente, sem os vazios de uma segunda hero. */
@@ -2738,8 +2730,6 @@ cvp-provider-card { display: block; height: 100%; }
   .service-detail-hero { padding-block: 1.25rem; }
   .service-detail-grid { gap: 1.25rem; }
   .service-detail-grid h1 { font-size: clamp(2rem, 2.7vw, 2.45rem); }
-  .service-visual { min-height: 10.75rem; border-radius: 1.1rem; }
-  .service-visual > span { width: 3.5rem; height: 3.5rem; border-radius: .9rem; }
 
   /* Cards de escolha: compactos, com mesma altura e ação sempre alinhada. */
   .service-grid { gap: .9rem; }
@@ -3407,10 +3397,6 @@ cvp-provider-detail .detail-main { gap: .85rem; }
 cvp-info-page .info-page-hero { padding-bottom: .6rem; }
 cvp-info-page .info-page-content { padding-top: .4rem; }
 
-@media (min-width: 64rem) {
-  .service-visual { min-height: 15rem; }
-}
-
 @media (max-width: 63.99rem) {
   cvp-provider-detail .profile-card-heading,
   cvp-provider-detail .profile-identity-panel { grid-column: 1 / -1; }
@@ -3423,7 +3409,6 @@ cvp-info-page .info-page-content { padding-top: .4rem; }
 }
 
 @media (max-width: 31.99rem) {
-  .service-visual { min-height: 13rem; }
   cvp-provider-detail .profile-identity-panel { padding: .8rem; }
   cvp-provider-detail .profile-identity-panel .avatar-lg { width: 4rem; height: 4rem; }
 }

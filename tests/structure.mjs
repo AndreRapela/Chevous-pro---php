@@ -107,12 +107,10 @@ assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat m�
 const publicServiceCard = await text('frontend/src/app/shared/components/service-card/service-card.component.ts');
 const publicServiceDetail = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.ts');
 const serviceDetailStyles = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.scss');
-assert.match(publicServiceDetail, /class="container service-detail-grid">\s*<div class="service-detail-copy">[\s\S]*?<div class="service-detail-art"/, 'Texto e retrato devem compartilhar a grade do banner.');
-assert.equal((publicServiceDetail.match(/class="service-hero-orb service-hero-orb-/g) ?? []).length, 4, 'A foto do detalhe deve receber quatro bolinhas, como na Home.');
-assert.match(publicServiceDetail, /@if \(!item\.isCustom\)\s*\{\s*<span class="service-hero-orb/, 'Serviços personalizados devem preservar o visual de iniciais sem decoração de foto.');
-assert.match(serviceDetailStyles, /\.service-detail-grid\s*\{[^}]*background:\s*var\(--brand-900\)/s, 'O fundo verde deve abranger o texto e o retrato.');
-assert.match(serviceDetailStyles, /animation:\s*home-orb-float/, 'As bolinhas devem reutilizar a animação da Home.');
-assert.match(serviceDetailStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.service-hero-orb\s*\{[^}]*animation:\s*none/s, 'A decoração deve respeitar movimento reduzido.');
+assert.match(publicServiceDetail, /<article[^>]*class="container service-detail-grid"[^>]*>[\s\S]*?<div class="service-detail-copy">[\s\S]*?<div class="service-detail-art"/, 'Texto e retrato devem compartilhar o cartão do banner.');
+assert.match(publicServiceDetail, /\[src\]="person\.avatarUrl"/, 'A foto do banner deve ser a foto cadastrada pelo profissional em destaque.');
+assert.match(publicServiceDetail, /reducedMotion\.matches/, 'A alternância deve respeitar movimento reduzido.');
+assert.match(serviceDetailStyles, /\.service-detail-grid\s*\{[^}]*grid-template-columns:/s, 'O banner deve manter duas colunas na tela estreita.');
 assert.doesNotMatch(publicServiceCard, /priceFromCents|A partir de/, 'Cards de serviço não devem mostrar um preço genérico.');
 assert.doesNotMatch(publicServiceDetail, /priceFromCents|A partir de/, 'O detalhe do serviço deve deixar o valor para cada profissional.');
 assert.match(globalStyles, /\.professionals-results \.provider-card \.chip-row,[\s\S]*display:\s*flex/s, 'Cards de profissionais no celular devem preservar os diferenciais.');

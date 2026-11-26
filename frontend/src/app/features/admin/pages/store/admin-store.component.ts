@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { Observable, defer, forkJoin, map, of, switchMap, tap } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
-import { Product, Promotion, PromotionLink, PromotionMediaFrame } from '../../../../core/models';
+import { Product, Promotion, PromotionLink, PromotionMediaFrame, PromotionPlacement, Service } from '../../../../core/models';
 import { PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
 import { PromotionMediaComponent } from '../../../../shared/components/promotion-media/promotion-media.component';
 import { LocalizedCatalogTextPipe, LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
@@ -22,229 +22,7 @@ type ProductDraft = Omit<Product, 'id'> & { id?: string };
   selector: 'cvp-admin-store',
   standalone: true,
   imports: [FormsModule, RouterLink, LocalizedCatalogTextPipe, LocalizedMoneyPipe, PageHeaderComponent, PromotionMediaComponent, CampaignCutoutComponent, CampaignPosterComponent, CampaignVideoOptimizerComponent, StatePanelComponent],
-  template: `
-    <section class="portal-page admin-store-page">
-      <cvp-page-header eyebrow="Conteúdo do site" title="Site e loja" description="Edite a publicidade da home e todos os produtos exibidos na loja.">
-        <a class="btn btn-secondary btn-small" href="/produtos" target="_blank" rel="noopener">Abrir loja</a>
-        <a class="btn btn-secondary btn-small" routerLink="/admin/pedidos">Pedidos da loja</a>
-      </cvp-page-header>
-
-      <aside class="admin-locked-note"><span aria-hidden="true">◈</span><div><strong>Outdoor inicial protegido</strong><p>O banner principal do início não aparece neste editor e permanece inalterável, conforme definido.</p></div></aside>
-
-      @if (loading()) { <cvp-state-panel kind="loading" message="Carregando o conteúdo da loja." /> }
-      @else if (error()) { <cvp-state-panel kind="error" title="Conteúdo indisponível" [message]="error()" (retry)="load()" /> }
-      @else {
-        @if (success()) { <p class="success-message" role="status">{{ success() }}</p> }
-        @if (actionError()) { <p class="field-error" role="alert">{{ actionError() }}</p> }
-
-        <section class="portal-card admin-content-editor" aria-labelledby="campaign-editor-title">
-          <div class="card-title-row">
-            <div><span class="eyebrow">Publicidade da home</span><h2 id="campaign-editor-title">Campanhas da página inicial</h2></div>
-            <button class="btn btn-primary btn-small" type="button" (click)="startNewPromotion()" [disabled]="saving() || editingPromotion()">Adicionar campanha</button>
-          </div>
-          @if (promotions().length) {
-            <ul class="campaign-list">
-              @for (campaign of promotions(); track campaign.id) {
-                <li>
-                  <strong data-cvp-no-localize>{{ campaign.title | appCatalogText }}</strong>
-                  <span class="campaign-order">{{ rotationOptions[(campaign.rotationWeight ?? 3) - 1] }}</span>
-                  <span class="admin-status" [class.success]="campaign.active" [class.neutral]="!campaign.active">{{ campaign.active ? 'Ativa' : 'Oculta' }}</span>
-                  <button class="btn btn-secondary btn-small" type="button" (click)="editPromotion(campaign)" [disabled]="saving() || editingPromotion()">Editar</button>
-                </li>
-              }
-            </ul>
-          } @else if (!editingPromotion()) {
-            <p>Nenhuma campanha cadastrada.</p>
-          }
-          @if (editingPromotion()) {
-            <div class="card-title-row">
-              <h3>{{ promotionDraft.id ? 'Editar campanha' : 'Nova campanha' }}</h3>
-              <button class="text-button" type="button" (click)="cancelPromotionEdit()" [disabled]="saving()">Cancelar</button>
-            </div>
-            <div class="admin-editor-layout">
-              <form class="admin-editor-form" #promotionForm="ngForm" (ngSubmit)="savePromotion(promotionForm.valid === true)">
-                <fieldset class="form-grid campaign-form-fields" [disabled]="saving()">
-                  <label class="span-two">Título<input #promotionTitleField name="promotionTitle" [(ngModel)]="promotionDraft.title" required minlength="3" maxlength="160"></label>
-                  <label class="span-two">Descrição<textarea name="promotionSubtitle" [(ngModel)]="promotionDraft.subtitle" maxlength="300" rows="3"></textarea></label>
-                  <label>Selo<input name="promotionBadge" [(ngModel)]="promotionDraft.badgeText" maxlength="80" placeholder="Ex.: Novidades na loja"></label>
-                  <label>Texto do botão<input name="promotionCta" [(ngModel)]="promotionDraft.ctaLabel" maxlength="60" placeholder="Ver produtos"></label>
-                  <label class="span-two">Destino do botão<input data-cvp-no-localize name="promotionUrl" [(ngModel)]="promotionDraft.ctaUrl" required maxlength="255" placeholder="/produtos"></label>
-                  <fieldset class="campaign-media-field span-two">
-                    <legend>Imagem ou vídeo</legend>
-                    <p>Escolha um arquivo do computador ou informe um endereço online. Use JPG, PNG ou WebP para imagens e MP4 ou WebM para vídeos.</p>
-                    <p>Até 10 vídeos cadastrados. Cada vídeo pode ter no máximo 1 minuto.</p>
-                    <div class="campaign-media-controls">
-                      <input #promotionMediaInput class="sr-only" type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" (change)="selectPromotionMedia($event)">
-                      <button class="btn btn-secondary btn-small" type="button" (click)="promotionMediaInput.click()">Procurar no computador</button>
-                      <span>{{ promotionUploadFileName || (promotionDraft.imageUrl ? 'Mídia online ou arquivo atual' : 'Nenhum arquivo escolhido') }}</span>
-                      @if (promotionDraft.imageUrl || promotionUploadFileName) { <button class="text-button" type="button" (click)="clearPromotionMedia(promotionMediaInput)">Remover mídia</button> }
-                    </div>
-                    <label class="span-two">Endereço online da mídia<input data-cvp-no-localize name="promotionImage" [(ngModel)]="promotionDraft.imageUrl" (ngModelChange)="onPromotionUrlChanged()" maxlength="1024" placeholder="https://... ou /images/campanha.webp"></label>
-                    <label class="campaign-media-type">Tipo da mídia<select name="promotionMediaType" [(ngModel)]="promotionDraft.mediaType" (ngModelChange)="cutoutSource.set('')"><option value="image">Imagem</option><option value="video">Vídeo</option></select></label>
-                    @if (promotionPreviewUrl) {
-                      <div class="campaign-framing">
-                        <label>Posição da mídia
-                          <select name="promotionLayout" [ngModel]="promotionDraft.mediaFrame?.layout ?? 'side'" (ngModelChange)="setPromotionLayout($event)">
-                            <option value="side">Ao lado do texto</option>
-                            <option value="background">Ocupar todo o banner</option>
-                          </select>
-                        </label>
-                        <label>Enquadramento
-                          <select name="promotionFit" [ngModel]="promotionDraft.mediaFrame?.fit ?? (promotionDraft.mediaType === 'video' ? 'contain' : 'original')" (ngModelChange)="setPromotionFit($event)">
-                            @if (promotionDraft.mediaType !== 'video') { <option value="original">Layout original</option> }
-                            <option value="contain">Mostrar a mídia inteira</option>
-                            <option value="cover">Preencher e recortar</option>
-                          </select>
-                        </label>
-                        <label class="campaign-range">Tamanho no banner
-                          <input name="promotionSize" type="range" min="40" max="100" step="1" [ngModel]="promotionDraft.mediaFrame?.size ?? 100" (ngModelChange)="setFrameValue('size', $event)">
-                          <output>{{ promotionDraft.mediaFrame?.size ?? 100 }}%</output>
-                        </label>
-                        @if (promotionDraft.mediaFrame; as frame) {
-                          @if (frame.fit === 'cover') {
-                            <p class="campaign-framing-hint">Posicione a parte que deve aparecer na prévia.</p>
-                            <label class="campaign-range">Esquerda ↔ direita
-                              <input name="promotionPositionX" type="range" min="0" max="100" step="1" [ngModel]="frame.x" (ngModelChange)="setFrameValue('x', $event)">
-                              <output>{{ frame.x }}%</output>
-                            </label>
-                            <label class="campaign-range">Cima ↔ baixo
-                              <input name="promotionPositionY" type="range" min="0" max="100" step="1" [ngModel]="frame.y" (ngModelChange)="setFrameValue('y', $event)">
-                              <output>{{ frame.y }}%</output>
-                            </label>
-                          }
-                        }
-                      </div>
-                      @if (promotionDraft.mediaType === 'video') {
-                        <cvp-campaign-video-optimizer #promotionOptimizer [source]="promotionUploadFile ?? promotionDraft.imageUrl ?? ''" />
-                        <cvp-campaign-poster #promotionPoster [savedUrl]="promotionDraft.mediaFrame?.posterUrl ?? null" />
-                        <label class="toggle-line campaign-cutout-button">
-                          <input type="checkbox" name="promotionVideoKey" [ngModel]="!!promotionDraft.mediaFrame?.backgroundKey"
-                            (ngModelChange)="setVideoBackground($event)">
-                          Remover fundo de cor sólida do vídeo
-                        </label>
-                        @if (promotionDraft.mediaFrame?.backgroundKey; as key) {
-                          <div class="campaign-framing">
-                            <label>Cor do fundo a remover
-                              <input type="color" name="promotionVideoKeyColor" [ngModel]="key.color" (ngModelChange)="updateVideoBackground({ color: $event })">
-                            </label>
-                            <label class="campaign-range">Tolerância
-                              <input name="promotionVideoKeyTolerance" type="range" min="5" max="100" step="1" [ngModel]="key.tolerance" (ngModelChange)="updateVideoBackground({ tolerance: $event })">
-                              <output>{{ key.tolerance }}</output>
-                            </label>
-                          </div>
-                        }
-                      } @else {
-                        @if (cutoutSource(); as source) {
-                          <cvp-campaign-cutout [src]="source" (applied)="applyPromotionCutout($event)" (cancelled)="cutoutSource.set('')" />
-                        } @else {
-                          <button class="btn btn-secondary btn-small campaign-cutout-button" type="button" (click)="cutoutSource.set(promotionPreviewUrl)">Remover fundo da imagem</button>
-                        }
-                      }
-                    }
-                  </fieldset>
-                  <label class="span-two">Onde mostrar o botão principal<select name="promotionButtonPlacement" [(ngModel)]="promotionDraft.buttonPlacement"><option value="banner">Dentro da campanha</option><option value="below">Abaixo da campanha</option><option value="both">Dentro e abaixo da campanha</option></select><small>Assim, “Conhecer a loja” pode aparecer em outro ponto da página inicial.</small></label>
-                  <fieldset class="campaign-links-field span-two">
-                    <legend>Links pequenos opcionais</legend>
-                    <p>Escolha onde mostrar cada link. Quando houver um botão na mesma posição, os links ficam abaixo dele.</p>
-                    @for (link of promotionDraft.secondaryLinks ?? []; track $index; let index = $index) {
-                      <div class="campaign-link-row">
-                        <label>Texto do link<input [name]="'promotionLinkLabel' + index" [(ngModel)]="link.label" required maxlength="40" placeholder="Ex.: Ver produtos"></label>
-                        <label>Destino<input data-cvp-no-localize [name]="'promotionLinkUrl' + index" [(ngModel)]="link.url" required maxlength="255" placeholder="/produtos ou https://..."></label>
-                        <label class="campaign-link-placement">Onde mostrar o link
-                          <select [name]="'promotionLinkPlacement' + index" [(ngModel)]="link.placement">
-                            <option value="banner">Dentro da campanha</option>
-                            <option value="below">Abaixo da campanha</option>
-                            <option value="both">Dentro e abaixo da campanha</option>
-                          </select>
-                        </label>
-                        <button class="text-button danger-text" type="button" (click)="removePromotionLink(index)">Remover</button>
-                      </div>
-                    }
-                    @if ((promotionDraft.secondaryLinks?.length ?? 0) < 3) { <button class="btn btn-secondary btn-small campaign-add-link" type="button" (click)="addPromotionLink()">Adicionar link</button> }
-                  </fieldset>
-                  <label class="span-two">Condições<small>Aparecem abaixo da publicidade.</small><input name="promotionTerms" [(ngModel)]="promotionDraft.termsText" maxlength="300"></label>
-                  <label>Cor do fundo<input name="promotionBackground" [(ngModel)]="promotionDraft.backgroundColor" type="color"></label>
-                  <label>Cor do texto<input name="promotionText" [(ngModel)]="promotionDraft.textColor" type="color"></label>
-                  <label class="span-two">Frequência de exibição
-                    <select name="promotionFrequency" [ngModel]="promotionDraft.rotationWeight ?? 3" (ngModelChange)="promotionDraft.rotationWeight = $event">
-                      @for (label of rotationOptions; track label; let index = $index) {
-                        <option [ngValue]="index + 1">{{ label }}</option>
-                      }
-                    </select>
-                    <small>Uma frequência maior aumenta a chance de esta campanha aparecer no sorteio.</small>
-                  </label>
-                  <label class="toggle-line span-two"><input name="promotionActive" [(ngModel)]="promotionDraft.active" type="checkbox"> Exibir esta campanha na home</label>
-                </fieldset>
-                <button class="btn btn-primary" type="submit" [disabled]="saving() || promotionForm.invalid || !!cutoutSource() || promotionOptimizer()?.blocksSave()">{{ saving() ? 'Salvando…' : 'Salvar campanha' }}</button>
-              </form>
-              <div class="admin-campaign-preview">
-                <span>Prévia</span>
-                <article [class.has-framed-media]="!!promotionPreviewUrl && !!effectiveMediaFrame"
-                  [class.has-media-background]="!!promotionPreviewUrl && effectiveMediaFrame?.layout === 'background'"
-                  [style.background]="promotionDraft.backgroundColor" [style.--preview-bg]="promotionDraft.backgroundColor" [style.color]="promotionDraft.textColor">
-                  <div>
-                    <small data-cvp-no-localize>{{ (promotionDraft.badgeText || 'Selo da campanha') | appCatalogText }}</small>
-                    <h3 data-cvp-no-localize>{{ (promotionDraft.title || 'Título da campanha') | appCatalogText }}</h3>
-                    <p data-cvp-no-localize>{{ (promotionDraft.subtitle || 'Descrição da publicidade.') | appCatalogText }}</p>
-                    @if (promotionDraft.buttonPlacement !== 'below') { <b data-cvp-no-localize>{{ (promotionDraft.ctaLabel || 'Ver produtos') | appCatalogText }} →</b> }
-                    @if (previewLinks('banner').length) {
-                      <div class="campaign-preview-inside-links">@for (link of previewLinks('banner'); track $index) { @if (link.label) { <span data-cvp-no-localize>{{ link.label | appCatalogText }}</span> } }</div>
-                    }
-                  </div>
-                  @if (promotionPreviewUrl) {
-                    @if (effectiveMediaFrame; as frame) {
-                      <cvp-promotion-media [src]="promotionPreviewUrl" [frame]="frame" [mediaType]="promotionDraft.mediaType ?? 'image'"
-                        [posterUrl]="promotionPoster()?.previewUrl()"
-                        [label]="promotionDraft.mediaType === 'video' ? 'Prévia do vídeo da campanha' : 'Prévia da imagem da campanha'" [preview]="true" />
-                    }
-                    @else { <img [src]="promotionPreviewUrl" alt="Prévia da imagem da campanha"> }
-                  }
-                </article>
-                @if (promotionDraft.buttonPlacement === 'below' || promotionDraft.buttonPlacement === 'both') { <div class="campaign-preview-below"><b data-cvp-no-localize>{{ (promotionDraft.ctaLabel || 'Ver produtos') | appCatalogText }} →</b></div> }
-                @if (previewLinks('below').length) { <nav class="campaign-preview-links" aria-label="Prévia dos links">@for (link of previewLinks('below'); track $index) { @if (link.label) { <span data-cvp-no-localize>{{ link.label | appCatalogText }}</span> } }</nav> }
-              </div>
-            </div>
-          }
-        </section>
-
-        <section class="portal-card admin-products-card" aria-labelledby="products-editor-title">
-          <div class="card-title-row"><div><span class="eyebrow">Rota /produtos</span><h2 id="products-editor-title">Produtos da loja</h2></div><button class="btn btn-primary btn-small" type="button" (click)="startNewProduct()">Adicionar produto</button></div>
-          @if (editingProduct()) {
-            <form class="admin-product-form" #productForm="ngForm" (ngSubmit)="saveProduct(productForm.valid === true)">
-              <div class="card-title-row"><h3>{{ productDraft.id ? 'Editar produto' : 'Novo produto' }}</h3><button class="text-button" type="button" (click)="cancelProductEdit()">Fechar</button></div>
-              <div class="form-grid">
-                <label>Nome<input name="productName" [(ngModel)]="productDraft.name" required minlength="2" maxlength="160"></label>
-                <label>Identificador da URL<input name="productSlug" [(ngModel)]="productDraft.slug" maxlength="180" placeholder="gerado pelo nome"></label>
-                <label class="span-two">Descrição<textarea name="productDescription" [(ngModel)]="productDraft.shortDescription" maxlength="300" rows="3"></textarea></label>
-                <label>Preço<input name="productPrice" [(ngModel)]="productPrice" type="number" min="0.01" max="1000000" step="0.01" required></label>
-                <label>Preço anterior<input name="productComparePrice" [(ngModel)]="productComparePrice" type="number" min="0.01" max="1000000" step="0.01" placeholder="Opcional"></label>
-                <label>Estoque<input name="productStock" [(ngModel)]="productDraft.inventoryCount" type="number" min="0" max="1000000" step="1" required></label>
-                <label>Selo<input name="productBadge" [(ngModel)]="productDraft.badgeText" maxlength="80" placeholder="Ex.: Mais vendido"></label>
-                <label class="span-two">URL da imagem<input data-cvp-no-localize name="productImage" [(ngModel)]="productDraft.imageUrl" maxlength="1024" placeholder="/images/produto.webp"></label>
-                <label class="span-two">Link para concluir a compra<input data-cvp-no-localize name="productPurchase" [(ngModel)]="productDraft.purchaseUrl" required maxlength="1024" placeholder="/ajuda?produto=... ou https://..."></label>
-                <label>Ordem de exibição<input name="productOrder" [(ngModel)]="productDraft.sortOrder" type="number" min="0" max="999" step="1"></label>
-                <div class="admin-checks"><label class="toggle-line"><input name="productFeatured" [(ngModel)]="productDraft.featured" type="checkbox"> Produto em destaque</label><label class="toggle-line"><input name="productActive" [(ngModel)]="productDraft.active" type="checkbox"> Produto publicado</label></div>
-              </div>
-              <div class="card-actions"><button class="btn btn-secondary" type="button" (click)="cancelProductEdit()">Cancelar</button><button class="btn btn-primary" type="submit" [disabled]="saving() || productForm.invalid">{{ saving() ? 'Salvando…' : 'Salvar produto' }}</button></div>
-            </form>
-          }
-
-          @if (!products().length) { <cvp-state-panel kind="empty" title="Nenhum produto cadastrado" message="Adicione o primeiro item da loja." /> }
-          @else {
-            <div class="admin-product-list">
-              @for (product of products(); track product.id) {
-                <article>
-                  <div class="admin-product-thumb" data-cvp-no-localize>@if (product.imageUrl) { <img [src]="product.imageUrl" alt=""> } @else { <span aria-hidden="true">⌂</span> }</div>
-                  <div class="admin-product-info" data-cvp-no-localize><div><strong>{{ product.name | appCatalogText }}</strong>@if (product.badgeText) { <span>{{ product.badgeText | appCatalogText }}</span> }</div><small>{{ (product.shortDescription || 'Sem descrição') | appCatalogText }}</small><b>{{ product.priceCents / 100 | appMoney:product.currency }}</b></div>
-                  <div class="admin-product-meta"><span class="admin-status" [class]="product.active ? 'admin-status success' : 'admin-status neutral'">{{ product.active ? 'Publicado' : 'Oculto' }}</span><small>{{ product.inventoryCount }} em estoque</small><button class="btn btn-secondary btn-small" type="button" (click)="editProduct(product)">Editar</button></div>
-                </article>
-              }
-            </div>
-          }
-        </section>
-      }
-    </section>
-  `,
+  templateUrl: './admin-store.component.html',
   styleUrl: './admin-store.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -256,6 +34,9 @@ export class AdminStoreComponent implements OnDestroy, OnInit {
   readonly promotionOptimizer = viewChild<CampaignVideoOptimizerComponent>('promotionOptimizer');
   readonly promotions = signal<Promotion[]>([]);
   readonly products = signal<Product[]>([]);
+  readonly campaignServices = signal<Service[]>([]);
+  readonly campaignServicesLoading = signal(false);
+  readonly campaignServicesError = signal('');
   readonly loading = signal(true);
   readonly saving = signal(false);
   readonly error = signal('');
@@ -275,7 +56,14 @@ export class AdminStoreComponent implements OnDestroy, OnInit {
   promotionLocalPreviewUrl = '';
   get promotionPreviewUrl(): string { return this.promotionOptimizer()?.previewUrl() || this.promotionLocalPreviewUrl || this.promotionDraft.imageUrl || ''; }
   get effectiveMediaFrame(): PromotionMediaFrame | null {
+    if (this.promotionDraft.placement === 'services') {
+      return { ...DEFAULT_MEDIA_FRAME, fit: 'cover', ...this.promotionDraft.mediaFrame, layout: 'background' };
+    }
     return this.promotionDraft.mediaFrame ?? (this.promotionDraft.mediaType === 'video' ? DEFAULT_MEDIA_FRAME : null);
+  }
+  get campaignServiceMissing(): boolean {
+    const selected = this.promotionDraft.serviceId;
+    return !!selected && !this.campaignServices().some((service) => service.id === selected);
   }
 
   ngOnDestroy(): void { this.releasePromotionPreview(); }
@@ -305,9 +93,44 @@ export class AdminStoreComponent implements OnDestroy, OnInit {
     this.savedVideoUrl = campaign.mediaType === 'video' ? campaign.imageUrl : null;
     this.promotionDraft = {
       ...campaign,
+      serviceId: campaign.serviceId ?? null,
       secondaryLinks: campaign.secondaryLinks?.map((link) => ({ ...link, placement: link.placement ?? 'below' })) ?? []
     };
+    if (campaign.placement === 'services') this.loadCampaignServices();
     this.openPromotionEditor();
+  }
+
+  setPromotionPlacement(placement: PromotionPlacement): void {
+    this.promotionDraft.placement = placement;
+    if (placement === 'services') {
+      if (!this.promotionDraft.id && this.promotionDraft.ctaUrl === '/produtos' && this.promotionDraft.ctaLabel === 'Ver produtos') {
+        this.promotionDraft.ctaUrl = '';
+        this.promotionDraft.ctaLabel = '';
+      }
+      this.loadCampaignServices();
+    } else {
+      this.promotionDraft.serviceId = null;
+      if (!this.promotionDraft.id && !this.promotionDraft.ctaUrl && !this.promotionDraft.ctaLabel) {
+        this.promotionDraft.ctaUrl = '/produtos';
+        this.promotionDraft.ctaLabel = 'Ver produtos';
+      }
+    }
+  }
+
+  loadCampaignServices(): void {
+    if (this.campaignServices().length || this.campaignServicesLoading()) return;
+    this.campaignServicesLoading.set(true);
+    this.campaignServicesError.set('');
+    this.marketplace.services().subscribe({
+      next: (services) => {
+        this.campaignServices.set(services);
+        this.campaignServicesLoading.set(false);
+      },
+      error: (failure: Error) => {
+        this.campaignServicesError.set(failure.message);
+        this.campaignServicesLoading.set(false);
+      }
+    });
   }
 
   private openPromotionEditor(): void {
@@ -426,6 +249,9 @@ export class AdminStoreComponent implements OnDestroy, OnInit {
   }
 
   previewLinks(place: 'banner' | 'below'): PromotionLink[] {
+    if (this.promotionDraft.placement === 'services') {
+      return place === 'banner' ? (this.promotionDraft.secondaryLinks ?? []).filter((link) => !!link.label.trim()) : [];
+    }
     return promotionLinksAt(this.promotionDraft.secondaryLinks, place).filter((link) => !!link.label.trim());
   }
 
@@ -494,6 +320,6 @@ export class AdminStoreComponent implements OnDestroy, OnInit {
   private clearMessages(): void { this.success.set(''); this.actionError.set(''); }
   private releasePromotionPreview(): void { if (this.promotionLocalPreviewUrl) URL.revokeObjectURL(this.promotionLocalPreviewUrl); this.promotionLocalPreviewUrl = ''; }
   private clearSelectedPromotionMedia(): void { this.releasePromotionPreview(); this.promotionUploadFile = null; this.promotionUploadFileName = ''; }
-  private emptyPromotion(): PromotionDraft { return { title: '', subtitle: '', ctaLabel: 'Ver produtos', ctaUrl: '/produtos', imageUrl: null, mediaType: 'image', rotationWeight: NORMAL_ROTATION_WEIGHT, buttonPlacement: 'banner', secondaryLinks: [], badgeText: '', termsText: '', backgroundColor: '#096653', textColor: '#FFFFFF', active: true, sortOrder: 10 }; }
+  private emptyPromotion(): PromotionDraft { return { placement: 'home', serviceId: null, title: '', subtitle: '', ctaLabel: 'Ver produtos', ctaUrl: '/produtos', imageUrl: null, mediaType: 'image', rotationWeight: NORMAL_ROTATION_WEIGHT, buttonPlacement: 'banner', secondaryLinks: [], badgeText: '', termsText: '', backgroundColor: '#096653', textColor: '#FFFFFF', active: true, sortOrder: 10 }; }
   private emptyProduct(): ProductDraft { return { name: '', slug: '', shortDescription: '', priceCents: 0, compareAtPriceCents: null, currency: 'BRL', imageUrl: null, purchaseUrl: '/ajuda?produto=', badgeText: '', inventoryCount: 0, featured: false, active: true, sortOrder: 0 }; }
 }

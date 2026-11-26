@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\PublicReadLimiter;
+use ChezVoust\Core\Request;
 use ChezVoust\Core\Uuid;
+use ChezVoust\Modules\Admin\AdminController;
 use ChezVoust\Modules\Admin\PromotionUploads;
+use ChezVoust\Modules\Catalog\CatalogController;
 
 $backend = $argv[1] ?? dirname(__DIR__) . '/backend';
 $services = require $backend . '/bootstrap/app.php';
@@ -24,6 +27,7 @@ $db = $services['db'];
 // The cleanup sees only fixture records and can never remove real media during this test.
 foreach (['promotions', 'promotion_uploads', 'products', 'app_settings'] as $table) {
     $definition = $db->query("SHOW CREATE TABLE {$table}")->fetchColumn(1);
+    $definition = preg_replace('/,\n\s+CONSTRAINT [^\n]+/', '', $definition);
     $db->exec(preg_replace('/^CREATE TABLE /', 'CREATE TEMPORARY TABLE ', $definition));
 }
 $directory = sys_get_temp_dir() . '/cvp-media-' . Uuid::v4();
@@ -103,7 +107,36 @@ try {
     $limiter->prune();
     verify(!file_exists($bucket), 'Remove stale public buckets.');
 
-    echo "PASS campaign registrations, references, grace period, safe cleanup and public rate-limit buckets.\n";
+    $serviceIds = $db->query(
+        'SELECT s.public_id FROM services s INNER JOIN service_categories c ON c.id = s.category_id
+         WHERE s.active = 1 AND c.active = 1 AND s.provider_created = 0 ORDER BY s.id LIMIT 2'
+    )->fetchAll(PDO::FETCH_COLUMN);
+    verify(count($serviceIds) === 2, 'Two test services must exist.');
+    [$firstService, $otherService] = $serviceIds;
+    $admin = new AdminController($db, $services['config'], $services['audit'], $uploads);
+    $catalog = new CatalogController($db, $services['config']);
+    $request = static function (array $body = []): Request {
+        $_SERVER['HTTP_CONTENT_TYPE'] = 'multipart/form-data';
+        $_POST = $body;
+        return Request::capture();
+    };
+    $legacy = $admin->createPromotion($request(['title' => 'Legacy home fixture']), [], null)->payload['data']['id'];
+    $allServices = $admin->createPromotion($request(['title' => 'All services fixture', 'placement' => 'services']), [], null)->payload['data']['id'];
+    $specific = $admin->createPromotion($request([
+        'title' => 'Specific service fixture', 'placement' => 'services', 'serviceId' => $firstService,
+    ]), [], null)->payload['data']['id'];
+    $homeCampaigns = static fn (): array => array_column($catalog->home($request(), [], null)->payload['data']['promotions'], 'id');
+    $serviceCampaigns = static fn (string $id): array => array_column(
+        $catalog->service($request(), ['id' => $id], null)->payload['data']['promotions'], 'id'
+    );
+    verify($homeCampaigns() === [$legacy], 'Only home campaigns are visible on the home page.');
+    verify($serviceCampaigns($firstService) === [$specific, $allServices], 'A service receives its own and shared campaigns.');
+    verify($serviceCampaigns($otherService) === [$allServices], 'An unrelated service receives only shared campaigns.');
+    $moved = $admin->updatePromotion($request(['placement' => 'home']), ['id' => $specific], null)->payload['data'];
+    verify($moved['serviceId'] === null && $homeCampaigns() === [$specific, $legacy], 'Moving a campaign home clears the old service target.');
+    verify($serviceCampaigns($firstService) === [$allServices], 'Moving a campaign removes it from the former service.');
+
+    echo "PASS campaign registrations, placement, references, cleanup and public rate-limit buckets.\n";
 } finally {
     foreach (new DirectoryIterator($directory) as $file) {
         if ($file->isFile() || $file->isLink()) unlink($file->getPathname());

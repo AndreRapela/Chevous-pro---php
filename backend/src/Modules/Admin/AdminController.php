@@ -278,7 +278,7 @@ final class AdminController extends Controller
     public function promotions(Request $request, array $params, ?array $auth): Response
     {
         $promotions = $this->db->query(
-            'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
+            'SELECT public_id AS id, placement, service_public_id AS serviceId, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
                     image_url AS imageUrl, media_type AS mediaType, media_frame AS mediaFrame, button_placement AS buttonPlacement,
                     video_duration_ms AS videoDurationMs, rotation_weight AS rotationWeight,
                     secondary_links AS secondaryLinks, badge_text AS badgeText, terms_text AS termsText,
@@ -311,6 +311,7 @@ final class AdminController extends Controller
     {
         $data = Validator::validate($request->body, [
             'title' => ['required', 'string', 'min:3', 'max:160'], 'subtitle' => ['nullable', 'string', 'max:300'],
+            'placement' => ['sometimes', 'string', 'in:home,services'], 'serviceId' => ['sometimes', 'nullable', 'uuid'],
             'ctaLabel' => ['nullable', 'string', 'max:60'], 'ctaUrl' => ['nullable', 'string', 'max:255'],
             'imageUrl' => ['nullable', 'string', 'max:1024'], 'badgeText' => ['nullable', 'string', 'max:80'],
             'mediaType' => ['nullable', 'string', 'in:image,video'],
@@ -327,18 +328,19 @@ final class AdminController extends Controller
         $this->validateWebPath($data['imageUrl'] ?? null);
         $secondaryLinks = $this->validatePromotionLinks($request->body['secondaryLinks'] ?? []);
         $publicId = Uuid::v4();
-        $duration = $this->writePromotion($publicId, $data, function (?int $duration) use ($data, $publicId, $secondaryLinks): void {
+        $publication = $this->writePromotion($publicId, $data, function (array $publication) use ($data, $publicId, $secondaryLinks): void {
           $this->db->prepare(
             'INSERT INTO promotions
-                (public_id, title, subtitle, cta_label, cta_url, image_url, media_type, media_frame, video_duration_ms, rotation_weight, button_placement, secondary_links, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
-             VALUES (:public_id, :title, :subtitle, :cta_label, :cta_url, :image_url, :media_type, :media_frame, :video_duration_ms, :rotation_weight, :button_placement, :secondary_links, :badge_text, :terms_text, :background_color, :text_color, :active,
+                (public_id, placement, service_public_id, title, subtitle, cta_label, cta_url, image_url, media_type, media_frame, video_duration_ms, rotation_weight, button_placement, secondary_links, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
+             VALUES (:public_id, :placement, :service_public_id, :title, :subtitle, :cta_label, :cta_url, :image_url, :media_type, :media_frame, :video_duration_ms, :rotation_weight, :button_placement, :secondary_links, :badge_text, :terms_text, :background_color, :text_color, :active,
                      :starts_at, :ends_at, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
         )->execute([
             'public_id' => $publicId, 'title' => $data['title'], 'subtitle' => $data['subtitle'] ?? null,
+            'placement' => $publication['placement'], 'service_public_id' => $publication['serviceId'],
             'cta_label' => $data['ctaLabel'] ?? null, 'cta_url' => $data['ctaUrl'] ?? null,
             'image_url' => $data['imageUrl'] ?? null, 'media_type' => $data['mediaType'] ?? 'image',
             'media_frame' => $this->encodeMediaFrame($data['mediaFrame'] ?? null),
-            'video_duration_ms' => $duration, 'rotation_weight' => $data['rotationWeight'] ?? 3,
+            'video_duration_ms' => $publication['videoDurationMs'], 'rotation_weight' => $data['rotationWeight'] ?? 3,
             'button_placement' => $data['buttonPlacement'] ?? 'banner',
             'secondary_links' => $secondaryLinks === [] ? null : json_encode($secondaryLinks, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
             'badge_text' => $data['badgeText'] ?? null,
@@ -348,13 +350,14 @@ final class AdminController extends Controller
             'starts_at' => $data['startsAt'] ?? null, 'ends_at' => $data['endsAt'] ?? null, 'sort_order' => $data['sortOrder'] ?? 0,
           ]);
         }, create: true);
-        return Response::data(['id' => $publicId, 'videoDurationMs' => $duration] + $data, 201);
+        return Response::data(['id' => $publicId] + $publication + $data, 201);
     }
 
     public function updatePromotion(Request $request, array $params, ?array $auth): Response
     {
         $data = Validator::validate($request->body, [
             'title' => ['sometimes', 'string', 'min:3', 'max:160'], 'subtitle' => ['sometimes', 'nullable', 'string', 'max:300'],
+            'placement' => ['sometimes', 'string', 'in:home,services'], 'serviceId' => ['sometimes', 'nullable', 'uuid'],
             'ctaLabel' => ['sometimes', 'nullable', 'string', 'max:60'], 'ctaUrl' => ['sometimes', 'nullable', 'string', 'max:255'],
             'imageUrl' => ['sometimes', 'nullable', 'string', 'max:1024'], 'badgeText' => ['sometimes', 'nullable', 'string', 'max:80'],
             'mediaType' => ['sometimes', 'string', 'in:image,video'],
@@ -375,6 +378,7 @@ final class AdminController extends Controller
         }
         $map = [
             'title' => 'title', 'subtitle' => 'subtitle', 'ctaLabel' => 'cta_label', 'ctaUrl' => 'cta_url',
+            'placement' => 'placement', 'serviceId' => 'service_public_id',
             'imageUrl' => 'image_url', 'mediaType' => 'media_type', 'mediaFrame' => 'media_frame', 'buttonPlacement' => 'button_placement',
             'videoDurationMs' => 'video_duration_ms', 'rotationWeight' => 'rotation_weight',
             'secondaryLinks' => 'secondary_links', 'badgeText' => 'badge_text', 'termsText' => 'terms_text',
@@ -388,19 +392,26 @@ final class AdminController extends Controller
         if (array_key_exists('mediaFrame', $data)) {
             $values['mediaFrame'] = $this->encodeMediaFrame($data['mediaFrame']);
         }
-        $duration = $this->writePromotion($params['id'], $data, function (?int $duration) use ($params, $values, $map): void {
-            if ($values !== []) $values['videoDurationMs'] = $duration;
+        $publication = $this->writePromotion($params['id'], $data, function (array $publication) use ($params, $values, $map): void {
+            if ($values !== []) $values = $publication + $values;
             $this->dynamicUpdate('promotions', $params['id'], $values, $map);
         });
-        return Response::data(['id' => $params['id'], 'videoDurationMs' => $duration] + $data);
+        return Response::data(['id' => $params['id']] + $publication + $data);
     }
 
-    private function writePromotion(string $id, array $data, callable $write, bool $create = false): ?int
+    private function writePromotion(string $id, array $data, callable $write, bool $create = false): array
     {
-        return $this->uploads->withCampaignLock(function () use ($id, $data, $write, $create): ?int {
-            $select = 'SELECT media_type, image_url, video_duration_ms, cta_url, media_frame, secondary_links
+        return $this->uploads->withCampaignLock(function () use ($id, $data, $write, $create): array {
+            $select = 'SELECT placement, service_public_id, media_type, image_url, video_duration_ms, cta_url, media_frame, secondary_links
                        FROM promotions WHERE public_id = :id';
             $current = $create ? [] : $this->requireRow($select, ['id' => $id]);
+            $placement = $data['placement'] ?? $current['placement'] ?? 'home';
+            $previousService = $current['service_public_id'] ?? null;
+            $serviceId = array_key_exists('serviceId', $data) ? $data['serviceId'] : $previousService;
+            if ($placement === 'home') $serviceId = null;
+            if ($serviceId !== null && $serviceId !== $previousService) {
+                $this->requireRow('SELECT id FROM services WHERE public_id = :id', ['id' => $serviceId], 'Serviço não encontrado.');
+            }
             $type = $data['mediaType'] ?? ($current['media_type'] ?? 'image');
             $url = array_key_exists('imageUrl', $data) ? $data['imageUrl'] : ($current['image_url'] ?? null);
             $duration = null;
@@ -415,9 +426,10 @@ final class AdminController extends Controller
                     ? (isset($current['video_duration_ms']) ? (int) $current['video_duration_ms'] : null)
                     : $this->promotionDuration($url, $data['videoDurationMs'] ?? null);
             }
+            $publication = ['videoDurationMs' => $duration, 'placement' => $placement, 'serviceId' => $serviceId];
             $this->db->beginTransaction();
             try {
-                $write($duration);
+                $write($publication);
                 $saved = $this->requireRow($select, ['id' => $id]);
                 $this->uploads->attachNewReferences($saved, $current, $this->config['url']);
                 $this->db->commit();
@@ -427,7 +439,7 @@ final class AdminController extends Controller
                 }
                 throw $failure;
             }
-            return $duration;
+            return $publication;
         });
     }
 

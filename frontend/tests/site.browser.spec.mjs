@@ -10,6 +10,10 @@ const fixtures = fileURLToPath(new URL('./fixtures/', import.meta.url));
 const pageShell = resolve(build, 'index.csr.html');
 const fixtureUrl = (length) => `/fixtures/campaign-${length}.webm`;
 const fixtureFile = (length) => resolve(fixtures, `campaign-${length}.webm`);
+const adminSession = {
+  user: { id: 'fixture-admin', email: 'admin@example.invalid', name: 'Fixture Admin', role: 'admin' },
+  accessToken: 'browser-fixture',
+};
 let server;
 let origin;
 
@@ -20,7 +24,7 @@ test.beforeAll(async () => {
   const app = express();
   app.use('/fixtures', express.static(fixtures));
   app.use(express.static(build, { index: false }));
-  app.get(['/', '/entrar', '/admin/conteudo'], (_request, response) => response.sendFile(pageShell));
+  app.get(['/', '/entrar', '/admin/conteudo', '/servicos/fixture-electrician'], (_request, response) => response.sendFile(pageShell));
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
   origin = `http://127.0.0.1:${server.address().port}`;
@@ -115,6 +119,78 @@ test('a campanha mantém título, botão e selo no idioma selecionado', async ({
   await expect(campaign.getByRole('link', { name: 'Voir les offres' })).toBeVisible();
 });
 
+test('o serviço exibe um só banner e alterna a foto e o nome do profissional juntos', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 860 });
+  const artwork = '/images/promo-laundry-discount-v1.webp';
+  const first = { id: 'professional-1', name: 'Fixture Alex', city: 'Brussels', avatarUrl: '/images/perfil-eletricista-rafael-nunes-640.jpg' };
+  const second = { id: 'professional-2', name: 'Fixture Robin', city: 'Brussels', avatarUrl: '/images/perfil-tecnico-bruno-almeida-640.jpg' };
+  const service = {
+    id: 'electrical', slug: 'fixture-electrician', name: 'Fixture electrician', categoryId: 'repairs',
+    promotions: [
+      { id: 'first', title: 'Priority slots', subtitle: 'Book a visit this week.', imageUrl: artwork },
+      { id: 'second', title: 'Evening visits', ctaLabel: 'Ver ofertas', ctaUrl: '/ajuda' },
+    ],
+  };
+  await stubApi(page, {
+    'GET /api/v1/services/fixture-electrician': service,
+    'GET /api/v1/professionals': [first, second],
+  });
+  const start = new Date('2026-11-26T14:00:00Z');
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(new Date(start.getTime() + 500));
+  await page.goto(`${origin}/servicos/fixture-electrician`);
+
+  const banner = page.locator('.service-detail-hero article');
+  await expect.poll(async () => {
+    await page.clock.runFor(20);
+    return (await banner.locator('.service-banner-title').allTextContents())[0];
+  }).toBe('Priority slots');
+  await expect(banner).toHaveCount(1);
+  await expect(banner.getByRole('heading', { level: 1 })).toHaveText(service.name);
+  await expect(banner.locator('.service-banner-media img')).toHaveAttribute('src', artwork);
+  const profile = banner.locator('.service-banner-profile');
+  await expect(profile).toContainText(first.name);
+  await expect(profile.locator('img')).toHaveAttribute('src', first.avatarUrl);
+  const copy = await banner.locator('.service-detail-copy').boundingBox();
+  const portrait = await profile.locator('img').boundingBox();
+  expect(portrait.x).toBeGreaterThan(copy.x + copy.width);
+  expect((await banner.boundingBox()).height).toBeLessThan(310);
+
+  await page.clock.fastForward(60_200);
+  await page.clock.runFor(100);
+  await expect(banner.locator('.service-banner-title')).toHaveText('Evening visits');
+  await expect(profile).toContainText(second.name);
+  await expect(profile.locator('img')).toHaveAttribute('src', second.avatarUrl);
+  await expect(profile).toHaveAttribute('href', '/profissionais/professional-2/fixture-robin-brussels');
+  await expect(banner.getByRole('link', { name: 'View offers' })).toHaveAttribute('href', '/ajuda');
+});
+
+test('o administrador pode salvar uma campanha exclusiva para um serviço', async ({ page }) => {
+  const saved = [];
+  await page.addInitScript(() => localStorage.setItem('cvp_has_session', '1'));
+  await stubApi(page, {
+    'POST /api/v1/auth/refresh': adminSession,
+    'GET /api/v1/admin/promotions': [],
+    'GET /api/v1/admin/products': [],
+    'GET /api/v1/notifications': [],
+    'GET /api/v1/services': [{ id: 'electrical', name: 'Fixture electrician' }],
+    'POST /api/v1/admin/promotions': (request) => {
+      saved.push(request.postDataJSON());
+      return { id: 'fixture-service-promotion' };
+    },
+  });
+  await page.goto(`${origin}/admin/conteudo`);
+  const editor = page.locator('cvp-admin-store');
+  await editor.getByRole('button', { name: 'Add campaign' }).click();
+  const form = editor.locator('form.admin-editor-form');
+  await form.locator('[name=promotionTitle]').fill('Priority slots');
+  await form.locator('[name=promotionPlacement]').selectOption('services');
+  await form.locator('[name=promotionService]').selectOption({ label: 'Fixture electrician' });
+  await form.getByRole('button', { name: 'Save campaign' }).click();
+  await expect(editor.getByText('Campaign saved.', { exact: true })).toBeVisible();
+  expect(saved).toMatchObject([{ placement: 'services', serviceId: 'electrical', ctaLabel: null, ctaUrl: null }]);
+});
+
 test('erros de login da API são exibidos no idioma do formulário', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('cvp.language', 'fr'));
   await page.route('**/api/v1/auth/login', route => route.fulfill({
@@ -176,10 +252,7 @@ for (const source of ['arquivo', 'link']) {
     let uploads = 0;
     await page.addInitScript(() => localStorage.setItem('cvp_has_session', '1'));
     await stubApi(page, {
-      'POST /api/v1/auth/refresh': {
-        user: { id: 'fixture-admin', email: 'admin@example.invalid', name: 'Fixture Admin', role: 'admin' },
-        accessToken: 'browser-fixture',
-      },
+      'POST /api/v1/auth/refresh': adminSession,
       'GET /api/v1/admin/promotions': [],
       'GET /api/v1/admin/products': [],
       'GET /api/v1/notifications': [],

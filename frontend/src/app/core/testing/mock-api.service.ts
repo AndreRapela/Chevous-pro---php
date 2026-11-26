@@ -64,7 +64,7 @@ export class MockApiService {
   private resolve(method: string, path: string, body: unknown, params: QueryParams): Observable<ApiEnvelope<unknown>> {
     if (method === 'GET' && path === 'home') {
       return this.ok({
-        promotions: this.orderedPromotions().filter((item) => item.active),
+        promotions: this.orderedPromotions().filter((item) => item.active && item.placement !== 'services'),
         categories: MOCK_CATEGORIES,
         services: this.servicesState.slice(0, 4),
         professionals: MOCK_PROVIDERS
@@ -94,7 +94,14 @@ export class MockApiService {
       const paginated = this.paginate(items, params);
       return this.ok(paginated.items, paginated.meta);
     }
-    if (method === 'GET' && /^services\//.test(path)) { const id = decodeURIComponent(path.slice(9)); const item = this.servicesState.find((service) => service.id === id || service.slug === id); return item ? this.ok(item) : this.notFound('Serviço não encontrado.'); }
+    if (method === 'GET' && /^services\//.test(path)) {
+      const id = decodeURIComponent(path.slice(9));
+      const item = this.servicesState.find((service) => service.id === id || service.slug === id);
+      if (!item) return this.notFound('Serviço não encontrado.');
+      const promotions = this.orderedPromotions().filter((campaign) =>
+        campaign.active && campaign.placement === 'services' && (!campaign.serviceId || campaign.serviceId === item.id));
+      return this.ok({ ...item, promotions });
+    }
     if (method === 'GET' && path === 'professionals') {
       const service = String(params['service'] ?? params['serviceId'] ?? ''); const city = String(params['city'] ?? '').toLocaleLowerCase('pt-BR'); const rating = Number(params['ratingMin'] ?? params['minRating'] ?? 0);
       const items = MOCK_PROVIDERS.filter((item) => (!service || item.serviceIds.includes(service)) && (!city || item.city.toLocaleLowerCase('pt-BR').includes(city)) && item.rating >= rating);
@@ -256,6 +263,8 @@ export class MockApiService {
       const value = body as Partial<Promotion>;
       const promotion: Promotion = {
         id: crypto.randomUUID(),
+        placement: value.placement ?? 'home',
+        serviceId: value.serviceId ?? null,
         title: value.title ?? 'Nova campanha',
         subtitle: value.subtitle ?? '',
         ctaLabel: value.ctaLabel ?? 'Ver produtos',
@@ -368,6 +377,10 @@ export class MockApiService {
     return { items: items.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total: items.length, lastPage } };
   }
   private savePromotion(promotion: Promotion, previous?: Promotion) {
+    if (promotion.placement !== 'services') promotion.serviceId = null;
+    if (promotion.serviceId && !this.servicesState.some((service) => service.id === promotion.serviceId)) {
+      return this.notFound('Serviço não encontrado.');
+    }
     const isVideo = promotion.mediaType === 'video' && !!promotion.imageUrl;
     const wasVideo = previous?.mediaType === 'video' && !!previous?.imageUrl;
     if (isVideo && !wasVideo && this.promotionsState.filter((item) => item.mediaType === 'video' && item.imageUrl).length >= MAX_PROMOTION_VIDEOS) {

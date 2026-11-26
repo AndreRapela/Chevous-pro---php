@@ -285,6 +285,8 @@ CREATE TABLE IF NOT EXISTS availability_exceptions (
 CREATE TABLE IF NOT EXISTS promotions (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    placement ENUM('home', 'services') NOT NULL DEFAULT 'home',
+    service_public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NULL,
     title VARCHAR(160) NOT NULL,
     subtitle VARCHAR(300) NULL,
     cta_label VARCHAR(60) NULL,
@@ -308,7 +310,9 @@ CREATE TABLE IF NOT EXISTS promotions (
     updated_at DATETIME NOT NULL,
     PRIMARY KEY (id),
     UNIQUE KEY uq_promotions_public_id (public_id),
-    KEY idx_promotions_active_period (active, starts_at, ends_at, sort_order)
+    KEY idx_promotions_active_period (active, starts_at, ends_at, sort_order),
+    KEY idx_promotions_placement (placement, active, service_public_id),
+    CONSTRAINT fk_promotions_service FOREIGN KEY (service_public_id) REFERENCES services (public_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS promotion_uploads (
