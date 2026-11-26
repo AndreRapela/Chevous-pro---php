@@ -62,13 +62,21 @@ final class TransactionalMailer
             : '';
         $logo = $this->logoAttachment();
         $logoHtml = $logo === null ? '' : '<img src="cid:' . $logo['content_id']
-            . '" alt="Chez vous pro" width="132" height="83" style="display:block;border:0;margin:12px 0 20px">';
-        $html = '<!doctype html><html lang="' . $language . '"><body style="font-family:Arial,sans-serif;color:#17212b;line-height:1.5">'
+            . '" alt="Chez vous pro" width="132" height="83" style="display:block;border:0;margin:0 0 20px">';
+        $html = '<!doctype html><html lang="' . $language . '"><head><meta charset="UTF-8">'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1"></head>'
+            . '<body style="margin:0;background-color:#ffffff">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"><tr>'
+            . '<td align="center" style="padding:24px 12px">'
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#ffffff"'
+            . ' style="max-width:640px;border:2px solid #006b4d;border-radius:14px">'
+            . '<tr><td style="padding:24px;text-align:left;font-family:Arial,sans-serif;color:#17212b;line-height:1.5">'
             . $logoHtml . '<p>' . htmlspecialchars($intro, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'
             . $codeHtml
             . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" style="display:inline-block;padding:12px 18px;background:#0c7a5b;color:#fff;text-decoration:none;border-radius:8px">'
-            . htmlspecialchars($action, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></p><p>'
-            . htmlspecialchars(self::COPY[$language]['ignore'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p></body></html>';
+            . htmlspecialchars($action, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></p><p style="margin-bottom:0">'
+            . htmlspecialchars(self::COPY[$language]['ignore'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+            . '</p></td></tr></table></td></tr></table></body></html>';
         $driver = $this->config['mail']['driver'];
         if ($driver === 'php-mail' || $driver === 'smtp') {
             [$headers, $body] = $this->mimeParts($html, $logo);
