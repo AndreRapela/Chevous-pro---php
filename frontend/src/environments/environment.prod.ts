@@ -2,6 +2,8 @@ export const environment = {
   production: true,
   apiUrl: '/api/v1',
   useMockApi: false,
+  demoPortalPath: null as string | null,
+  hostedDemo: false,
   demoAccounts: null as { customer: readonly [string, string]; provider: readonly [string, string]; admin: readonly [string, string] } | null,
   locale: 'en-US',
   currency: 'EUR'

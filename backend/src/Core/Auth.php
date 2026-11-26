@@ -35,6 +35,7 @@ final class Auth
              FROM users u
              INNER JOIN auth_sessions s ON s.user_id = u.id
              WHERE u.public_id = :subject
+               AND u.deleted_at IS NULL
                AND s.public_id = :session
                AND s.revoked_at IS NULL
                AND s.expires_at > UTC_TIMESTAMP()

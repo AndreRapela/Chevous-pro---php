@@ -1,9 +1,9 @@
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
-import { Observable, map } from 'rxjs';
+import { Injectable, Injector, inject } from '@angular/core';
+import { Observable, defer, map, switchMap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiEnvelope } from '../models';
-import { MockApiService } from '../testing/mock-api.service';
+import type { MockApiService } from '../testing/mock-api.service';
 import { API_BASE_URL } from './api-base-url.token';
 import { SERVER_API_HEADERS } from './server-api-headers.token';
 
@@ -14,7 +14,8 @@ export interface ApiRequestOptions { headers?: Record<string, string>; }
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
-  private readonly mock = inject(MockApiService);
+  private readonly injector = inject(Injector);
+  private mock?: Promise<MockApiService>;
   private readonly apiBaseUrl = inject(API_BASE_URL);
   private readonly serverApiHeaders = inject(SERVER_API_HEADERS);
 
@@ -55,7 +56,8 @@ export class ApiService {
   private requestEnvelope<T>(method: string, path: string, body?: unknown, query: ApiQuery = {}, options: ApiRequestOptions = {}): Observable<ApiEnvelope<T>> {
     const cleanPath = path.replace(/^\//, '');
     const source = environment.useMockApi
-      ? this.mock.request<T>(method, cleanPath, body, query)
+      ? defer(() => this.mock ??= import('../testing/mock-api.service').then(({ MockApiService }) => this.injector.get(MockApiService)))
+          .pipe(switchMap((mock) => mock.request<T>(method, cleanPath, body, query)))
       : this.http.request<ApiEnvelope<T> | null>(method, `${this.apiBaseUrl}/${cleanPath}`, {
           body,
           params: this.toHttpParams(query),

@@ -10,6 +10,7 @@ import { Address, Booking, BookingDraft, BookingQuote, ProviderProfile, Service 
 import { StatePanelComponent } from '../../../../shared/components';
 import { LocalizedMoneyPipe, LocalizedNumberPipe } from '../../../../shared/localization/localized-format.pipe';
 import { formatPostalCode } from '../../../../shared/utils/postal-code.util';
+import { agendaDateTime } from '../../../../shared/utils/booking-time.util';
 import { BookingAddressStepComponent } from '../../components/booking-address-step/booking-address-step.component';
 import { BookingConfirmationComponent } from '../../components/booking-confirmation/booking-confirmation.component';
 import { BookingDetailsStepComponent } from '../../components/booking-details-step/booking-details-step.component';
@@ -427,7 +428,7 @@ export class BookingWizardComponent implements OnInit {
       durationMinutes: 120,
       addonIds: [],
       notes: '',
-      address: { postalCode: '', street: '', number: '', complement: '', neighborhood: '', city: 'São Paulo', state: 'SP' },
+      address: { postalCode: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '' },
       date: '',
       time: '',
       providerId: '',
@@ -484,9 +485,7 @@ export class BookingWizardComponent implements OnInit {
   }
 
   private localDateToday(): string {
-    const now = new Date();
-    const local = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-    return local.toISOString().slice(0, 10);
+    return agendaDateTime(new Date()).date;
   }
 
 }

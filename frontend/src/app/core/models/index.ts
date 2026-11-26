@@ -10,6 +10,7 @@ export interface User {
   initials: string;
   city: string;
   avatarUrl?: string | null;
+  emailVerified?: boolean;
 }
 
 export interface AuthSession {
@@ -74,6 +75,12 @@ export interface Promotion {
   ctaLabel: string;
   ctaUrl: string;
   imageUrl: string | null;
+  mediaType?: 'image' | 'video';
+  mediaFrame?: PromotionMediaFrame | null;
+  videoDurationMs?: number | null;
+  rotationWeight?: number;
+  buttonPlacement?: 'banner' | 'below' | 'both';
+  secondaryLinks?: PromotionLink[];
   badgeText: string;
   termsText: string;
   backgroundColor: string;
@@ -82,6 +89,22 @@ export interface Promotion {
   startsAt?: string | null;
   endsAt?: string | null;
   sortOrder?: number;
+}
+
+export interface PromotionLink {
+  label: string;
+  url: string;
+  placement?: 'banner' | 'below' | 'both';
+}
+
+export interface PromotionMediaFrame {
+  fit: 'contain' | 'cover';
+  x: number;
+  y: number;
+  size: number;
+  layout?: 'side' | 'background';
+  posterUrl?: string | null;
+  backgroundKey?: { color: string; tolerance: number } | null;
 }
 
 export interface Product {
@@ -103,6 +126,9 @@ export interface Product {
 
 export interface HomeContent {
   promotions: Promotion[];
+  categories: ServiceCategory[];
+  services: Service[];
+  professionals: ProviderProfile[];
 }
 
 export interface Review {
@@ -224,6 +250,8 @@ export interface Booking {
   customerName: string;
   status: BookingStatus;
   scheduledAt: string;
+  timezone?: string;
+  agendaTimezone?: string;
   addressLabel: string;
   notes?: string;
   price: PriceBreakdown;
@@ -311,6 +339,7 @@ export interface ProviderJob {
   status: BookingStatus;
   scheduledStart: string;
   scheduledEnd?: string;
+  timezone?: string;
   totalCents: number;
   serviceName: string;
   customerName: string;
@@ -323,6 +352,7 @@ export interface ProviderJob {
 export interface ProviderRequest {
   id: string;
   scheduledStart: string;
+  timezone?: string;
   durationMinutes: number;
   quantity: number;
   areaSqm?: number;
@@ -365,6 +395,7 @@ export interface PublicAvailability {
   rules: AvailabilityRule[];
   exceptions: AvailabilityException[];
   slots: string[];
+  timezone?: string;
 }
 
 export interface AppNotification {

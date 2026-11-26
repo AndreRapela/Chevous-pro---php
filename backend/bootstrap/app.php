@@ -10,6 +10,7 @@ use ChezVoust\Core\Jwt;
 use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Router;
 use ChezVoust\Core\SensitivePayload;
+use ChezVoust\Modules\Mail\MailOutbox;
 
 require __DIR__ . '/autoload.php';
 
@@ -35,6 +36,7 @@ $services = [
     'rateLimiter' => $rateLimiter,
     'audit' => $audit,
     'sensitivePayload' => $sensitivePayload,
+    'mailOutbox' => new MailOutbox($pdo, $config, $sensitivePayload),
     'router' => $router,
 ];
 

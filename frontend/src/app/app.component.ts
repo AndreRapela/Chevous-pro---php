@@ -5,6 +5,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { LocalizationService } from './core/localization/localization.service';
 import { SeoPage, SeoService } from './core/seo/seo.service';
 import { LocalizedContentDirective } from './shared/localization/localized-content.directive';
+import { environment } from '../environments/environment';
 
 const DEFAULT_SEO: SeoPage = {
   title: 'Pro | Home services',
@@ -16,7 +17,11 @@ const DEFAULT_SEO: SeoPage = {
   selector: 'cvp-root',
   standalone: true,
   imports: [LocalizedContentDirective, RouterOutlet],
-  template: '<div class="app-root" cvpLocalizedContent><router-outlet /></div>',
+  template: `
+    <div class="app-root" cvpLocalizedContent>
+      <router-outlet />
+    </div>
+  `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AppComponent {
@@ -44,7 +49,7 @@ export class AppComponent {
     let route: ActivatedRouteSnapshot | null = this.router.routerState.snapshot.root;
     let seoData: Partial<SeoPage> = {};
     let routeTitle = DEFAULT_SEO.title;
-    let noindex = false;
+    let noindex: boolean = environment.hostedDemo;
     while (route) {
       const data = route.data['seo'] as Partial<SeoPage> | undefined;
       if (data) seoData = { ...seoData, ...data };

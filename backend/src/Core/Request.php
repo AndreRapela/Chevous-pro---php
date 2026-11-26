@@ -15,7 +15,8 @@ final class Request
         public readonly array $headers,
         public readonly array $cookies,
         public readonly string $ip,
-        public readonly string $requestId
+        public readonly string $requestId,
+        public readonly string $rawBody
     ) {
     }
 
@@ -44,6 +45,7 @@ final class Request
         }
 
         $body = [];
+        $raw = '';
         $files = [];
         $contentType = strtolower($normalizedHeaders['content-type'] ?? '');
         if (str_starts_with($contentType, 'multipart/form-data')) {
@@ -76,7 +78,7 @@ final class Request
         $providedRequestId = $normalizedHeaders['x-request-id'] ?? '';
         $requestId = preg_match('/^[a-zA-Z0-9._-]{8,80}$/', $providedRequestId) ? $providedRequestId : Uuid::v4();
 
-        return new self($method, $path, $_GET, $body, $files, $normalizedHeaders, $_COOKIE, $ip, $requestId);
+        return new self($method, $path, $_GET, $body, $files, $normalizedHeaders, $_COOKIE, $ip, $requestId, $raw);
     }
 
     public function bearerToken(): ?string

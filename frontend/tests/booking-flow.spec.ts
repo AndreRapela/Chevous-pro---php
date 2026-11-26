@@ -9,6 +9,8 @@ import type { BookingForm, BookingFormValue } from '../src/app/features/booking/
 import type { BookingDraft, ProviderProfile, Service } from '../src/app/core/models/index.ts';
 import { homeSizeRange } from '../src/app/features/booking/utils/booking-home-size.util.ts';
 import { mergeAvailableSlots, providerIdsForSlot } from '../src/app/features/booking/utils/availability.util.ts';
+import { POSTAL_CODE_PATTERN, validateAddressRegion } from '../src/app/shared/utils/postal-code.util.ts';
+import { agendaDateTime } from '../src/app/shared/utils/booking-time.util.ts';
 
 // Execute the actual component methods with Angular forms and recording API stubs.
 // No network requests or real reservations are made by this suite.
@@ -18,7 +20,7 @@ function sourceFile(path: string) {
 const model = sourceFile('../src/app/features/booking/models/booking-form.model.ts');
 const functions = model.statements.filter(ts.isFunctionDeclaration).map((node) => node.getText(model).replace(/^export /u, ''));
 const modelJs = ts.transpileModule(functions.join('\n'), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-const { createBookingForm, configureBookingFormForService } = new Function('Validators', 'homeSizeRange', `${modelJs}; return { createBookingForm, configureBookingFormForService };`)(Validators, homeSizeRange) as {
+const { createBookingForm, configureBookingFormForService } = new Function('Validators', 'homeSizeRange', 'POSTAL_CODE_PATTERN', 'validateAddressRegion', `${modelJs}; return { createBookingForm, configureBookingFormForService };`)(Validators, homeSizeRange, POSTAL_CODE_PATTERN, validateAddressRegion) as {
   createBookingForm(builder: FormBuilder): BookingForm;
   configureBookingFormForService(form: BookingForm, service: Service): void;
 };
@@ -27,9 +29,9 @@ const wizard = component.statements.find((node): node is ts.ClassDeclaration => 
 assert.ok(wizard);
 const members = wizard.members.filter((node) => ts.isMethodDeclaration(node) || (ts.isPropertyDeclaration(node) && ['totalSteps', 'displayStep', 'progress'].includes(node.name.getText(component))));
 const wizardJs = ts.transpileModule(`class FlowHarness { ${members.map((node) => node.getText(component)).join('\n')} }`, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText;
-const Harness = new Function('computed', 'catchError', 'combineLatest', 'distinctUntilChanged', 'forkJoin', 'map', 'of', 'switchMap', 'takeUntilDestroyed', 'configureBookingFormForService', 'mergeAvailableSlots', 'providerIdsForSlot', `${wizardJs}; return FlowHarness;`)(
+const Harness = new Function('computed', 'catchError', 'combineLatest', 'distinctUntilChanged', 'forkJoin', 'map', 'of', 'switchMap', 'takeUntilDestroyed', 'configureBookingFormForService', 'mergeAvailableSlots', 'providerIdsForSlot', 'agendaDateTime', `${wizardJs}; return FlowHarness;`)(
   (read: () => unknown) => read, catchError, combineLatest, distinctUntilChanged, forkJoin, map, of, switchMap,
-  () => (source: unknown) => source, configureBookingFormForService, mergeAvailableSlots, providerIdsForSlot
+  () => (source: unknown) => source, configureBookingFormForService, mergeAvailableSlots, providerIdsForSlot, agendaDateTime
 );
 
 const detailsSource = sourceFile('../src/app/features/booking/components/booking-details-step/booking-details-step.component.ts');
@@ -114,7 +116,7 @@ describe('booking from a professional profile', () => {
     const { harness, quotes, saved } = fixture('ana');
     harness.loadAvailability(false);
     harness.form.controls.time.setValue('09:00');
-    harness.form.controls.address.patchValue({ postalCode: '01001-000', street: 'Test street', number: '1', neighborhood: 'Test' });
+    harness.form.controls.address.patchValue({ postalCode: '1000', street: 'Test street', number: '1', city: 'Bruxelles' });
     harness.step.set(1);
     harness.next();
     assert.equal(harness.step(), 3);

@@ -53,9 +53,11 @@ final class CatalogController extends Controller
         foreach ($categories as $category) {
             $entries[] = ['/servicos/categoria/' . rawurlencode((string) $category['slug']), 'weekly', '0.7', $category['lastmod']];
         }
+        $visibility = ServiceVisibility::inCatalog();
         $services = $this->db->query(
-            'SELECT slug, DATE_FORMAT(updated_at, \'%Y-%m-%d\') AS lastmod
-             FROM services WHERE active = 1 ORDER BY updated_at DESC'
+            "SELECT s.slug, DATE_FORMAT(s.updated_at, '%Y-%m-%d') AS lastmod
+             FROM services s INNER JOIN service_categories c ON c.id = s.category_id AND c.active = 1
+             WHERE {$visibility} ORDER BY s.updated_at DESC"
         )->fetchAll();
         foreach ($services as $service) {
             $entries[] = ['/servicos/' . rawurlencode((string) $service['slug']), 'weekly', '0.8', $service['lastmod']];
@@ -104,27 +106,36 @@ final class CatalogController extends Controller
 
     public function home(Request $request, array $params, ?array $auth): Response
     {
-        $categories = $this->db->query(
-            'SELECT public_id AS id, name, slug, description, icon, color
-             FROM service_categories WHERE active = 1 ORDER BY sort_order, name LIMIT 12'
-        )->fetchAll();
+        $categories = $this->publicCategories();
         $promotions = $this->db->query(
             'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
-                    image_url AS imageUrl, badge_text AS badgeText, terms_text AS termsText,
+                    image_url AS imageUrl, media_type AS mediaType, media_frame AS mediaFrame, button_placement AS buttonPlacement,
+                    video_duration_ms AS videoDurationMs, rotation_weight AS rotationWeight,
+                    secondary_links AS secondaryLinks, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor
              FROM promotions WHERE active = 1
                AND (starts_at IS NULL OR starts_at <= UTC_TIMESTAMP())
                AND (ends_at IS NULL OR ends_at >= UTC_TIMESTAMP())
-             ORDER BY sort_order, created_at DESC LIMIT 8'
+             ORDER BY sort_order, created_at DESC, promotions.id DESC'
         )->fetchAll();
-        $professionals = $this->db->query(
-            'SELECT u.public_id AS id, u.name, p.headline, p.base_city AS city, p.base_state AS state,
-                    p.rating_avg AS rating, p.reviews_count AS reviewsCount, p.verification_status AS verificationStatus
-             FROM professional_profiles p INNER JOIN users u ON u.id = p.user_id
-             WHERE u.status = \'active\' AND p.verification_status = \'approved\'
-             ORDER BY p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC LIMIT 8'
-        )->fetchAll();
-        return Response::data(compact('promotions', 'categories', 'professionals'));
+        $videoCount = 0;
+        $promotions = array_values(array_filter($promotions, static function (array $promotion) use (&$videoCount): bool {
+            return !PromotionVideo::hasSource($promotion['mediaType'], $promotion['imageUrl'])
+                || ++$videoCount <= PromotionVideo::LIMIT;
+        }));
+        foreach ($promotions as &$promotion) {
+            $promotion['mediaFrame'] = isset($promotion['mediaFrame']) ? json_decode($promotion['mediaFrame'], true) : null;
+            $promotion['secondaryLinks'] = is_string($promotion['secondaryLinks'] ?? null)
+                ? (json_decode($promotion['secondaryLinks'], true) ?: [])
+                : [];
+        }
+        unset($promotion);
+        $services = $this->serviceCards(ServiceVisibility::inCatalog() . ' AND c.active = 1', [], 4, 0);
+        $professionals = $this->professionalCards(
+            '', "u.status = 'active' AND p.verification_status = 'approved'",
+            'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC', [], 8, 0
+        );
+        return $this->catalogData(compact('promotions', 'categories', 'services', 'professionals'));
     }
 
     public function products(Request $request, array $params, ?array $auth): Response
@@ -132,9 +143,10 @@ final class CatalogController extends Controller
         [$page, $perPage, $offset] = $this->pagination($request, 24, 50);
         $where = ['active = 1'];
         $values = [];
-        if (!empty($request->query['q'])) {
+        $query = $request->query['q'] ?? '';
+        if (is_string($query) && trim($query) !== '') {
             $where[] = '(name LIKE :name_query OR short_description LIKE :description_query)';
-            $search = '%' . mb_substr((string) $request->query['q'], 0, 100) . '%';
+            $search = '%' . mb_substr(trim($query), 0, 100) . '%';
             $values['name_query'] = $search;
             $values['description_query'] = $search;
         }
@@ -148,29 +160,34 @@ final class CatalogController extends Controller
                     image_url AS imageUrl, purchase_url AS purchaseUrl, badge_text AS badgeText,
                     inventory_count AS inventoryCount, featured
              FROM products WHERE {$whereSql}
-             ORDER BY featured DESC, sort_order, created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+             ORDER BY featured DESC, sort_order, created_at DESC, id DESC LIMIT {$perPage} OFFSET {$offset}"
         );
         $statement->execute($values);
-        return Response::data($statement->fetchAll(), 200, [
+        return $this->catalogData($statement->fetchAll(), [
             'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
         ]);
     }
 
     public function categories(Request $request, array $params, ?array $auth): Response
     {
-        $rows = $this->db->query(
-            'SELECT c.public_id AS id, c.name, c.slug, c.description, c.icon, c.color,
+        return $this->catalogData($this->publicCategories());
+    }
+
+    private function publicCategories(): array
+    {
+        $visibility = ServiceVisibility::inCatalog();
+        return $this->db->query(
+            "SELECT c.public_id AS id, c.name, c.slug, c.description, c.icon, c.color,
                     COUNT(s.id) AS servicesCount
-             FROM service_categories c LEFT JOIN services s ON s.category_id = c.id AND s.active = 1
-             WHERE c.active = 1 GROUP BY c.id ORDER BY c.sort_order, c.name'
+             FROM service_categories c LEFT JOIN services s ON s.category_id = c.id AND {$visibility}
+             WHERE c.active = 1 GROUP BY c.id ORDER BY c.sort_order, c.name"
         )->fetchAll();
-        return Response::data($rows);
     }
 
     public function services(Request $request, array $params, ?array $auth): Response
     {
         [$page, $perPage, $offset] = $this->pagination($request, 20, 50);
-        $where = ['s.active = 1', 'c.active = 1'];
+        $where = [ServiceVisibility::inCatalog(), 'c.active = 1'];
         $values = [];
         if (!empty($request->query['category'])) {
             $where[] = '(c.public_id = :category_id OR c.slug = :category_slug)';
@@ -185,7 +202,12 @@ final class CatalogController extends Controller
             $values['search_description'] = $search;
         }
         if (!empty($request->query['professional'])) {
-            $where[] = 'EXISTS (SELECT 1 FROM professional_services ps INNER JOIN users pu ON pu.id = ps.professional_id WHERE ps.service_id = s.id AND ps.active = 1 AND pu.public_id = :professional_id AND pu.status = \'active\')';
+            $offerVisibility = ServiceVisibility::forProfessional('s', 'pu', 'pp');
+            $where[] = "EXISTS (SELECT 1 FROM professional_services ps
+                INNER JOIN users pu ON pu.id = ps.professional_id
+                LEFT JOIN professional_profiles pp ON pp.user_id = pu.id
+                WHERE ps.service_id = s.id AND ps.active = 1 AND pu.public_id = :professional_id
+                AND pu.status = 'active' AND {$offerVisibility})";
             $values['professional_id'] = (string) $request->query['professional'];
         }
 
@@ -194,6 +216,13 @@ final class CatalogController extends Controller
         $count->execute($values);
         $total = (int) $count->fetchColumn();
 
+        return $this->catalogData($this->serviceCards($whereSql, $values, $perPage, $offset), [
+            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+        ]);
+    }
+
+    private function serviceCards(string $whereSql, array $values, int $perPage, int $offset): array
+    {
         $statement = $this->db->prepare(
             "SELECT s.public_id AS id, s.name, s.slug, s.short_description AS shortDescription,
                     s.pricing_type AS pricingType, s.price_cents AS priceCents, s.unit_label AS unitLabel,
@@ -204,22 +233,21 @@ final class CatalogController extends Controller
              WHERE {$whereSql} ORDER BY s.featured DESC, s.sort_order, s.name LIMIT {$perPage} OFFSET {$offset}"
         );
         $statement->execute($values);
-        return Response::data($statement->fetchAll(), 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
-        ]);
+        return $statement->fetchAll();
     }
 
     public function service(Request $request, array $params, ?array $auth): Response
     {
+        $visibility = ServiceVisibility::inCatalog();
         $service = $this->requireRow(
-            'SELECT s.id AS internalId, s.public_id AS id, s.name, s.slug, s.description,
+            "SELECT s.id AS internalId, s.public_id AS id, s.name, s.slug, s.description,
                     s.short_description AS shortDescription, s.pricing_type AS pricingType,
                     s.price_cents AS priceCents, s.unit_label AS unitLabel,
                     s.default_duration_minutes AS defaultDurationMinutes,
                     s.minimum_quantity AS minimumQuantity, s.maximum_quantity AS maximumQuantity,
-                    c.public_id AS categoryId, c.name AS categoryName, (c.slug = \'outros\') AS isCustom
+                    c.public_id AS categoryId, c.name AS categoryName, (c.slug = 'outros') AS isCustom
              FROM services s INNER JOIN service_categories c ON c.id = s.category_id
-             WHERE (s.public_id = :public_id OR s.slug = :slug) AND s.active = 1 AND c.active = 1',
+             WHERE (s.public_id = :public_id OR s.slug = :slug) AND {$visibility} AND c.active = 1",
             ['public_id' => $params['id'], 'slug' => $params['id']],
             'Serviço não encontrado.'
         );
@@ -230,7 +258,7 @@ final class CatalogController extends Controller
         $addons->execute(['service_id' => $service['internalId']]);
         unset($service['internalId']);
         $service['addons'] = $addons->fetchAll();
-        return Response::data($service);
+        return $this->catalogData($service);
     }
 
     public function professionals(Request $request, array $params, ?array $auth): Response
@@ -244,6 +272,7 @@ final class CatalogController extends Controller
             $joins[] = 'INNER JOIN professional_services ps ON ps.professional_id = u.id AND ps.active = 1';
             $joins[] = 'INNER JOIN services s ON s.id = ps.service_id';
             $where[] = '(s.public_id = :service_id OR s.slug = :service_slug)';
+            $where[] = ServiceVisibility::forProfessional();
             $values['service_id'] = (string) $request->query['service'];
             $values['service_slug'] = (string) $request->query['service'];
         }
@@ -262,16 +291,26 @@ final class CatalogController extends Controller
 
         $joinSql = implode(' ', $joins);
         $whereSql = implode(' AND ', $where);
+        $priceVisibility = ServiceVisibility::forProfessional('s4');
         $sort = match ($request->query['sort'] ?? '') {
             'rating' => 'p.rating_avg DESC, p.reviews_count DESC',
             'experience' => 'p.years_experience DESC, p.completed_jobs DESC',
-            'price' => 'COALESCE((SELECT MIN(COALESCE(ps4.price_cents, s4.price_cents)) FROM professional_services ps4 INNER JOIN services s4 ON s4.id = ps4.service_id WHERE ps4.professional_id = u.id AND ps4.active = 1 AND s4.active = 1), 2147483647) ASC, p.rating_avg DESC',
+            'price' => "COALESCE((SELECT MIN(COALESCE(ps4.price_cents, s4.price_cents)) FROM professional_services ps4 INNER JOIN services s4 ON s4.id = ps4.service_id WHERE ps4.professional_id = u.id AND ps4.active = 1 AND {$priceVisibility}), 2147483647) ASC, p.rating_avg DESC",
             default => 'p.featured DESC, p.rating_avg DESC, p.completed_jobs DESC',
         };
 
         $count = $this->db->prepare("SELECT COUNT(DISTINCT u.id) FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id {$joinSql} WHERE {$whereSql}");
         $count->execute($values);
         $total = (int) $count->fetchColumn();
+        return $this->catalogData($this->professionalCards($joinSql, $whereSql, $sort, $values, $perPage, $offset), [
+            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
+        ]);
+    }
+
+    private function professionalCards(string $joinSql, string $whereSql, string $sort, array $values, int $perPage, int $offset): array
+    {
+        $servicesVisibility = ServiceVisibility::forProfessional('s2');
+        $priceVisibility = ServiceVisibility::forProfessional('s3');
         $statement = $this->db->prepare(
             "SELECT u.public_id AS id, u.name, u.avatar_path AS avatarPath, u.avatar_updated_at AS avatarUpdatedAt, p.headline, p.bio, p.base_city AS city,
                     p.base_state AS state, p.years_experience AS yearsExperience, p.rating_avg AS rating,
@@ -279,10 +318,10 @@ final class CatalogController extends Controller
                     p.verification_status AS verificationStatus,
                     (SELECT GROUP_CONCAT(s2.public_id ORDER BY s2.public_id)
                      FROM professional_services ps2 INNER JOIN services s2 ON s2.id = ps2.service_id
-                     WHERE ps2.professional_id = u.id AND ps2.active = 1 AND s2.active = 1) AS serviceIds,
+                     WHERE ps2.professional_id = u.id AND ps2.active = 1 AND {$servicesVisibility}) AS serviceIds,
                     (SELECT MIN(COALESCE(ps3.price_cents, s3.price_cents))
                      FROM professional_services ps3 INNER JOIN services s3 ON s3.id = ps3.service_id
-                     WHERE ps3.professional_id = u.id AND ps3.active = 1 AND s3.active = 1) AS priceFromCents
+                     WHERE ps3.professional_id = u.id AND ps3.active = 1 AND {$priceVisibility}) AS priceFromCents
              FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id {$joinSql}
              WHERE {$whereSql} ORDER BY {$sort} LIMIT {$perPage} OFFSET {$offset}"
         );
@@ -294,9 +333,7 @@ final class CatalogController extends Controller
             unset($row['avatarPath'], $row['avatarUpdatedAt']);
         }
         unset($row);
-        return Response::data($rows, 200, [
-            'page' => $page, 'perPage' => $perPage, 'total' => $total, 'lastPage' => max(1, (int) ceil($total / $perPage)),
-        ]);
+        return $rows;
     }
 
     public function professional(Request $request, array $params, ?array $auth): Response
@@ -312,11 +349,14 @@ final class CatalogController extends Controller
             ['id' => $params['id']],
             'Profissional não encontrado.'
         );
+        $visibility = ServiceVisibility::forProfessional();
         $services = $this->db->prepare(
-            'SELECT s.public_id AS id, s.name, s.slug, COALESCE(ps.price_cents, s.price_cents) AS priceCents,
+            "SELECT s.public_id AS id, s.name, s.slug, COALESCE(ps.price_cents, s.price_cents) AS priceCents,
                     s.pricing_type AS pricingType, s.unit_label AS unitLabel
              FROM professional_services ps INNER JOIN services s ON s.id = ps.service_id
-             WHERE ps.professional_id = :professional_id AND ps.active = 1 AND s.active = 1 ORDER BY s.name'
+             INNER JOIN users u ON u.id = ps.professional_id
+             INNER JOIN professional_profiles p ON p.user_id = u.id
+             WHERE ps.professional_id = :professional_id AND ps.active = 1 AND {$visibility} ORDER BY s.name"
         );
         $services->execute(['professional_id' => $professional['internalId']]);
         $professional['services'] = $services->fetchAll();
@@ -338,7 +378,7 @@ final class CatalogController extends Controller
         $professional['avatarUrl'] = $this->avatarUrl((string) $professional['id'], $professional['avatarPath'] ?? null, $professional['avatarUpdatedAt'] ?? null);
         unset($professional['avatarPath'], $professional['avatarUpdatedAt']);
         unset($professional['internalId']);
-        return Response::data($professional);
+        return $this->catalogData($professional);
     }
 
     public function availability(Request $request, array $params, ?array $auth): Response
@@ -356,14 +396,16 @@ final class CatalogController extends Controller
         );
         $rules->execute(['id' => $professional['id']]);
         $ruleRows = $rules->fetchAll();
+        $timezone = new DateTimeZone($this->config['timezone']);
+        $today = new DateTimeImmutable('today', $timezone);
         $exceptions = $this->db->prepare(
             'SELECT public_id AS id, exception_date AS date, type,
                     TIME_FORMAT(start_time, \'%H:%i\') AS startTime,
                     TIME_FORMAT(end_time, \'%H:%i\') AS endTime, reason
-             FROM availability_exceptions WHERE professional_id = :id AND exception_date >= CURRENT_DATE()
+             FROM availability_exceptions WHERE professional_id = :id AND exception_date >= :today
              ORDER BY exception_date, start_time LIMIT 90'
         );
-        $exceptions->execute(['id' => $professional['id']]);
+        $exceptions->execute(['id' => $professional['id'], 'today' => $today->format('Y-m-d')]);
         $exceptionRows = $exceptions->fetchAll();
 
         $slots = [];
@@ -376,13 +418,12 @@ final class CatalogController extends Controller
             if ($duration < 30 || $duration > 1440 || $duration % 30 !== 0) {
                 throw new ApiException(422, 'INVALID_DURATION', 'A duração deve usar intervalos de 30 minutos.');
             }
-            $timezone = new DateTimeZone($this->config['timezone']);
             $day = DateTimeImmutable::createFromFormat('!Y-m-d', $dateValue, $timezone);
             $dateErrors = DateTimeImmutable::getLastErrors();
             if (!$day || ($dateErrors !== false && ($dateErrors['warning_count'] > 0 || $dateErrors['error_count'] > 0))) {
                 throw new ApiException(422, 'INVALID_DATE', 'Data de disponibilidade inválida.');
             }
-            if ($day < new DateTimeImmutable('today', $timezone)) {
+            if ($day < $today) {
                 throw new ApiException(422, 'INVALID_DATE', 'Consulte uma data de hoje ou futura.');
             }
             $dayEnd = $day->modify('+1 day');
@@ -419,9 +460,14 @@ final class CatalogController extends Controller
             foreach ($intervals as $interval) {
                 $cursor = new DateTimeImmutable($dateValue . ' ' . $interval['startTime'], $timezone);
                 $intervalEnd = new DateTimeImmutable($dateValue . ' ' . $interval['endTime'], $timezone);
-                while ($cursor->modify('+' . $duration . ' minutes') <= $intervalEnd) {
-                    $candidateEnd = $cursor->modify('+' . $duration . ' minutes');
-                    $blocked = $cursor->getTimestamp() < time() + 1800;
+                for (; $cursor < $intervalEnd; $cursor = $cursor->modify('+30 minutes')) {
+                    // Resolve the displayed wall time the same way as a booking request during DST transitions.
+                    $candidateStart = new DateTimeImmutable($cursor->format('Y-m-d H:i'), $timezone);
+                    $candidateEnd = $candidateStart->setTimestamp($candidateStart->getTimestamp() + $duration * 60);
+                    if ($candidateEnd > $intervalEnd) {
+                        break;
+                    }
+                    $blocked = $candidateStart->getTimestamp() < time() + 1800;
                     foreach ($exceptionRows as $exception) {
                         if ($blocked || $exception['date'] !== $dateValue || $exception['type'] !== 'unavailable') {
                             continue;
@@ -432,13 +478,13 @@ final class CatalogController extends Controller
                         }
                         $exceptionStart = new DateTimeImmutable($dateValue . ' ' . $exception['startTime'], $timezone);
                         $exceptionEnd = new DateTimeImmutable($dateValue . ' ' . $exception['endTime'], $timezone);
-                        if ($cursor < $exceptionEnd && $candidateEnd > $exceptionStart) {
+                        if ($candidateStart < $exceptionEnd && $candidateEnd > $exceptionStart) {
                             $blocked = true;
                             break;
                         }
                     }
-                    $candidateStartUtc = $cursor->setTimezone(new DateTimeZone('UTC'))->getTimestamp();
-                    $candidateEndUtc = $candidateEnd->setTimezone(new DateTimeZone('UTC'))->getTimestamp();
+                    $candidateStartUtc = $candidateStart->getTimestamp();
+                    $candidateEndUtc = $candidateEnd->getTimestamp();
                     foreach ($busyRows as $busy) {
                         if ($blocked) {
                             break;
@@ -450,15 +496,19 @@ final class CatalogController extends Controller
                         }
                     }
                     if (!$blocked) {
-                        $slots[] = $cursor->format('H:i');
+                        $slots[] = $candidateStart->format('H:i');
                     }
-                    $cursor = $cursor->modify('+30 minutes');
                 }
             }
             $slots = array_values(array_unique($slots));
             sort($slots);
         }
-        return Response::data(['rules' => $ruleRows, 'exceptions' => $exceptionRows, 'slots' => $slots]);
+        return Response::data(['rules' => $ruleRows, 'exceptions' => $exceptionRows, 'slots' => $slots, 'timezone' => $timezone->getName()]);
+    }
+
+    private function catalogData(array $data, ?array $meta = null): Response
+    {
+        return Response::data($data, meta: $meta, headers: ['Cache-Control' => 'public, max-age=30']);
     }
 
     private function avatarUrl(string $publicId, mixed $path, mixed $updatedAt): ?string

@@ -12,12 +12,16 @@ ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
 # O limite da borda (Nginx) e do PHP precisa comportar o contrato público de
 # avatar de 5 MiB mais o overhead do multipart.
 COPY docker/php/uploads.ini /usr/local/etc/php/conf.d/uploads.ini
+COPY docker/apache/access-log.conf /etc/apache2/conf-available/chezvoust-access-log.conf
 
 RUN sed -ri 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' \
     /etc/apache2/sites-available/*.conf \
     /etc/apache2/apache2.conf \
     /etc/apache2/conf-available/*.conf \
-    && sed -ri 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf
+    && sed -ri 's/AllowOverride None/AllowOverride All/g' /etc/apache2/apache2.conf \
+    && sed -ri '/^[[:space:]]*CustomLog[[:space:]]/d' /etc/apache2/sites-available/000-default.conf \
+    && a2disconf other-vhosts-access-log \
+    && a2enconf chezvoust-access-log
 
 COPY . /var/www/html
 

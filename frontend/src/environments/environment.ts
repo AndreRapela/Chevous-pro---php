@@ -2,6 +2,8 @@ export const environment = {
   production: false,
   apiUrl: '/api/v1',
   useMockApi: false,
+  demoPortalPath: null as string | null,
+  hostedDemo: false,
   demoAccounts: {
     customer: ['cliente@chezvoust.test', 'Cliente@123'],
     provider: ['profissional@chezvoust.test', 'Profissional@123'],

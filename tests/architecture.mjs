@@ -67,8 +67,9 @@ assert.match(routes, /path:\s*'pagamento\/:slug'[\s\S]*?noindex:\s*true/, 'Check
 assert.match(serverRoutes, /path:\s*'pagamento\/:slug'[\s\S]*RenderMode\.Client/, 'Checkout deve permanecer client-side para não renderizar formulário sensível no SSR.');
 
 const payment = await source('frontend/src/app/features/checkout/pages/payment/payment.component.ts');
-assert.doesNotMatch(payment, /localStorage|sessionStorage|marketplace\.(?:post|pay|payment)|api\.(?:post|patch)/, 'Checkout visual não deve persistir nem transmitir dados financeiros.');
-assert.match(payment, /this\.cardForm\.reset\(\)/, 'Checkout deve limpar os campos bancários após a simulação.');
+const paymentTemplate = await source('frontend/src/app/features/checkout/pages/payment/payment.component.html');
+assert.doesNotMatch(payment + paymentTemplate, /localStorage|sessionStorage|cardForm|autocomplete="cc-|\b(?:cvv|cardNumber)\b/, 'O site não deve coletar nem persistir dados de cartão.');
+assert.match(payment, /stripeCheckoutUrl\(session\.checkoutUrl\)/, 'O checkout deve validar o destino antes de redirecionar o cliente.');
 
 const unitTests = (await walk('frontend/tests')).filter((path) => path.endsWith('.spec.ts'));
 const integrationTests = (await walk('tests')).filter((path) => path.endsWith('_flow.ps1') || path.endsWith('compose_smoke.ps1'));

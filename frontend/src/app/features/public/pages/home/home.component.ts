@@ -1,39 +1,64 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, NgZone, OnInit, afterNextRender, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Promotion, ProviderProfile, Service, ServiceCategory } from '../../../../core/models';
 import { ProviderCardComponent, ServiceCardComponent, ServiceIconComponent, StatePanelComponent } from '../../../../shared/components';
+import { PromotionMediaComponent } from '../../../../shared/components/promotion-media/promotion-media.component';
 import { HorizontalScrollDirective } from '../../../../shared/directives/horizontal-scroll.directive';
 import { categoryPublicPath } from '../../../../shared/utils/public-url.util';
+import { DEFAULT_MEDIA_FRAME, promotionLinksAt } from '../../../../shared/utils/promotion-media.util';
+import { nextPromotionIndex, PROMOTION_SLOT_MS } from '../../../../shared/utils/promotion-rotation.util';
 import { SeoService } from '../../../../core/seo/seo.service';
 import { HomeHeroComponent } from '../../components/home-hero/home-hero.component';
+
+const DEFAULT_PROMOTION: Promotion = {
+  id: 'default', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
+  ctaLabel: 'Conhecer a loja', ctaUrl: '/produtos', imageUrl: '/images/promo-laundry-discount-v1.webp', badgeText: 'Novidades na loja',
+  mediaType: 'image', buttonPlacement: 'banner', secondaryLinks: [],
+  termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.', backgroundColor: '#096653', textColor: '#FFFFFF'
+};
 
 @Component({
   selector: 'cvp-home',
   standalone: true,
-  imports: [HomeHeroComponent, HorizontalScrollDirective, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
+  imports: [HomeHeroComponent, HorizontalScrollDirective, PromotionMediaComponent, ProviderCardComponent, RouterLink, ServiceCardComponent, ServiceIconComponent, StatePanelComponent],
   template: `
     <cvp-home-hero [(query)]="heroQuery" (searchRequested)="searchServices()" />
-    <section class="section home-section home-deals" aria-labelledby="discounts-title">
-      <div class="container">
-        <div class="home-deals-heading">
-          <span class="eyebrow">Loja ChezVoust</span>
-          <h2 id="discounts-title">Produtos e ofertas especiais</h2>
+    @if (promotion(); as campaign) {
+      <section class="section home-section home-deals" aria-labelledby="discounts-title">
+        <div class="container">
+          <div class="home-deals-heading">
+            <span class="eyebrow">Loja ChezVoust</span>
+            <h2 id="discounts-title">Produtos e ofertas especiais</h2>
+          </div>
+          <article class="home-discount-banner" [class.has-media-background]="!!campaign.imageUrl && campaign.mediaFrame?.layout === 'background'" [style.--promo-bg]="campaign.backgroundColor" [style.--promo-text]="campaign.textColor">
+            <div class="home-discount-copy">
+              @if (campaign.badgeText) { <span class="home-discount-pill">{{ campaign.badgeText }}</span> }
+              <h3>{{ campaign.title }}</h3>
+              @if (campaign.subtitle) { <p>{{ campaign.subtitle }}</p> }
+              @if (campaign.buttonPlacement !== 'below') { <a class="btn home-discount-cta" [href]="campaign.ctaUrl">{{ campaign.ctaLabel }} <span aria-hidden="true">→</span></a> }
+              @if (insideLinks().length) {
+                <nav class="campaign-links-inside" aria-label="Mais links da campanha">
+                  @for (link of insideLinks(); track $index) { <a [href]="link.url">{{ link.label }}</a> }
+                </nav>
+              }
+            </div>
+            <div class="home-discount-art" [class.home-discount-art-framed]="!!campaign.mediaFrame || campaign.mediaType === 'video'">
+              @if (campaign.imageUrl) {
+                @if (campaign.mediaFrame || (campaign.mediaType === 'video' ? defaultMediaFrame : null); as frame) {
+                  <cvp-promotion-media [src]="campaign.imageUrl" [frame]="frame" [mediaType]="campaign.mediaType ?? 'image'"
+                    [label]="campaign.mediaType === 'video' ? 'Vídeo da campanha' : ''" />
+                }
+                @else { <img [src]="campaign.imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
+              }
+            </div>
+          </article>
+          @if (campaign.buttonPlacement === 'below' || campaign.buttonPlacement === 'both') { <div class="home-promotion-actions"><a class="btn btn-primary" [href]="campaign.ctaUrl">{{ campaign.ctaLabel }} <span aria-hidden="true">→</span></a></div> }
+          @if (outsideLinks().length) { <nav class="home-promotion-links" aria-label="Links abaixo da campanha">@for (link of outsideLinks(); track $index) { <a [href]="link.url">{{ link.label }}</a> }</nav> }
+          @if (campaign.termsText) { <p class="home-discount-terms">{{ campaign.termsText }}</p> }
         </div>
-        <a class="home-discount-banner" [attr.href]="promotion().ctaUrl" [attr.aria-label]="'Abrir oferta: ' + promotion().title" [style.--promo-bg]="promotion().backgroundColor" [style.--promo-text]="promotion().textColor">
-          <div class="home-discount-copy">
-            <span class="home-discount-pill">{{ promotion().badgeText }}</span>
-            <h3>{{ promotion().title }}</h3>
-            <p>{{ promotion().subtitle }}</p>
-            <span class="btn home-discount-cta">{{ promotion().ctaLabel }} <span aria-hidden="true">→</span></span>
-          </div>
-          <div class="home-discount-art" aria-hidden="true">
-            @if (promotion().imageUrl) { <img [src]="promotion().imageUrl" alt="" width="720" height="377" loading="lazy" decoding="async"> }
-          </div>
-        </a>
-        @if (promotion().termsText) { <p class="home-discount-terms">{{ promotion().termsText }}</p> }
-      </div>
-    </section>
+      </section>
+    }
 
     <section class="section home-section home-categories" aria-labelledby="categorias-title">
       <div class="container">
@@ -95,18 +120,35 @@ export class HomeComponent implements OnInit {
   private readonly marketplace = inject(MarketplaceService);
   private readonly seo = inject(SeoService);
   private readonly router = inject(Router);
+  private readonly zone = inject(NgZone);
+  private readonly rotationReady = signal(false);
   heroQuery = '';
   readonly categories = signal<ServiceCategory[]>([]);
   readonly popularServices = signal<Service[]>([]);
   readonly providers = signal<ProviderProfile[]>([]);
-  readonly promotion = signal<Promotion>({
-    id: 'default', title: 'Produtos para cuidar melhor da sua casa', subtitle: 'Seleção de utilidades e equipamentos para facilitar sua rotina.',
-    ctaLabel: 'Conhecer a loja', ctaUrl: '/produtos', imageUrl: '/images/promo-laundry-discount-v1.webp', badgeText: 'Novidades na loja',
-    termsText: 'Preços e disponibilidade podem mudar sem aviso prévio.', backgroundColor: '#096653', textColor: '#FFFFFF'
-  });
+  readonly promotions = signal<Promotion[]>([DEFAULT_PROMOTION]);
+  readonly promotionIndex = signal(0);
+  readonly promotion = computed(() => this.promotions()[this.promotionIndex()]);
+  readonly defaultMediaFrame = DEFAULT_MEDIA_FRAME;
+  readonly insideLinks = computed(() => promotionLinksAt(this.promotion()?.secondaryLinks, 'banner'));
+  readonly outsideLinks = computed(() => promotionLinksAt(this.promotion()?.secondaryLinks, 'below'));
   readonly loading = signal(true);
   readonly error = signal('');
   readonly categoryPath = categoryPublicPath;
+
+  constructor() {
+    afterNextRender(() => this.rotationReady.set(true));
+    effect((onCleanup) => {
+      if (!this.rotationReady()) return;
+      const campaigns = this.promotions();
+      if (campaigns.length < 2) return;
+      this.promotionIndex.set(nextPromotionIndex(campaigns));
+      const interval = this.zone.runOutsideAngular(() => window.setInterval(() => {
+        this.promotionIndex.update((current) => nextPromotionIndex(campaigns, current));
+      }, PROMOTION_SLOT_MS));
+      onCleanup(() => window.clearInterval(interval));
+    });
+  }
 
   searchServices(): void {
     const query = this.heroQuery.trim();
@@ -134,24 +176,17 @@ export class HomeComponent implements OnInit {
 
   load(): void {
     this.loading.set(true); this.error.set('');
-    this.marketplace.categories().subscribe({
-      next: (categories) => { this.categories.set(categories); this.loading.set(false); },
-      error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
-    });
     this.marketplace.home().subscribe({
-      next: (content) => { if (content.promotions[0]) this.promotion.set(content.promotions[0]); },
-      error: () => undefined
-    });
-    this.marketplace.servicesPage({ perPage: 4 }).subscribe({
-      next: (services) => {
-        const popular = services.data.filter((item) => item.popular);
-        this.popularServices.set((popular.length ? popular : services.data).slice(0, 4));
+      next: ({ promotions, categories, services, professionals }) => {
+        this.promotionIndex.set(0);
+        this.promotions.set(promotions);
+        this.categories.set(categories);
+        const popular = services.filter((item) => item.popular);
+        this.popularServices.set((popular.length ? popular : services).slice(0, 4));
+        this.providers.set(professionals.slice(0, 3));
+        this.loading.set(false);
       },
-      error: () => this.popularServices.set([])
-    });
-    this.marketplace.providersPage({ perPage: 3 }).subscribe({
-      next: (providers) => this.providers.set(providers.data),
-      error: () => this.providers.set([])
+      error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
     });
   }
 }

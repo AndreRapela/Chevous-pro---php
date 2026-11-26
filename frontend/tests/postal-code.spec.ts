@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { formatPostalCode, postalCodeDigits } from '../src/app/shared/utils/postal-code.util.ts';
+import { POSTAL_CODE_PATTERN, formatPostalCode, isBrazilianPostalCode, postalCodeDigits } from '../src/app/shared/utils/postal-code.util.ts';
 
 describe('Brazilian postal code input', () => {
   it('adds the standard mask while typing and pasting', () => {
@@ -14,4 +14,13 @@ describe('Brazilian postal code input', () => {
     assert.equal(postalCodeDigits('01001-000'), '01001000');
     assert.equal(postalCodeDigits('010010001234'), '01001000');
   });
+});
+
+it('accepts a Belgian postcode without applying the Brazilian mask', () => {
+  assert.equal(formatPostalCode(' 1000 '), '1000');
+  assert.equal(postalCodeDigits('1000'), '1000');
+  assert.equal(POSTAL_CODE_PATTERN.test('1000'), true);
+  assert.equal(POSTAL_CODE_PATTERN.test('100'), false);
+  assert.equal(isBrazilianPostalCode('1000'), false);
+  assert.equal(isBrazilianPostalCode('01001-000'), true);
 });

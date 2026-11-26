@@ -40,7 +40,7 @@ externos.
 
 ## Início rápido da interface
 
-Pré-requisito: Node.js 22 ou 24 e npm.
+Pré-requisito: Node.js 22.22.3+ na linha 22, Node.js 24.15.0+ na linha 24 ou Node.js 26, com npm.
 
 ```powershell
 Set-Location frontend
@@ -86,8 +86,8 @@ aplicação na rede interna; ele não emite certificado nem deve ser exposto dir
 em HTTP na internet. Banco, API e processo de SSR ficam sem portas públicas no overlay
 de produção.
 
-Antes da primeira subida, faça backup restaurável do banco e valide a migração em um
-ambiente de homologação. A migração `202609120001_remove_coupon_feature.sql` elimina
+Antes da primeira subida, faça um backup restaurável do banco e dos arquivos enviados.
+Valide a migração em um ambiente de homologação. A migração `202609120001_remove_coupon_feature.sql` elimina
 dados de cupons de versões antigas; ela é idempotente para bancos novos, mas a remoção
 dos registros é intencional. Configure `APP_URL`, `FRONTEND_ORIGINS` e
 `SSR_ALLOWED_HOSTS` com o domínio HTTPS público (inclua cada variação de domínio
@@ -96,6 +96,32 @@ publicação, envie `https://seu-dominio/sitemap.xml` ao Search Console; `robots
 canonicals e metadados sociais são entregues automaticamente pela aplicação.
 O procedimento de backup, alertas e cuidados de privacidade está em
 [docs/OPERATIONS.md](docs/OPERATIONS.md).
+
+## Pagamentos da loja em teste
+
+O checkout de produtos fica desativado até ser configurado. Para testar com o
+Stripe Checkout, configure no `.env` do Compose ou em `backend/.env` para uma
+instalação PHP direta:
+
+```dotenv
+STORE_PAYMENT_MODE=test
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STORE_SHIPPING_COUNTRIES=FR,BE
+STORE_SHIPPING_BRL_CENTS=0
+```
+
+Os países e o frete acima são exemplos de teste. Use uma chave de teste do
+Stripe e o segredo do webhook informado pelo Stripe CLI ao encaminhar
+`checkout.session.completed` e `checkout.session.expired` para
+`/api/v1/store/stripe/webhook` na API local. Defina `APP_URL` como o endereço
+local do frontend e recrie o serviço `api` do Compose depois de ajustar o
+ambiente. [Webhooks no Stripe](https://docs.stripe.com/webhooks).
+
+O sistema reserva o estoque durante o Checkout e só confirma o pedido depois
+que o Stripe confirma o pagamento. O administrador pode acompanhar o estado em
+**Site e loja → Pedidos da loja**. O Stripe recebe o endereço de entrega e os
+dados do cartão na sua própria página.
 
 ## Execução sem containers
 

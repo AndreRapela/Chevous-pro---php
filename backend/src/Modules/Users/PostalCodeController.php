@@ -20,11 +20,20 @@ final class PostalCodeController extends Controller
 
     public function lookup(Request $request, array $params, ?array $auth): Response
     {
-        $cep = preg_replace('/\D+/', '', (string) ($params['cep'] ?? ''));
-        if (!is_string($cep) || !preg_match('/^\d{8}$/', $cep)) {
-            throw new ApiException(422, 'INVALID_POSTAL_CODE', 'Informe um CEP com 8 dígitos.');
-        }
+        $cep = PostalCode::normalize((string) ($params['cep'] ?? ''));
         $this->rateLimiter->check('postal-code:' . $request->ip, 30, 60);
+        if (strlen($cep) === 4) {
+            $data = file_get_contents(dirname(__DIR__, 3) . '/data/belgian-postcodes.json');
+            $postcodes = $data === false ? [] : json_decode($data, true, flags: JSON_THROW_ON_ERROR);
+            $localities = $postcodes[$cep] ?? [];
+            if ($localities === []) {
+                throw new ApiException(404, 'POSTAL_CODE_NOT_FOUND', 'Código postal não encontrado. Confira os números ou preencha o endereço manualmente.');
+            }
+            return Response::data([
+                'postalCode' => $cep, 'city' => count($localities) === 1 ? $localities[0] : '',
+                'localities' => $localities, 'street' => '', 'neighborhood' => '', 'state' => '',
+            ]);
+        }
         $handle = curl_init('https://viacep.com.br/ws/' . $cep . '/json/');
         if ($handle === false) {
             throw new ApiException(503, 'POSTAL_CODE_UNAVAILABLE', 'A consulta de CEP está indisponível. Preencha o endereço manualmente.');

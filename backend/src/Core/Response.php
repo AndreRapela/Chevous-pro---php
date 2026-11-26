@@ -16,13 +16,13 @@ final class Response
     ) {
     }
 
-    public static function data(mixed $data, int $status = 200, ?array $meta = null): self
+    public static function data(mixed $data, int $status = 200, ?array $meta = null, array $headers = []): self
     {
         $payload = ['data' => $data];
         if ($meta !== null) {
             $payload['meta'] = $meta;
         }
-        return new self($payload, $status);
+        return new self($payload, $status, $headers);
     }
 
     public static function noContent(): self
@@ -48,16 +48,6 @@ final class Response
         ], null, true);
     }
 
-    /** Fluxo SSE autenticado; a função é executada somente depois dos headers. */
-    public static function eventStream(\Closure $stream): self
-    {
-        return new self(null, 200, [
-            'Content-Type' => 'text/event-stream; charset=utf-8',
-            'Cache-Control' => 'no-cache, no-store, private',
-            'X-Accel-Buffering' => 'no',
-        ], null, true, $stream);
-    }
-
     public static function error(ApiException $exception, string $requestId): self
     {
         $error = [
@@ -78,8 +68,10 @@ final class Response
             header('Content-Type: application/json; charset=utf-8');
             // A API retorna endereços, sessões e conversas. Nunca permita que um
             // navegador ou proxy guarde essas respostas autenticadas em cache.
-            header('Cache-Control: no-store, private');
-            header('Pragma: no-cache');
+            if (!isset($this->headers['Cache-Control'])) {
+                header('Cache-Control: no-store, private');
+                header('Pragma: no-cache');
+            }
         }
         header('X-Request-Id: ' . $requestId);
         header('X-Content-Type-Options: nosniff');

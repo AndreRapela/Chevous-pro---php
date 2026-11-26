@@ -1,6 +1,7 @@
 import { RenderMode, ServerRoute } from '@angular/ssr';
 
 const privateHeaders = { 'X-Robots-Tag': 'noindex, nofollow' };
+const tokenPageHeaders = { ...privateHeaders, 'Cache-Control': 'no-store', 'Referrer-Policy': 'no-referrer' };
 
 /**
  * Só o conteúdo público é renderizado no servidor. Painéis e autenticação são
@@ -23,8 +24,8 @@ export const serverRoutes: ServerRoute[] = [
   { path: 'entrar', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'cadastro', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'recuperar-senha', renderMode: RenderMode.Client, headers: privateHeaders },
-  { path: 'redefinir-senha', renderMode: RenderMode.Client, headers: privateHeaders },
-  { path: 'verificar-email', renderMode: RenderMode.Client, headers: privateHeaders },
+  { path: 'redefinir-senha', renderMode: RenderMode.Client, headers: tokenPageHeaders },
+  { path: 'verificar-email', renderMode: RenderMode.Client, headers: tokenPageHeaders },
   { path: 'agendar/:serviceId', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'pagamento/:slug', renderMode: RenderMode.Client, headers: privateHeaders },
   { path: 'conta/**', renderMode: RenderMode.Client, headers: privateHeaders },

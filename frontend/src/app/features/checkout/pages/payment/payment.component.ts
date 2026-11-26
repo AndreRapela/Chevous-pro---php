@@ -1,140 +1,132 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
-import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
-import { Product } from '../../../../core/models';
+import { Subscription, combineLatest, exhaustMap, take, takeWhile, timer } from 'rxjs';
+import { ProductCheckoutQuote, ProductOrder, ProductOrderService } from '../../../../core/data-access/product-order.service';
+import { AppCurrency, LocalizationService } from '../../../../core/localization/localization.service';
+import { ApiClientError } from '../../../../core/models';
 import { BrandComponent, StatePanelComponent } from '../../../../shared/components';
-import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
-import {
-  cardBrand,
-  checkoutTotalCents,
-  formatCardNumber,
-  formatExpiry,
-  isValidCardNumber,
-  isValidExpiry,
-  paymentDigits
-} from '../../utils/payment-form.util';
-
-type PaymentMethod = 'card' | 'pix';
-
-const cardNumberValidator: ValidatorFn = (control: AbstractControl<string>): ValidationErrors | null =>
-  !control.value || isValidCardNumber(control.value) ? null : { cardNumber: true };
-
-const expiryValidator: ValidatorFn = (control: AbstractControl<string>): ValidationErrors | null =>
-  !control.value || isValidExpiry(control.value) ? null : { expiry: true };
+import { checkoutTotalCents, stripeCheckoutUrl } from '../../utils/payment-form.util';
 
 @Component({
   selector: 'cvp-payment',
   standalone: true,
-  imports: [BrandComponent, LocalizedMoneyPipe, ReactiveFormsModule, RouterLink, StatePanelComponent],
+  imports: [BrandComponent, RouterLink, StatePanelComponent],
   templateUrl: './payment.component.html',
   styleUrl: './payment.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PaymentComponent implements OnInit {
-  private readonly marketplace = inject(MarketplaceService);
+  private readonly orders = inject(ProductOrderService);
   private readonly route = inject(ActivatedRoute);
-  private readonly fb = inject(FormBuilder);
+  private readonly localization = inject(LocalizationService);
   private readonly destroyRef = inject(DestroyRef);
-  private completionTimer?: ReturnType<typeof setTimeout>;
-
-  readonly product = signal<Product | null>(null);
+  private lookup?: Subscription;
+  private readonly checkoutKey = signal<string | undefined>(undefined);
+  private slug = '';
+  private orderId = '';
+  readonly quote = signal<ProductCheckoutQuote | null>(null);
+  readonly order = signal<ProductOrder | null>(null);
   readonly loading = signal(true);
-  readonly error = signal('');
-  readonly method = signal<PaymentMethod>('card');
+  readonly lookupError = signal('');
+  readonly checkoutError = signal('');
   readonly quantity = signal(1);
   readonly processing = signal(false);
-  readonly completed = signal(false);
-  readonly orderCode = signal('');
-  readonly totalCents = computed(() => checkoutTotalCents(this.product()?.priceCents ?? 0, this.quantity()));
-  readonly detectedBrand = computed(() => cardBrand(this.cardForm.controls.number.value));
-
-  readonly deliveryForm = this.fb.nonNullable.group({
-    name: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-    email: ['', [Validators.required, Validators.email, Validators.maxLength(160)]],
-    postalCode: ['', [Validators.required, Validators.pattern(/^\d{5}-?\d{3}$/)]],
-    street: ['', [Validators.required, Validators.maxLength(150)]],
-    number: ['', [Validators.required, Validators.maxLength(20)]],
-    complement: ['', Validators.maxLength(80)],
-    city: ['', [Validators.required, Validators.maxLength(100)]],
-    state: ['', [Validators.required, Validators.pattern(/^[A-Za-z]{2}$/)]]
-  });
-
-  readonly cardForm = this.fb.nonNullable.group({
-    holder: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(100)]],
-    number: ['', [Validators.required, cardNumberValidator]],
-    expiry: ['', [Validators.required, expiryValidator]],
-    cvv: ['', [Validators.required, Validators.pattern(/^\d{3,4}$/)]]
-  });
+  readonly cancelled = signal(false);
+  readonly canRetryCheckout = computed(() => this.checkoutKey() !== undefined);
+  readonly subtotal = computed(() => checkoutTotalCents(this.quote()?.unitCents ?? 0, this.quantity()));
+  readonly totalCents = computed(() => this.subtotal() + (this.quote()?.shippingCents ?? 0));
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => {
-      if (this.completionTimer) clearTimeout(this.completionTimer);
-    });
-    this.load();
+    combineLatest([this.route.paramMap, this.route.queryParamMap]).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(([params, query]) => {
+        this.slug = params.get('slug') ?? '';
+        this.orderId = query.get('pedido') ?? '';
+        this.cancelled.set(query.get('cancelado') === '1');
+        this.quantity.set(1);
+        this.checkoutKey.set(undefined);
+        this.quote.set(null);
+        this.order.set(null);
+        this.load();
+      });
   }
 
   load(): void {
-    const slug = this.route.snapshot.paramMap.get('slug') ?? '';
-    this.loading.set(true);
-    this.error.set('');
-    this.marketplace.products().subscribe({
-      next: (products) => {
-        const product = products.find((item) => item.slug === slug || item.id === slug) ?? null;
-        this.product.set(product);
-        this.loading.set(false);
-        if (!product) this.error.set('Produto indisponível para pagamento.');
-      },
-      error: (failure: Error) => {
-        this.error.set(failure.message || 'Não foi possível preparar o pagamento.');
-        this.loading.set(false);
-      }
-    });
-  }
-
-  selectMethod(method: PaymentMethod): void {
-    this.method.set(method);
+    this.lookup?.unsubscribe();
+    this.loading.set(!this.order());
+    this.lookupError.set('');
+    this.checkoutError.set('');
+    if (this.orderId) {
+      this.lookup = timer(0, 2500).pipe(
+        exhaustMap(() => this.orders.order(this.orderId)),
+        takeWhile((order) => order.status === 'pending' && !this.cancelled(), true),
+        take(10),
+        takeUntilDestroyed(this.destroyRef)
+      ).subscribe({
+        next: (order) => { this.order.set(order); this.loading.set(false); },
+        error: (failure: Error) => this.failLookup(failure),
+      });
+      return;
+    }
+    this.lookup = this.orders.quote(this.slug, this.localization.currency()).pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (quote) => {
+          const previous = this.quote();
+          if (previous?.unitCents !== quote.unitCents || previous.shippingCents !== quote.shippingCents || previous.currency !== quote.currency) {
+            this.checkoutKey.set(undefined);
+          }
+          this.quote.set(quote);
+          if (!this.canRetryCheckout()) {
+            this.quantity.update((value) => Math.max(1, Math.min(value, quote.available)));
+          }
+          this.loading.set(false);
+        },
+        error: (failure: Error) => this.failLookup(failure),
+      });
   }
 
   updateQuantity(change: number): void {
-    const maximum = Math.max(1, Math.min(10, this.product()?.inventoryCount ?? 1));
+    const maximum = this.quote()?.available ?? 1;
     this.quantity.update((value) => Math.max(1, Math.min(maximum, value + change)));
-  }
-
-  cardNumberInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const formatted = formatCardNumber(input.value);
-    input.value = formatted;
-    this.cardForm.controls.number.setValue(formatted);
-  }
-
-  expiryInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const formatted = formatExpiry(input.value);
-    input.value = formatted;
-    this.cardForm.controls.expiry.setValue(formatted);
-  }
-
-  cvvInput(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    const formatted = paymentDigits(input.value).slice(0, 4);
-    input.value = formatted;
-    this.cardForm.controls.cvv.setValue(formatted);
+    this.checkoutKey.set(undefined);
+    this.checkoutError.set('');
   }
 
   submit(): void {
-    if (this.processing() || !this.product()) return;
-    this.deliveryForm.markAllAsTouched();
-    if (this.method() === 'card') this.cardForm.markAllAsTouched();
-    if (this.deliveryForm.invalid || (this.method() === 'card' && this.cardForm.invalid)) return;
-
+    const quote = this.quote();
+    if (!quote?.enabled || (quote.available < 1 && !this.canRetryCheckout()) || this.processing()) return;
     this.processing.set(true);
-    this.completionTimer = setTimeout(() => {
-      this.orderCode.set(`CVP-${Date.now().toString().slice(-8)}`);
-      this.cardForm.reset();
-      this.processing.set(false);
-      this.completed.set(true);
-      queueMicrotask(() => document.querySelector<HTMLElement>('.payment-success h1')?.focus());
-    }, 650);
+    this.checkoutError.set('');
+    const checkoutKey = this.checkoutKey() ?? crypto.randomUUID();
+    this.checkoutKey.set(checkoutKey);
+    this.orders.start(quote, this.quantity(), this.totalCents(), this.localization.language(), checkoutKey)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (session) => {
+          const url = stripeCheckoutUrl(session.checkoutUrl);
+          if (url) window.location.assign(url);
+          else this.failCheckout('Não foi possível abrir a página de pagamento.');
+        },
+        error: (failure: Error) => {
+          if (failure instanceof ApiClientError && failure.status >= 400 && failure.status < 500 && failure.status !== 429) {
+            this.checkoutKey.set(undefined);
+          }
+          this.failCheckout(failure.message);
+        },
+      });
+  }
+
+  money(cents: number, currency: AppCurrency): string {
+    return new Intl.NumberFormat(this.localization.locale(), { style: 'currency', currency }).format(cents / 100);
+  }
+
+  private failLookup(failure: Error): void {
+    this.lookupError.set(failure.message);
+    this.loading.set(false);
+  }
+
+  private failCheckout(message: string): void {
+    this.checkoutError.set(message);
+    this.processing.set(false);
   }
 }

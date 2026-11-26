@@ -1,3 +1,57 @@
+.home-discount-art-framed {
+  display: grid;
+  place-items: center;
+  padding: .5rem .75rem;
+
+  cvp-promotion-media { width: min(100%, 25rem); }
+}
+
+.home-discount-banner.has-media-background {
+  grid-template-columns: minmax(0, 1fr);
+  background: var(--promo-bg, #096653);
+
+  .home-discount-art-framed {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    min-height: 0;
+    padding: 0;
+  }
+
+  cvp-promotion-media { width: 100%; }
+
+  &::after {
+    content: '';
+    position: absolute;
+    z-index: 1;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg, var(--promo-bg, #096653) 0%, color-mix(in srgb, var(--promo-bg, #096653) 82%, transparent) 42%, transparent 90%);
+  }
+}
+
+.campaign-links-inside {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem .75rem;
+  margin-top: .25rem;
+  font-size: .8rem;
+}
+
+.campaign-links-inside a {
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: .15em;
+}
+
+@media (max-width: 47.99rem) {
+  .home-discount-copy .home-discount-cta { display: inline-flex; }
+  .home-discount-banner.has-media-background::after {
+    background: linear-gradient(90deg, var(--promo-bg, #096653) 3%, color-mix(in srgb, var(--promo-bg, #096653) 82%, transparent) 58%, transparent);
+  }
+}
+
 @media (min-width: 48rem) {
   .home-discount-banner,
   .home-discount-art { min-height: 14rem; }

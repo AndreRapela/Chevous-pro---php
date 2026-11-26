@@ -11,9 +11,9 @@ use ChezVoust\Core\Jwt;
 use ChezVoust\Core\RateLimiter;
 use ChezVoust\Core\Request;
 use ChezVoust\Core\Response;
-use ChezVoust\Core\SensitivePayload;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
+use ChezVoust\Modules\Mail\MailOutbox;
 use PDO;
 use PDOException;
 
@@ -30,7 +30,7 @@ final class AuthController extends Controller
         private readonly Jwt $jwt,
         private readonly RateLimiter $rateLimiter,
         private readonly Audit $audit,
-        private readonly SensitivePayload $sensitivePayload
+        private readonly MailOutbox $mailOutbox
     ) {
         parent::__construct($db, $config);
     }
@@ -60,16 +60,17 @@ final class AuthController extends Controller
         $data = Validator::validate($request->body, [
             'name' => ['required', 'string', 'min:3', 'max:120'],
             'email' => ['required', 'email', 'max:190'],
-            'phone' => ['nullable', 'string', 'min:10', 'max:20'],
+            'phone' => ['nullable', 'string', 'max:20', 'regex:/^(?:\+(?:[ ().-]*[0-9]){6,19}|(?:[ ().-]*[0-9]){9,20})[ ().-]*$/D'],
             'password' => ['required', 'string', 'min:8', 'max:128'],
             'city' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:2'],
+            'locale' => ['sometimes', 'string', 'max:12'],
         ]);
         $this->assertStrongPassword((string) $data['password']);
 
         $email = mb_strtolower(trim((string) $data['email']));
+        $locale = trim($data['locale'] ?? '') ?: $this->config['locale'];
         $userPublicId = Uuid::v4();
-        $verificationToken = bin2hex(random_bytes(32));
 
         try {
             $this->db->beginTransaction();
@@ -84,7 +85,7 @@ final class AuthController extends Controller
                 'email' => $email,
                 'password_hash' => password_hash((string) $data['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT),
                 'phone' => isset($data['phone']) ? preg_replace('/\D+/', '', (string) $data['phone']) : null,
-                'locale' => $this->config['locale'],
+                'locale' => $locale,
                 'timezone' => $this->config['timezone'],
             ]);
             $userId = (int) $this->db->lastInsertId();
@@ -102,26 +103,13 @@ final class AuthController extends Controller
                 ]);
             }
 
-            $verification = $this->db->prepare(
-                'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, created_at)
-                 VALUES (:user_id, :token_hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), UTC_TIMESTAMP())'
-            );
-            $verification->execute(['user_id' => $userId, 'token_hash' => hash('sha256', $verificationToken)]);
-
-            $event = $this->db->prepare(
-                'INSERT INTO outbox_events (event_type, aggregate_type, aggregate_id, payload, available_at, created_at)
-                 VALUES (\'email.verify\', \'user\', :aggregate_id, :payload, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
-            );
-            $event->execute([
-                'aggregate_id' => $userPublicId,
-                'payload' => $this->sensitivePayload->encrypt(['email' => $email, 'token' => $verificationToken]),
-            ]);
+            $verification = $this->queueEmailVerification($userId, $userPublicId, $email, $locale);
             $this->db->commit();
-        } catch (PDOException $exception) {
+        } catch (\Throwable $exception) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }
-            if ($exception->getCode() === '23000') {
+            if ($exception instanceof PDOException && $exception->getCode() === '23000') {
                 throw new ApiException(409, 'EMAIL_ALREADY_USED', 'Já existe uma conta com este e-mail.');
             }
             throw $exception;
@@ -131,8 +119,9 @@ final class AuthController extends Controller
             'user' => ['id' => $userPublicId, 'name' => trim((string) $data['name']), 'email' => $email, 'role' => $role],
             'message' => 'Conta criada. Verifique seu e-mail para concluir o cadastro.',
         ];
-        if ($this->config['env'] === 'local' && $this->config['debug']) {
-            $response['debugVerificationToken'] = $verificationToken;
+        if ($this->config['env'] === 'local' && $this->config['debug'] && $this->config['mail']['driver'] === 'log') {
+            $response['debugVerificationToken'] = $verification['token'];
+            $response['debugVerificationCode'] = $verification['code'];
         }
         return Response::data($response, 201);
     }
@@ -208,6 +197,7 @@ final class AuthController extends Controller
                  FROM auth_sessions s
                  INNER JOIN users u ON u.id = s.user_id
                  WHERE s.public_id = :session AND u.public_id = :subject
+                   AND u.deleted_at IS NULL
                    AND s.revoked_at IS NULL AND s.expires_at > UTC_TIMESTAMP()
                  FOR UPDATE'
             );
@@ -384,6 +374,7 @@ final class AuthController extends Controller
         );
         $statement->execute(['id' => $auth['id']]);
         $user = $statement->fetch();
+        $user['emailVerified'] = $user['emailVerifiedAt'] !== null;
         $user['avatarUrl'] = $this->avatarUrl((string) $user['id'], $user['avatarPath'] ?? null, $user['avatarUpdatedAt'] ?? null);
         unset($user['avatarPath'], $user['avatarUpdatedAt']);
         return Response::data($user);
@@ -414,37 +405,85 @@ final class AuthController extends Controller
     public function forgotPassword(Request $request, array $params, ?array $auth): Response
     {
         $this->rateLimiter->check('forgot:' . $request->ip, 5, 3600);
-        $data = Validator::validate($request->body, ['email' => ['required', 'email', 'max:190']]);
-        $statement = $this->db->prepare('SELECT id, public_id, email FROM users WHERE email = :email AND status = \'active\' LIMIT 1');
-        $statement->execute(['email' => mb_strtolower(trim((string) $data['email']))]);
-        $user = $statement->fetch();
+        $data = Validator::validate($request->body, [
+            'email' => ['required', 'email', 'max:190'],
+            'locale' => ['sometimes', 'string', 'max:20'],
+        ]);
         $debugToken = null;
 
         // Mantém custo criptográfico constante mesmo quando a conta não existe.
         // O endpoint continua devolvendo a mesma resposta pública em ambos os casos.
         password_verify('password-reset-timing-probe', self::DUMMY_PASSWORD_HASH);
-        if ($user) {
-            $token = bin2hex(random_bytes(32));
-            $debugToken = $token;
-            $this->db->prepare('UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP() WHERE user_id = :user_id AND used_at IS NULL')
-                ->execute(['user_id' => $user['id']]);
-            $this->db->prepare(
-                'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at)
-                 VALUES (:user_id, :hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 HOUR), UTC_TIMESTAMP())'
-            )->execute(['user_id' => $user['id'], 'hash' => hash('sha256', $token)]);
-            $this->db->prepare(
-                'INSERT INTO outbox_events (event_type, aggregate_type, aggregate_id, payload, available_at, created_at)
-                 VALUES (\'email.password_reset\', \'user\', :aggregate_id, :payload, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
-            )->execute([
-                'aggregate_id' => $user['public_id'],
-                'payload' => $this->sensitivePayload->encrypt(['email' => $user['email'], 'token' => $token]),
-            ]);
+        $this->db->beginTransaction();
+        try {
+            $statement = $this->db->prepare('SELECT id, public_id, email, locale FROM users WHERE email = :email AND status = \'active\' AND deleted_at IS NULL LIMIT 1 FOR UPDATE');
+            $statement->execute(['email' => mb_strtolower(trim((string) $data['email']))]);
+            $user = $statement->fetch();
+            if ($user) {
+                $token = bin2hex(random_bytes(32));
+                $debugToken = $token;
+                $this->db->prepare('UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP() WHERE user_id = :user_id AND used_at IS NULL')
+                    ->execute(['user_id' => $user['id']]);
+                $this->db->prepare(
+                    'INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at)
+                     VALUES (:user_id, :hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 1 HOUR), UTC_TIMESTAMP())'
+                )->execute(['user_id' => $user['id'], 'hash' => hash('sha256', $token)]);
+                $this->mailOutbox->enqueue('email.password_reset', $user['public_id'], $user['email'], $token, trim($data['locale'] ?? '') ?: $user['locale']);
+            }
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
         }
         $response = ['message' => 'Se o e-mail estiver cadastrado, enviaremos as instruções de recuperação.'];
-        if ($debugToken !== null && $this->config['env'] === 'local' && $this->config['debug']) {
+        if ($debugToken !== null && $this->config['env'] === 'local' && $this->config['debug'] && $this->config['mail']['driver'] === 'log') {
             $response['debugResetToken'] = $debugToken;
         }
         return Response::data($response);
+    }
+
+    public function resendEmailVerification(Request $request, array $params, ?array $auth): Response
+    {
+        $this->rateLimiter->check('email-resend:ip:' . $request->ip, 20, 3600);
+        $data = Validator::validate($request->body, [
+            'email' => ['required', 'email', 'max:190'],
+            'locale' => ['sometimes', 'string', 'max:20'],
+        ]);
+        $email = mb_strtolower(trim((string) $data['email']));
+        $this->rateLimiter->check('email-resend:address:' . $email, 3, 3600);
+        $this->db->beginTransaction();
+        try {
+            $statement = $this->db->prepare(
+                "SELECT id, public_id, locale, email FROM users
+                 WHERE email = :email AND status = 'active' AND deleted_at IS NULL AND email_verified_at IS NULL FOR UPDATE"
+            );
+            $statement->execute(['email' => $email]);
+            if ($user = $statement->fetch()) {
+                $this->queueEmailVerification((int) $user['id'], $user['public_id'], $user['email'], trim($data['locale'] ?? '') ?: $user['locale']);
+            }
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
+        }
+        return Response::data(['message' => 'Se houver uma conta pendente com esse e-mail, enviaremos um novo código e link.']);
+    }
+
+    private function queueEmailVerification(int $userId, string $publicId, string $email, string $locale): array
+    {
+        $token = bin2hex(random_bytes(32));
+        $tokenHash = hash('sha256', $token);
+        $code = EmailVerificationCode::fromTokenHash($tokenHash, $this->config['jwt']['secret']);
+        $this->db->prepare(
+            'INSERT INTO email_verification_tokens (user_id, token_hash, expires_at, created_at)
+             VALUES (:user_id, :hash, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 24 HOUR), UTC_TIMESTAMP())'
+        )->execute(['user_id' => $userId, 'hash' => $tokenHash]);
+        $this->mailOutbox->enqueue('email.verify', $publicId, $email, $token, $locale, $code);
+        return ['token' => $token, 'code' => $code];
     }
 
     public function resetPassword(Request $request, array $params, ?array $auth): Response
@@ -460,19 +499,29 @@ final class AuthController extends Controller
         try {
             $statement = $this->db->prepare(
                 'SELECT id, user_id FROM password_reset_tokens
-                 WHERE token_hash = :hash AND used_at IS NULL AND expires_at > UTC_TIMESTAMP() FOR UPDATE'
+                 WHERE token_hash = :hash AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()'
             );
             $statement->execute(['hash' => hash('sha256', (string) $data['token'])]);
             $token = $statement->fetch();
             if (!$token) {
                 throw new ApiException(422, 'INVALID_RESET_TOKEN', 'O link de recuperação é inválido ou expirou.');
             }
-            $this->db->prepare('UPDATE users SET password_hash = :hash, updated_at = UTC_TIMESTAMP() WHERE id = :id')
-                ->execute([
-                    'hash' => password_hash((string) $data['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT),
-                    'id' => $token['user_id'],
-                ]);
-            $this->db->prepare('UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $token['id']]);
+            $update = $this->db->prepare('UPDATE users SET password_hash = :hash, updated_at = UTC_TIMESTAMP() WHERE id = :id AND deleted_at IS NULL');
+            $update->execute([
+                'hash' => password_hash((string) $data['password'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_DEFAULT),
+                'id' => $token['user_id'],
+            ]);
+            if ($update->rowCount() !== 1) {
+                throw new ApiException(422, 'INVALID_RESET_TOKEN', 'O link de recuperação é inválido ou expirou.');
+            }
+            $redeem = $this->db->prepare(
+                'UPDATE password_reset_tokens SET used_at = UTC_TIMESTAMP()
+                 WHERE id = :id AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()'
+            );
+            $redeem->execute(['id' => $token['id']]);
+            if ($redeem->rowCount() !== 1) {
+                throw new ApiException(422, 'INVALID_RESET_TOKEN', 'O link de recuperação é inválido ou expirou.');
+            }
             $this->db->prepare('UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP() WHERE user_id = :id AND revoked_at IS NULL')->execute(['id' => $token['user_id']]);
             $this->notify(
                 (int) $token['user_id'],
@@ -492,23 +541,55 @@ final class AuthController extends Controller
 
     public function verifyEmail(Request $request, array $params, ?array $auth): Response
     {
-        $this->rateLimiter->check('email-verify:' . $request->ip, 10, 3600);
-        $data = Validator::validate($request->body, ['token' => ['required', 'string', 'min:64', 'max:64']]);
+        $byCode = array_key_exists('code', $request->body);
+        if ($byCode) {
+            $this->rateLimiter->check('email-code:ip:' . $request->ip, 60, 900);
+            $data = Validator::validate($request->body, [
+                'email' => ['required', 'email', 'max:190'],
+                'code' => ['required', 'string', 'regex:/^[0-9]{6}$/D'],
+            ]);
+            $email = mb_strtolower(trim($data['email']));
+            $account = $this->db->prepare('SELECT id FROM users WHERE email = :email AND deleted_at IS NULL');
+            $account->execute(['email' => $email]);
+            $userId = (int) $account->fetchColumn();
+            $this->rateLimiter->check('email-code:account:' . ($userId ?: $email), 8, 900);
+            $invalid = new ApiException(422, 'INVALID_VERIFICATION_CODE', 'Código inválido ou expirado. Use o código mais recente.');
+        } else {
+            $this->rateLimiter->check('email-verify:' . $request->ip, 10, 3600);
+            $data = Validator::validate($request->body, ['token' => ['required', 'string', 'min:64', 'max:64']]);
+            $invalid = new ApiException(422, 'INVALID_VERIFICATION_TOKEN', 'O link de verificação é inválido ou expirou.');
+        }
         $this->db->beginTransaction();
         try {
-            $statement = $this->db->prepare(
-                'SELECT id, user_id FROM email_verification_tokens
-                 WHERE token_hash = :hash AND used_at IS NULL AND expires_at > UTC_TIMESTAMP() FOR UPDATE'
-            );
-            $statement->execute(['hash' => hash('sha256', (string) $data['token'])]);
-            $token = $statement->fetch();
-            if (!$token) {
-                throw new ApiException(422, 'INVALID_VERIFICATION_TOKEN', 'O link de verificação é inválido ou expirou.');
+            if ($byCode) {
+                $token = $this->findVerificationByCode($userId, $data['code']);
+            } else {
+                $statement = $this->db->prepare(
+                    'SELECT id, user_id FROM email_verification_tokens
+                     WHERE token_hash = :hash AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()'
+                );
+                $statement->execute(['hash' => hash('sha256', $data['token'])]);
+                $token = $statement->fetch();
             }
-            $this->db->prepare('UPDATE users SET email_verified_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = :id')
+            if (!$token) {
+                throw $invalid;
+            }
+            // Reenvio e confirmação bloqueiam primeiro a conta, em ordem consistente.
+            $user = $this->db->prepare(
+                "UPDATE users SET email_verified_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
+                 WHERE id = :id AND status = 'active' AND deleted_at IS NULL AND email_verified_at IS NULL"
+            );
+            $user->execute(['id' => $token['user_id']]);
+            $redeem = $this->db->prepare(
+                'UPDATE email_verification_tokens SET used_at = UTC_TIMESTAMP()
+                 WHERE id = :id AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()'
+            );
+            $redeem->execute(['id' => $token['id']]);
+            if ($user->rowCount() !== 1 || $redeem->rowCount() !== 1) {
+                throw $invalid;
+            }
+            $this->db->prepare('UPDATE email_verification_tokens SET used_at = UTC_TIMESTAMP() WHERE user_id = :id AND used_at IS NULL')
                 ->execute(['id' => $token['user_id']]);
-            $this->db->prepare('UPDATE email_verification_tokens SET used_at = UTC_TIMESTAMP() WHERE id = :id')
-                ->execute(['id' => $token['id']]);
             $this->notify(
                 (int) $token['user_id'],
                 'account.email_verified',
@@ -523,6 +604,28 @@ final class AuthController extends Controller
             throw $exception;
         }
         return Response::data(['message' => 'E-mail verificado com sucesso.']);
+    }
+
+    private function findVerificationByCode(int $userId, string $code): array|false
+    {
+        // Hold the same account lock as resend before inspecting the latest code.
+        $account = $this->db->prepare(
+            "SELECT id FROM users WHERE id = :id AND status = 'active' AND deleted_at IS NULL AND email_verified_at IS NULL FOR UPDATE"
+        );
+        $account->execute(['id' => $userId]);
+        if (!$account->fetchColumn()) {
+            return false;
+        }
+        $statement = $this->db->prepare(
+            'SELECT id, user_id, token_hash FROM email_verification_tokens
+             WHERE user_id = :id AND used_at IS NULL AND expires_at > UTC_TIMESTAMP()
+               AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 15 MINUTE)
+             ORDER BY id DESC LIMIT 1'
+        );
+        $statement->execute(['id' => $userId]);
+        $token = $statement->fetch();
+        return $token && hash_equals(EmailVerificationCode::fromTokenHash($token['token_hash'], $this->config['jwt']['secret']), $code)
+            ? $token : false;
     }
 
     private function createSession(array $user, Request $request, bool $remember): array

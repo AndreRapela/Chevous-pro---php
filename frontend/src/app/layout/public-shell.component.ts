@@ -1,13 +1,14 @@
-import { ChangeDetectionStrategy, Component, HostListener, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, inject, signal, viewChild } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../core/auth/auth.service';
 import { BrandComponent } from '../shared/components';
 import { LocaleControlsComponent } from '../shared/localization/locale-controls.component';
+import { PortalIcon, PortalNavIconComponent } from './portal-nav-icon.component';
 
 @Component({
   selector: 'cvp-public-shell',
   standalone: true,
-  imports: [BrandComponent, LocaleControlsComponent, RouterLink, RouterLinkActive, RouterOutlet],
+  imports: [BrandComponent, LocaleControlsComponent, PortalNavIconComponent, RouterLink, RouterLinkActive, RouterOutlet],
   template: `
     <a class="skip-link" href="#conteudo-principal">Pular para o conteúdo</a>
     <header class="site-header">
@@ -31,24 +32,37 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
             <a class="btn btn-primary header-create-account" routerLink="/cadastro">Criar conta</a>
           }
           <cvp-locale-controls />
-          <button class="menu-button" type="button" (click)="menuOpen.set(!menuOpen())" [attr.aria-expanded]="menuOpen()" aria-controls="mobile-menu" [attr.aria-label]="menuOpen() ? 'Fechar menu' : 'Abrir menu'">
+          <button #menuButton class="menu-button" type="button" (click)="openMenu(menuPanel)" [attr.aria-expanded]="menuOpen()" aria-haspopup="dialog" aria-controls="mobile-menu" aria-label="Abrir menu">
             <span></span><span></span><span></span>
           </button>
         </div>
       </div>
-      @if (menuOpen()) {
-        <nav id="mobile-menu" class="mobile-menu" aria-label="Navegação principal">
-          <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" (click)="closeMenu()">Início</a>
-          <a routerLink="/servicos" routerLinkActive="active" (click)="closeMenu()">Serviços</a>
-          <a routerLink="/produtos" routerLinkActive="active" (click)="closeMenu()">Produtos</a>
-          <a routerLink="/profissionais" routerLinkActive="active" (click)="closeMenu()">Profissionais</a>
-          <a routerLink="/como-funciona" routerLinkActive="active" (click)="closeMenu()">Como funciona</a>
-          <a routerLink="/seguranca" (click)="closeMenu()">Segurança</a>
-          <a routerLink="/ajuda" (click)="closeMenu()">Ajuda</a>
-          @if (!auth.user()) { <a routerLink="/entrar" (click)="closeMenu()">Entrar</a><a routerLink="/cadastro" (click)="closeMenu()">Criar conta</a> }
-        </nav>
-      }
     </header>
+    <dialog #menuPanel id="mobile-menu" class="mobile-drawer" aria-label="Navegação principal" (close)="menuOpen.set(false)"
+      (pointerdown)="backdropPressed = $event.target === menuPanel" (pointerup)="closeFromBackdrop($event, menuPanel)">
+      <div class="mobile-drawer-content">
+        <button class="mobile-drawer-close" type="button" aria-label="Fechar menu" (click)="menuPanel.close()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+        </button>
+        <div class="mobile-drawer-account">
+          @if (auth.user(); as user) {
+            <a class="btn btn-primary" [routerLink]="auth.homeFor(user)" (click)="menuPanel.close()">Meu painel</a>
+          } @else {
+            <a class="btn btn-primary" routerLink="/cadastro" (click)="menuPanel.close()">Criar conta</a>
+            <a class="btn btn-secondary" routerLink="/entrar" (click)="menuPanel.close()">Entrar</a>
+          }
+        </div>
+        <nav class="mobile-drawer-links" aria-label="Navegação principal">
+          @for (item of mobileLinks; track item.path) {
+            <a [routerLink]="item.path" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.path === '/' }"
+              ariaCurrentWhenActive="page" (click)="menuPanel.close()">
+              <cvp-portal-nav-icon [icon]="item.icon" />{{ item.label }}
+              <svg class="mobile-drawer-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" aria-hidden="true"><path d="m6 3 5 5-5 5"/></svg>
+            </a>
+          }
+        </nav>
+      </div>
+    </dialog>
     <main id="conteudo-principal" tabindex="-1">
       <router-outlet />
     </main>
@@ -89,14 +103,39 @@ import { LocaleControlsComponent } from '../shared/localization/locale-controls.
       <a [routerLink]="auth.user() ? auth.homeFor() : '/entrar'" routerLinkActive="active"><span aria-hidden="true">○</span>Conta</a>
     </nav>
   `,
+  styleUrl: './public-shell.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class PublicShellComponent {
   readonly auth = inject(AuthService);
   readonly menuOpen = signal(false);
+  readonly mobileLinks: ReadonlyArray<{ path: string; label: string; icon: PortalIcon }> = [
+    { path: '/', label: 'Início', icon: 'home' },
+    { path: '/servicos', label: 'Serviços', icon: 'catalog' },
+    { path: '/produtos', label: 'Produtos', icon: 'bag' },
+    { path: '/profissionais', label: 'Profissionais', icon: 'profile' },
+    { path: '/como-funciona', label: 'Como funciona', icon: 'info' },
+    { path: '/seguranca', label: 'Segurança', icon: 'moderation' },
+    { path: '/ajuda', label: 'Ajuda', icon: 'help' }
+  ];
+  backdropPressed = false;
+  private readonly menuPanel = viewChild<ElementRef<HTMLDialogElement>>('menuPanel');
+  private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
 
-  closeMenu(): void { this.menuOpen.set(false); }
+  openMenu(panel: HTMLDialogElement): void {
+    panel.showModal();
+    this.menuOpen.set(true);
+  }
 
-  @HostListener('document:keydown.escape')
-  onEscape(): void { this.closeMenu(); }
+  closeFromBackdrop(event: PointerEvent, panel: HTMLDialogElement): void {
+    if (this.backdropPressed && event.target === panel) panel.close();
+    this.backdropPressed = false;
+  }
+
+  @HostListener('window:resize')
+  closeMenuOnDesktop(): void {
+    const panel = this.menuPanel()?.nativeElement;
+    const trigger = this.menuButton()?.nativeElement;
+    if (panel?.open && trigger && getComputedStyle(trigger).display === 'none') panel.close();
+  }
 }

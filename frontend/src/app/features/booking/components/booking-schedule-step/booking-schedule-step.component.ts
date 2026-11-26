@@ -31,6 +31,7 @@ import { BookingCalendarDay, bookingCalendarDays, parseBookingDate } from '../..
       @if (invalid('date')) { <small class="field-error" role="alert">Escolha uma data.</small> }
       <fieldset class="booking-times">
         <legend>Horários disponíveis</legend>
+        <p class="muted">Horários no fuso de Bruxelas.</p>
         @if (loading) { <p class="muted" role="status">Consultando as agendas…</p> }
         @else if (availabilityError) { <p class="field-error" role="alert">{{ availabilityError }}</p> }
         @else if (!form.controls.date.value) { <p class="muted">Escolha uma data para ver os horários.</p> }

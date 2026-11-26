@@ -5,61 +5,55 @@ import { fileURLToPath } from 'node:url';
 import ts from 'typescript';
 import { parseTemplate, TmplAstText, TmplAstBoundText } from '@angular/compiler';
 import { replaceTranslationFragment } from '../src/app/core/localization/localized-text.util.ts';
+import * as english from '../src/app/core/localization/translations.en.ts';
+import * as french from '../src/app/core/localization/translations.fr.ts';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const app = join(root, 'src/app');
 const source = ts.createSourceFile('translations.ts', readFileSync(join(app, 'core/localization/localization.service.ts'), 'utf8'), ts.ScriptTarget.Latest, true);
-const entries = [];
+assert.equal(english.translations.length, french.translations.length);
+const entries = english.translations.map(([pt, en], index) => {
+  const [frenchSource, fr] = french.translations[index];
+  assert.equal(frenchSource, pt, 'French phrases must follow the English source order');
+  assert.ok(pt && en && fr, 'Every phrase needs EN and FR');
+  return { pt, en, fr };
+});
 const methods = new Map();
-const patterns = [];
-function readDictionary(node) {
-  if (ts.isVariableDeclaration(node) && node.name.getText(source) === 'TRANSLATIONS') {
-    assert.ok(node.initializer && ts.isArrayLiteralExpression(node.initializer));
-    for (const item of node.initializer.elements) {
-      assert.ok(ts.isObjectLiteralExpression(item));
-      const entry = Object.fromEntries(item.properties.map(property => {
-        assert.ok(ts.isPropertyAssignment(property) && ts.isStringLiteral(property.initializer));
-        return [property.name.getText(source), property.initializer.text];
-      }));
-      assert.ok(entry.pt && entry.en && entry.fr, 'Every phrase needs EN and FR');
-      entries.push(entry);
-    }
-  }
-  if (ts.isMethodDeclaration(node) && ['translate', 'translatePatterns', 'readLanguage', 'readCurrency'].includes(node.name.getText(source))) {
+const patterns = [['en', english], ['fr', french]].flatMap(([language, catalog]) =>
+  catalog.patterns.map(([regex, target]) => ({
+    language, regex: new RegExp(`^(?:${regex.source})$`, regex.flags.replace('g', '')), target
+  })));
+function readPreferences(node) {
+  if (ts.isMethodDeclaration(node) && ['readLanguage', 'readCurrency'].includes(node.name.getText(source))) {
     methods.set(node.name.getText(source), node.getText(source));
   }
-  if (ts.isVariableDeclaration(node) && node.name.getText(source) === 'replacements' && ts.isConditionalExpression(node.initializer)) {
-    for (const [language, branch] of [['fr', node.initializer.whenTrue], ['en', node.initializer.whenFalse]]) {
-      assert.ok(ts.isArrayLiteralExpression(branch));
-      for (const pair of branch.elements) {
-        assert.ok(ts.isArrayLiteralExpression(pair) && ts.isRegularExpressionLiteral(pair.elements[0]) && ts.isStringLiteral(pair.elements[1]));
-        const regex = pair.elements[0].text;
-        const slash = regex.lastIndexOf('/');
-        patterns.push({ language, regex: new RegExp(`^(?:${regex.slice(1, slash)})$`, regex.slice(slash + 1).replace('g', '')), target: pair.elements[1].text });
-      }
-    }
-  }
-  ts.forEachChild(node, readDictionary);
+  ts.forEachChild(node, readPreferences);
 }
-readDictionary(source);
+readPreferences(source);
 assert.ok(entries.length > 1000);
-assert.equal(methods.size, 4);
-// Exercise the actual service method bodies without Angular injection or browser storage.
-// Parsing/transpiling repo code avoids copying the translation algorithm into the test.
-const harnessSource = `class LocalizationHarness { constructor(chosen) { this.language = () => chosen; } ${[...methods.values()].join('\n')} }`;
+assert.equal(methods.size, 2);
+// Exercise the app catalog and preference methods without Angular or browser storage.
+const catalogSource = readFileSync(join(app, 'core/localization/translation-catalog.ts'), 'utf8')
+  .replace(/^import .*;\r?\n/, '').replace('export function', 'function');
+const catalogJs = ts.transpileModule(catalogSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
+const createCatalog = new Function('replaceTranslationFragment', `${catalogJs}; return createTranslationCatalog;`)(replaceTranslationFragment);
+const translators = {
+  en: { translate: createCatalog(english.translations, english.patterns) },
+  fr: { translate: createCatalog(english.translations, french.patterns, french.translations, true) }
+};
+const harnessSource = `class LocalizationHarness { ${[...methods.values()].join('\n')} }`;
 const harnessJs = ts.transpileModule(harnessSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
-const createHarness = new Function('TRANSLATIONS', 'ORDERED_TRANSLATIONS', 'replaceTranslationFragment', 'localStorage', 'LANGUAGE_KEY', 'CURRENCY_KEY', `${harnessJs}; return LocalizationHarness;`);
-const Harness = createHarness(entries, [...entries].sort((a, b) => b.pt.length - a.pt.length), replaceTranslationFragment, { getItem: key => key === 'cvp.language' ? 'pt' : 'BRL' }, 'cvp.language', 'cvp.currency');
-const translators = { en: new Harness('en'), fr: new Harness('fr') };
-assert.equal(translators.en.readLanguage(), 'en', 'Legacy Portuguese preferences must fall back to English');
-assert.equal(translators.en.readCurrency(), 'EUR', 'Legacy BRL preferences must fall back to EUR');
-const MissingStorageHarness = createHarness(entries, entries, replaceTranslationFragment, { getItem: () => { throw new Error('Storage disabled'); } }, 'cvp.language', 'cvp.currency');
-assert.equal(new MissingStorageHarness('en').readLanguage(), 'en');
-assert.equal(new MissingStorageHarness('en').readCurrency(), 'EUR');
+const createHarness = new Function('localStorage', 'LANGUAGE_KEY', 'CURRENCY_KEY', `${harnessJs}; return new LocalizationHarness();`);
+const legacy = createHarness({ getItem: key => key === 'cvp.language' ? 'pt' : 'BRL' }, 'cvp.language', 'cvp.currency');
+assert.equal(legacy.readLanguage(), 'en', 'Legacy Portuguese preferences must fall back to English');
+assert.equal(legacy.readCurrency(), 'EUR', 'Legacy BRL preferences must fall back to EUR');
+const missingStorage = createHarness({ getItem: () => { throw new Error('Storage disabled'); } }, 'cvp.language', 'cvp.currency');
+assert.equal(missingStorage.readLanguage(), 'en');
+assert.equal(missingStorage.readCurrency(), 'EUR');
 for (const [language, currency] of [['en', 'EUR'], ['fr', 'USD']]) {
-  const PreferenceHarness = createHarness(entries, entries, replaceTranslationFragment, { getItem: key => key === 'cvp.language' ? language : currency }, 'cvp.language', 'cvp.currency');
-  assert.equal(new PreferenceHarness(language).readLanguage(), language);
-  assert.equal(new PreferenceHarness(language).readCurrency(), currency);
+  const preferences = createHarness({ getItem: key => key === 'cvp.language' ? language : currency }, 'cvp.language', 'cvp.currency');
+  assert.equal(preferences.readLanguage(), language);
+  assert.equal(preferences.readCurrency(), currency);
 }
 for (const [phrase, english, french] of [
   ['Etapa 1 de 3', 'Step 1 of 3', 'Étape 1 sur 3'],

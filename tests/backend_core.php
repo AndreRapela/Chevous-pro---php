@@ -8,6 +8,7 @@ use ChezVoust\Core\Request;
 use ChezVoust\Core\SensitivePayload;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
+use ChezVoust\Modules\Catalog\PromotionVideo;
 
 require dirname(__DIR__) . '/backend/bootstrap/autoload.php';
 
@@ -157,6 +158,28 @@ check('Outbox cifra token efêmero e detecta adulteração', static function ():
     $rejected = false;
     try { $protector->decrypt(substr($encrypted, 0, -2) . 'xx'); } catch (RuntimeException) { $rejected = true; }
     expect($rejected, 'Envelope adulterado foi aceito.');
+});
+
+check('Duração máxima de vídeo MP4 e WebM é aplicada em milissegundos', static function (): void {
+    $mp4Box = static fn (string $type, string $payload): string => pack('Na4', strlen($payload) + 8, $type) . $payload;
+    $mp4 = static fn (int $ms): string => $mp4Box('moov', $mp4Box('mvhd', str_repeat("\0", 12) . pack('NN', 1000, $ms)));
+    $webm = static fn (int $ms): string => hex2bin('18538067ff1549a9668b448988') . pack('E', (float) $ms);
+    $path = tempnam(sys_get_temp_dir(), 'cvp-video-');
+    try {
+        foreach (['mp4' => $mp4, 'webm' => $webm] as $format => $make) {
+            file_put_contents($path, $make(60_000));
+            expect(PromotionVideo::requireDuration(PromotionVideo::duration($path, $format)) === 60_000, "60 s should be accepted in {$format}.");
+            file_put_contents($path, $make(60_001));
+            try {
+                PromotionVideo::requireDuration(PromotionVideo::duration($path, $format));
+                throw new RuntimeException("Video above 60 s accepted in {$format}.");
+            } catch (ApiException $failure) {
+                expect($failure->errorCode === 'PROMOTION_VIDEO_TOO_LONG', 'Unexpected video duration validation error.');
+            }
+        }
+    } finally {
+        unlink($path);
+    }
 });
 
 fwrite(STDOUT, "\nResultado: {$passed} aprovados, {$failed} falhos.\n");

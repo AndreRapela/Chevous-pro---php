@@ -177,11 +177,7 @@ final class EngagementController extends Controller
         return Response::data(['conversationId' => $conversationId], 201);
     }
 
-    /**
-     * Consulta incremental curta para a conversa ativa. O limite global do
-     * bootstrap já protege o IP antes do roteamento; não repetir dois buckets
-     * persistentes neste endpoint evita seis operações de banco por polling.
-     */
+    /** Consulta incremental autenticada para a conversa ativa. */
     public function messageUpdates(Request $request, array $params, ?array $auth): Response
     {
         $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
@@ -192,38 +188,15 @@ final class EngagementController extends Controller
         return Response::data($messages, 200, [
             'after' => $after,
             'limit' => $limit,
-            'pollAfterSeconds' => 10,
+            'pollAfterSeconds' => 3,
         ]);
     }
 
-    /**
-     * Entrega mensagens novas imediatamente para a conversa ativa. O fluxo
-     * termina em 25s para liberar workers Apache e o cliente reconecta.
-     */
+    /** Clientes antigos continuam recebendo mensagens pela consulta incremental. */
     public function messageStream(Request $request, array $params, ?array $auth): Response
     {
-        $conversation = $this->conversationForUser($params['id'], (int) $auth['id']);
-        $after = max(0, (int) ($request->query['after'] ?? 0));
-        $conversationId = (int) $conversation['id'];
-        return Response::eventStream(function () use ($conversationId, $after): void {
-            @set_time_limit(30);
-            $cursor = $after;
-            $deadline = microtime(true) + 25;
-            echo "retry: 1000\n\n";
-            @ob_flush(); flush();
-            while (microtime(true) < $deadline && connection_aborted() === 0) {
-                $messages = $this->messageRowsAfter($conversationId, $cursor, 50);
-                foreach ($messages as $message) {
-                    $cursor = max($cursor, (int) $message['sequence']);
-                    echo 'event: message' . "\n";
-                    echo 'data: ' . json_encode($message, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR) . "\n\n";
-                }
-                if ($messages !== []) { @ob_flush(); flush(); }
-                usleep(1000000);
-            }
-            echo "event: keepalive\ndata: {}\n\n";
-            @ob_flush(); flush();
-        });
+        $this->conversationForUser($params['id'], (int) $auth['id']);
+        return Response::noContent();
     }
 
     public function sendMessage(Request $request, array $params, ?array $auth): Response
@@ -269,11 +242,12 @@ final class EngagementController extends Controller
         $publicId = Uuid::v4();
         try {
             $this->db->beginTransaction();
+            // Serialize inserts within the conversation before assigning a message sequence.
+            $this->db->prepare('UPDATE conversations SET updated_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $conversation['id']]);
             $this->db->prepare(
                 'INSERT INTO messages (public_id, conversation_id, sender_id, message_type, body, created_at)
                  VALUES (:public_id, :conversation_id, :sender_id, \'text\', :body, UTC_TIMESTAMP())'
             )->execute(['public_id' => $publicId, 'conversation_id' => $conversation['id'], 'sender_id' => $auth['id'], 'body' => $body]);
-            $this->db->prepare('UPDATE conversations SET updated_at = UTC_TIMESTAMP() WHERE id = :id')->execute(['id' => $conversation['id']]);
             $recipients = $this->db->prepare('SELECT user_id FROM conversation_participants WHERE conversation_id = :id AND user_id <> :sender');
             $recipients->execute(['id' => $conversation['id'], 'sender' => $auth['id']]);
             foreach ($recipients->fetchAll() as $recipient) {

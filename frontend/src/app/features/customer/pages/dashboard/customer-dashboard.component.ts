@@ -30,8 +30,8 @@ import { LocalizedDatePipe, LocalizedMoneyPipe } from '../../../../shared/locali
             <div class="card-title-row"><div><span class="eyebrow">Próximo compromisso</span><h2>Seu próximo serviço</h2></div><a class="text-link" routerLink="/conta/agendamentos">Ver todos</a></div>
             @if (nextBooking(); as booking) {
               <article class="next-booking">
-                <div class="date-tile"><strong>{{ booking.scheduledAt | appDate:'dd' }}</strong><span>{{ booking.scheduledAt | appDate:'MMM' }}</span></div>
-                <div class="next-booking-main"><cvp-status-pill [status]="booking.status" /><h3>{{ booking.service.name }}</h3><p><cvp-date-line [value]="booking.scheduledAt" /> · {{ booking.addressLabel }}</p><div class="person-line"><span class="avatar avatar-sm">{{ booking.provider.initials }}</span><span>com <strong>{{ booking.provider.name }}</strong></span></div></div>
+                <div class="date-tile"><strong>{{ booking.scheduledAt | appDate:'dd':booking.timezone }}</strong><span>{{ booking.scheduledAt | appDate:'MMM':booking.timezone }}</span></div>
+                <div class="next-booking-main"><cvp-status-pill [status]="booking.status" /><h3>{{ booking.service.name }}</h3><p><cvp-date-line [value]="booking.scheduledAt" [timezone]="booking.timezone" /> · {{ booking.addressLabel }}</p><div class="person-line"><span class="avatar avatar-sm">{{ booking.provider.initials }}</span><span>com <strong>{{ booking.provider.name }}</strong></span></div></div>
                 <div class="next-booking-actions">@if (booking.canMessage && booking.conversationId) { <a class="btn btn-secondary btn-small" routerLink="/conta/mensagens" [queryParams]="{ conversa: booking.conversationId }">Mensagem</a> }<a class="btn btn-primary btn-small" [routerLink]="['/conta/agendamentos', booking.id]">Detalhes</a></div>
               </article>
             } @else {
@@ -50,7 +50,7 @@ import { LocalizedDatePipe, LocalizedMoneyPipe } from '../../../../shared/locali
         </div>
         <section class="portal-card">
           <div class="card-title-row"><div><span class="eyebrow">Histórico</span><h2>Atividade recente</h2></div></div>
-          <div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Profissional</th><th>Data</th><th>Status</th><th>Valor</th></tr></thead><tbody>@for (booking of bookings(); track booking.id) { <tr><td><strong>{{ booking.service.name }}</strong><small>{{ booking.code }}</small></td><td><strong data-cvp-no-localize>{{ booking.provider.name }}</strong></td><td>{{ booking.scheduledAt | appDate:'MMM d, yyyy, HH:mm' }}</td><td><cvp-status-pill [status]="booking.status" /></td><td><strong>{{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}</strong></td></tr> }</tbody></table></div>
+          <div class="table-wrap"><table><thead><tr><th>Serviço</th><th>Profissional</th><th>Data</th><th>Status</th><th>Valor</th></tr></thead><tbody>@for (booking of bookings(); track booking.id) { <tr><td><strong>{{ booking.service.name }}</strong><small>{{ booking.code }}</small></td><td><strong data-cvp-no-localize>{{ booking.provider.name }}</strong></td><td>{{ booking.scheduledAt | appDate:'MMM d, yyyy, HH:mm':booking.timezone }}</td><td><cvp-status-pill [status]="booking.status" /></td><td><strong>{{ booking.price.totalCents / 100 | appMoney:booking.price.currency }}</strong></td></tr> }</tbody></table></div>
         </section>
       }
     </section>

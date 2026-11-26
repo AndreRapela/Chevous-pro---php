@@ -1,0 +1,2 @@
+export const MAX_CAMPAIGN_UPLOAD = 25 * 1024 * 1024;
+export const MAX_CAMPAIGN_VIDEO_INPUT = 100 * 1024 * 1024;

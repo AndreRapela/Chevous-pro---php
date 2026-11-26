@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/auth.service';
 import { AuthSessionInfo } from '../../../core/models';
 import { LocalizedDatePipe } from '../../localization/localized-format.pipe';
@@ -8,14 +8,17 @@ import { LocalizedDatePipe } from '../../localization/localized-format.pipe';
 @Component({
   selector: 'cvp-account-security',
   standalone: true,
-  imports: [LocalizedDatePipe, ReactiveFormsModule],
+  imports: [LocalizedDatePipe, ReactiveFormsModule, RouterLink],
   template: `
     <section class="portal-card account-security" aria-labelledby="account-security-title">
       <div class="card-title-row"><div><span class="eyebrow">Proteção da conta</span><h2 id="account-security-title">Senha e dispositivos</h2></div><span class="chip chip-soft">Sessão protegida</span></div>
       @if (success()) { <div class="alert alert-success" role="status">{{ success() }}</div> }
       @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
       <form class="security-password-form" [formGroup]="passwordForm" (ngSubmit)="changePassword()" novalidate>
-        <h3>Alterar senha</h3>
+        <div class="label-row password-heading">
+          <h3>Alterar senha</h3>
+          <a routerLink="/recuperar-senha" [state]="{ recoveryEmail: auth.user()?.email }">Esqueci minha senha</a>
+        </div>
         <div class="form-grid">
           <label>Senha atual<input type="password" formControlName="currentPassword" autocomplete="current-password"></label>
           <label>Nova senha<input type="password" formControlName="newPassword" autocomplete="new-password" aria-describedby="password-help"></label>
@@ -32,11 +35,12 @@ import { LocalizedDatePipe } from '../../localization/localized-format.pipe';
       </div>
     </section>
   `,
+  styles: `.password-heading { gap: .35rem 1rem; flex-wrap: wrap; }`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AccountSecurityComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
-  private readonly auth = inject(AuthService);
+  readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   readonly sessions = signal<AuthSessionInfo[]>([]);
   readonly loading = signal(true);

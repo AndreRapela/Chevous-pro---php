@@ -5,7 +5,11 @@ import { allowedSeoHosts, isAllowedSeoHost } from './app/core/seo/seo-origin.uti
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+const trustedProxyHeaders = (process.env['NG_TRUST_PROXY_HEADERS'] ?? '').split(',').map((header) => header.trim());
+const angularApp = new AngularNodeAppEngine({
+  // O Nginx sobrescreve apenas estes cabeçalhos antes de encaminhar ao SSR.
+  trustProxyHeaders: ['x-forwarded-host', 'x-forwarded-proto'].filter((header) => trustedProxyHeaders.includes(header)),
+});
 const allowedHosts = allowedSeoHosts(process.env['NG_ALLOWED_HOSTS'], process.env['SITE_URL']);
 
 // O Angular recebe os cabeçalhos do Nginx diretamente. Não habilitar trust

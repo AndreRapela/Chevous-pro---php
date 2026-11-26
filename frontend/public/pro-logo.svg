@@ -20,13 +20,12 @@
       <use href="#aperture-cutouts"/>
     </mask>
   </defs>
-  <rect width="220" height="138" fill="#006b4d"/>
   <g fill="#fff">
     <g id="letter-p" transform="translate(52 45)">
       <path d="M-35 0A35 35 0 1 1-16 31.128V47H-35Z" mask="url(#p-shutter)"/>
     </g>
     <path id="letter-r" d="M95 40H109V46C113 40 119 38 128 40L126 53C120 51 113 54 112 61V90H95Z"/>
-    <g id="letter-o" transform="translate(171 58)">
+    <g id="letter-o" transform="translate(162 64) scale(.684)">
       <circle r="38" mask="url(#o-shutter)"/>
     </g>
     <text x="110" y="125" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700" textLength="195" lengthAdjust="spacingAndGlyphs">Chez vous pro</text>

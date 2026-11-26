@@ -23,7 +23,36 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run check
+      - name: Instalar Chromium para os testes
+        run: npx playwright install --with-deps --only-shell chromium
+      - name: Validar campanhas no navegador
+        run: npm run test:browser
       - run: npm audit --omit=dev --audit-level=high
+  frontend-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Localizar o branch do frontend espelhado
+        id: mirror
+        shell: bash
+        env:
+          PR_BRANCH: ${{ github.head_ref }}
+        run: |
+          ref=refs/heads/main
+          if [[ -n "$PR_BRANCH" ]] && git ls-remote --exit-code --heads https://github.com/AndreRapela/chevous-pro---angular.git "refs/heads/$PR_BRANCH" >/dev/null; then
+            ref="refs/heads/$PR_BRANCH"
+          fi
+          printf 'ref=%s\n' "$ref" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        with:
+          repository: AndreRapela/chevous-pro---angular
+          ref: ${{ steps.mirror.outputs.ref }}
+          path: .frontend-mirror
+          persist-credentials: false
+      - name: Comparar as duas cópias do frontend
+        run: node tests/frontend_mirror.mjs .frontend-mirror
   backend:
     runs-on: ubuntu-latest
     steps:
@@ -46,6 +75,10 @@ jobs:
       - name: Validar saúde e contas de teste
         shell: pwsh
         run: ./tests/compose_smoke.ps1
+      - name: Validar checkout e reservas com Stripe simulado
+        run: docker compose exec -T api php /dev/stdin /var/www/html < tests/product_checkout.php
+      - name: Validar armazenamento e limpeza de mídias de campanha
+        run: docker compose exec -T api php /dev/stdin /var/www/html < tests/promotion_storage.php
       - name: Validar descarte seguro da outbox
         shell: pwsh
         run: ./tests/outbox_flow.ps1

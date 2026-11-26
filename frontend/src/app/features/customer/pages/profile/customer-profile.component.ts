@@ -1,13 +1,13 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { EMPTY, catchError, map, of, switchMap } from 'rxjs';
+import { EMPTY, catchError, map, of, switchMap, timer } from 'rxjs';
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Address } from '../../../../core/models';
 import { AccountIdentityComponent, AccountSecurityComponent, PageHeaderComponent } from '../../../../shared/components';
-import { formatPostalCode, postalCodeDigits } from '../../../../shared/utils/postal-code.util';
+import { POSTAL_CODE_PATTERN, formatPostalCode, isBrazilianPostalCode, postalCodeDigits, validateAddressRegion } from '../../../../shared/utils/postal-code.util';
 
 @Component({
   selector: 'cvp-customer-profile',
@@ -18,15 +18,30 @@ import { formatPostalCode, postalCodeDigits } from '../../../../shared/utils/pos
       <cvp-page-header eyebrow="Sua conta" title="Perfil e preferências" description="Mantenha seus dados atualizados." />
       @if (saved()) { <div class="alert alert-success" role="status">Alterações salvas com sucesso.</div> }
       @if (error()) { <div class="alert alert-error" role="alert">{{ error() }}</div> }
-      <div class="settings-layout">
-        <cvp-account-identity />
-        <aside class="portal-card settings-nav"><span class="success-mark small">✓</span><h2>Conta protegida</h2><p>O acesso usa sessão renovável em cookie protegido. Revise abaixo os dispositivos conectados e mantenha sua senha atualizada.</p></aside>
-      </div>
+      <cvp-account-identity />
       <cvp-account-security />
       <section class="portal-card address-settings"><div class="card-title-row"><div><span class="eyebrow">Locais de atendimento</span><h2>Endereços salvos</h2></div><button class="btn btn-secondary btn-small" type="button" (click)="resetAddressForm()">Novo endereço</button></div>
         @if (addressesLoading()) { <p class="muted" role="status">Carregando endereços…</p> }
-        @else { @if (addresses().length) { <div class="address-list">@for (address of addresses(); track address.id) { <article><div><strong><span data-cvp-no-localize>{{ address.label || localization.translate('Endereço') }}</span> @if (address.isDefault) { <span class="chip chip-soft">Principal</span> }</strong><p data-cvp-no-localize>{{ address.street }}, {{ address.number }} · {{ address.neighborhood }}, {{ address.city }}/{{ address.state }}</p></div><div class="card-actions"><button class="text-button" type="button" (click)="editAddress(address)">Editar</button>@if (removeTarget() === address.id) { <button class="btn btn-secondary btn-small" type="button" (click)="removeTarget.set('')">Voltar</button><button class="btn btn-danger btn-small" type="button" [disabled]="addressSaving()" (click)="removeAddress(address)">Confirmar remoção</button> } @else { <button class="text-button" type="button" (click)="removeTarget.set(address.id || '')">Remover</button> }</div></article> }</div> } @else { <p class="muted">Nenhum endereço salvo.</p> } }
-        <form class="inline-action-form" [formGroup]="addressForm" (ngSubmit)="saveAddress()" novalidate><h3>{{ editingAddressId() ? 'Editar endereço' : 'Adicionar endereço' }}</h3><div class="form-grid"><label>Identificação<input formControlName="label" placeholder="Casa ou trabalho"></label><label>CEP<input formControlName="postalCode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" maxlength="9" aria-describedby="profile-postal-feedback">@if (addressForm.controls.postalCode.invalid && addressForm.controls.postalCode.touched) { <small class="field-error">Informe um CEP com 8 dígitos.</small> }<small id="profile-postal-feedback" [class.field-error]="postalError()" role="status">{{ postalLoading() ? 'Buscando endereço pelo CEP…' : postalError() || postalSuccess() }}</small></label><label class="span-two">Rua<input formControlName="street" autocomplete="address-line1"></label><label>Número<input formControlName="number"></label><label>Complemento <span class="optional">Opcional</span><input formControlName="complement"></label><label>Bairro<input formControlName="neighborhood"></label><label>Cidade<input formControlName="city" autocomplete="address-level2"></label><label>Estado<input formControlName="state" autocomplete="address-level1" maxlength="2"></label><label class="check-row"><input type="checkbox" formControlName="isDefault"><span>Usar como endereço principal</span></label></div><div class="card-actions"><button class="btn btn-primary" type="submit" [disabled]="addressSaving() || postalLoading()">{{ addressSaving() ? 'Salvando…' : editingAddressId() ? 'Atualizar endereço' : 'Adicionar endereço' }}</button></div></form>
+        @else { @if (addresses().length) { <div class="address-list">@for (address of addresses(); track address.id) { <article><div><strong><span data-cvp-no-localize>{{ address.label || localization.translate('Endereço') }}</span> @if (address.isDefault) { <span class="chip chip-soft">Principal</span> }</strong><p data-cvp-no-localize>{{ address.street }}, {{ address.number }} · {{ address.postalCode }} {{ address.city }}@if (address.state) {, {{ address.state }}}</p></div><div class="card-actions"><button class="text-button" type="button" (click)="editAddress(address)">Editar</button>@if (removeTarget() === address.id) { <button class="btn btn-secondary btn-small" type="button" (click)="removeTarget.set('')">Voltar</button><button class="btn btn-danger btn-small" type="button" [disabled]="addressSaving()" (click)="removeAddress(address)">Confirmar remoção</button> } @else { <button class="text-button" type="button" (click)="removeTarget.set(address.id || '')">Remover</button> }</div></article> }</div> } @else { <p class="muted">Nenhum endereço salvo.</p> } }
+        <form class="inline-action-form" [formGroup]="addressForm" (ngSubmit)="saveAddress()" novalidate>
+          <h3>{{ editingAddressId() ? 'Editar endereço' : 'Adicionar endereço' }}</h3>
+          <div class="form-grid">
+            <label>Identificação<input formControlName="label" placeholder="Casa ou trabalho"></label>
+            <label>Código postal<input formControlName="postalCode" autocomplete="postal-code" inputmode="numeric" placeholder="1000" maxlength="9" aria-describedby="profile-postal-feedback">@if (addressForm.controls.postalCode.invalid && addressForm.controls.postalCode.touched) { <small class="field-error">Informe um código postal de 4 dígitos ou um CEP de 8 dígitos.</small> }<small id="profile-postal-feedback" [class.field-error]="postalError()" role="status">{{ postalLoading() ? 'Consultando o código postal…' : postalError() || postalSuccess() }}</small></label>
+            <label class="span-two">Rua<input formControlName="street" autocomplete="address-line1"></label>
+            <label>Número<input formControlName="number"></label>
+            <label>Complemento <span class="optional">Opcional</span><input formControlName="complement"></label>
+            <label>Cidade<input formControlName="city" autocomplete="address-level2" [attr.list]="postalLocalities().length ? 'profile-postal-localities' : null"></label>
+            <datalist id="profile-postal-localities">@for (city of postalLocalities(); track city) { <option [value]="city"></option> }</datalist>
+            @if (isBrazilianPostalCode(addressForm.controls.postalCode.value)) {
+              <label>Bairro<input formControlName="neighborhood" required></label>
+              <label>Estado<input formControlName="state" autocomplete="address-level1" maxlength="2" required></label>
+              @if (addressForm.touched && addressForm.hasError('brazilianRegionRequired')) { <small class="field-error">Informe o bairro e o estado do endereço brasileiro.</small> }
+            }
+            <label class="check-row"><input type="checkbox" formControlName="isDefault"><span>Usar como endereço principal</span></label>
+          </div>
+          <div class="card-actions"><button class="btn btn-primary" type="submit" [disabled]="addressSaving() || postalLoading()">{{ addressSaving() ? 'Salvando…' : editingAddressId() ? 'Atualizar endereço' : 'Adicionar endereço' }}</button></div>
+        </form>
       </section>
     </section>
   `,
@@ -43,6 +58,8 @@ export class CustomerProfileComponent implements OnInit {
   readonly postalLoading = signal(false);
   readonly postalError = signal('');
   readonly postalSuccess = signal('');
+  readonly postalLocalities = signal<string[]>([]);
+  readonly isBrazilianPostalCode = isBrazilianPostalCode;
   readonly addresses = signal<Address[]>([]);
   readonly addressesLoading = signal(true);
   readonly addressSaving = signal(false);
@@ -50,15 +67,15 @@ export class CustomerProfileComponent implements OnInit {
   readonly removeTarget = signal('');
   readonly addressForm = this.fb.nonNullable.group({
     label: [this.localization.translate('Casa'), [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
-    postalCode: ['', [Validators.required, Validators.pattern(/^\d{5}-\d{3}$/)]],
+    postalCode: ['', [Validators.required, Validators.pattern(POSTAL_CODE_PATTERN)]],
     street: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(180)]],
     number: ['', [Validators.required, Validators.maxLength(20)]],
     complement: ['', Validators.maxLength(100)],
-    neighborhood: ['', [Validators.required, Validators.maxLength(100)]],
-    city: [this.auth.user()?.city || 'São Paulo', [Validators.required, Validators.maxLength(100)]],
-    state: ['SP', [Validators.required, Validators.minLength(2), Validators.maxLength(2)]],
+    neighborhood: ['', Validators.maxLength(100)],
+    city: ['', [Validators.required, Validators.maxLength(100)]],
+    state: ['', Validators.maxLength(2)],
     isDefault: [false]
-  });
+  }, { validators: validateAddressRegion });
 
   ngOnInit(): void {
     this.loadAddresses();
@@ -69,14 +86,16 @@ export class CustomerProfileComponent implements OnInit {
         if (formatted !== value) control.setValue(formatted, { emitEvent: false });
         this.postalError.set('');
         this.postalSuccess.set('');
-        if (postalCodeDigits(formatted).length !== 8) {
+        this.postalLocalities.set([]);
+        if (!POSTAL_CODE_PATTERN.test(formatted)) {
           this.postalLoading.set(false);
           return EMPTY;
         }
         this.postalLoading.set(true);
-        return this.marketplace.lookupPostalCode(formatted).pipe(
+        return timer(250).pipe(
+          switchMap(() => this.marketplace.lookupPostalCode(formatted)),
           map((address) => ({ code: postalCodeDigits(formatted), address, error: '' })),
-          catchError((failure: Error) => of({ code: postalCodeDigits(formatted), address: null, error: failure.message || 'Não foi possível consultar o CEP.' }))
+          catchError((failure: Error) => of({ code: postalCodeDigits(formatted), address: null, error: failure.message || 'Não foi possível consultar o código postal.' }))
         );
       }),
       takeUntilDestroyed(this.destroyRef)
@@ -84,13 +103,14 @@ export class CustomerProfileComponent implements OnInit {
       if (code !== postalCodeDigits(control.value)) return;
       this.postalLoading.set(false);
       if (!address) { this.postalError.set(error); return; }
+      this.postalLocalities.set(address.localities ?? []);
       this.addressForm.patchValue({
         street: address.street || this.addressForm.controls.street.value,
-        neighborhood: address.neighborhood || this.addressForm.controls.neighborhood.value,
+        neighborhood: code.length === 4 ? '' : address.neighborhood || this.addressForm.controls.neighborhood.value,
         city: address.city || this.addressForm.controls.city.value,
-        state: address.state || this.addressForm.controls.state.value
+        state: code.length === 4 ? '' : address.state || this.addressForm.controls.state.value
       });
-      this.postalSuccess.set('Endereço encontrado. Confira os dados e informe o número.');
+      this.postalSuccess.set(code.length === 4 ? 'Confira a cidade e informe a rua e o número.' : 'Endereço encontrado. Confira os dados e informe o número.');
     });
   }
 
@@ -102,13 +122,13 @@ export class CustomerProfileComponent implements OnInit {
   editAddress(address: Address): void {
     this.editingAddressId.set(address.id || '');
     this.addressForm.reset({ label: address.label || this.localization.translate('Casa'), postalCode: formatPostalCode(address.postalCode), street: address.street, number: address.number, complement: address.complement || '', neighborhood: address.neighborhood, city: address.city, state: address.state, isDefault: !!address.isDefault }, { emitEvent: false });
-    this.postalError.set(''); this.postalSuccess.set(''); this.postalLoading.set(false);
+    this.postalError.set(''); this.postalSuccess.set(''); this.postalLoading.set(false); this.postalLocalities.set([]);
   }
 
   resetAddressForm(): void {
     this.editingAddressId.set(''); this.removeTarget.set('');
-    this.addressForm.reset({ label: this.localization.translate('Casa'), postalCode: '', street: '', number: '', complement: '', neighborhood: '', city: this.auth.user()?.city || 'São Paulo', state: 'SP', isDefault: false }, { emitEvent: false });
-    this.postalError.set(''); this.postalSuccess.set(''); this.postalLoading.set(false);
+    this.addressForm.reset({ label: this.localization.translate('Casa'), postalCode: '', street: '', number: '', complement: '', neighborhood: '', city: '', state: '', isDefault: false }, { emitEvent: false });
+    this.postalError.set(''); this.postalSuccess.set(''); this.postalLoading.set(false); this.postalLocalities.set([]);
   }
 
   saveAddress(): void {

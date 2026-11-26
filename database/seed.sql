@@ -11,14 +11,17 @@ VALUES
     ('10000000-0000-4000-8000-000000000005', 'provider', 'Fernanda Alves', 'fernanda.alves@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11972345678', 'active', 'en-US', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('10000000-0000-4000-8000-000000000006', 'provider', 'Diego Martins', 'diego.martins@chezvoust.test', '{{PROVIDER_PASSWORD_HASH}}', '11973456789', 'active', 'en-US', 'America/Sao_Paulo', UTC_TIMESTAMP(), UTC_TIMESTAMP(), UTC_TIMESTAMP())
 ON DUPLICATE KEY UPDATE
-    name = VALUES(name), phone = VALUES(phone), status = 'active', updated_at = UTC_TIMESTAMP();
+    name = IF(deleted_at IS NULL AND public_id = VALUES(public_id), VALUES(name), name),
+    phone = IF(deleted_at IS NULL AND public_id = VALUES(public_id), VALUES(phone), phone),
+    status = IF(deleted_at IS NULL AND public_id = VALUES(public_id), 'active', status),
+    updated_at = IF(deleted_at IS NULL AND public_id = VALUES(public_id), UTC_TIMESTAMP(), updated_at);
 
-SET @customer_id := (SELECT id FROM users WHERE email = 'cliente@chezvoust.test');
-SET @provider_id := (SELECT id FROM users WHERE email = 'profissional@chezvoust.test');
-SET @provider_ana_id := (SELECT id FROM users WHERE email = 'ana.souza@chezvoust.test');
-SET @provider_fernanda_id := (SELECT id FROM users WHERE email = 'fernanda.alves@chezvoust.test');
-SET @provider_diego_id := (SELECT id FROM users WHERE email = 'diego.martins@chezvoust.test');
-SET @admin_id := (SELECT id FROM users WHERE email = 'admin@chezvoust.test');
+SET @customer_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000001');
+SET @provider_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000002');
+SET @provider_ana_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000004');
+SET @provider_fernanda_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000005');
+SET @provider_diego_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000006');
+SET @admin_id := (SELECT id FROM users WHERE public_id = '10000000-0000-4000-8000-000000000003');
 
 INSERT INTO professional_profiles
     (user_id, headline, bio, years_experience, base_city, base_state, service_radius_km,
@@ -161,11 +164,7 @@ INSERT INTO promotions
 VALUES
     ('70000000-0000-4000-8000-000000000001', 'Produtos para cuidar melhor da sua casa', 'Seleção de utilidades e equipamentos para facilitar sua rotina.', 'Conhecer a loja', '/produtos', '/images/promo-laundry-discount-v1.webp', 'Novidades na loja', 'Preços e disponibilidade podem mudar sem aviso prévio.', '#096653', '#FFFFFF', 1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL 365 DAY), 10, UTC_TIMESTAMP(), UTC_TIMESTAMP()),
     ('70000000-0000-4000-8000-000000000002', 'Ofertas escolhidas para você', 'Encontre produtos úteis para limpeza, organização e manutenção.', 'Ver produtos', '/produtos', '/images/promo-laundry-discount-v1.webp', 'Oferta especial', 'Consulte as condições de cada produto.', '#0C9471', '#FFFFFF', 0, NULL, NULL, 20, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-ON DUPLICATE KEY UPDATE
-    title = VALUES(title), subtitle = VALUES(subtitle), cta_label = VALUES(cta_label), cta_url = VALUES(cta_url),
-    image_url = VALUES(image_url), badge_text = VALUES(badge_text), terms_text = VALUES(terms_text),
-    background_color = VALUES(background_color), text_color = VALUES(text_color), active = VALUES(active),
-    ends_at = VALUES(ends_at), sort_order = VALUES(sort_order), updated_at = UTC_TIMESTAMP();
+ON DUPLICATE KEY UPDATE public_id = promotions.public_id;
 
 INSERT INTO products
     (public_id, name, slug, short_description, price_cents, compare_at_price_cents, currency, image_url, purchase_url,

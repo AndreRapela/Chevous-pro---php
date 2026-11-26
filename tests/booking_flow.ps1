@@ -3,6 +3,7 @@ $PSNativeCommandUseErrorActionPreference = $false
 
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '..')).Path
 $baseUrl = if ($env:CVP_API_URL) { $env:CVP_API_URL.TrimEnd('/') } else { 'http://localhost:8080/api/v1' }
+$agendaTimezone = [TimeZoneInfo]::FindSystemTimeZoneById('Europe/Brussels')
 
 function Assert-True([bool]$condition, [string]$message) {
     if (-not $condition) { throw $message }
@@ -34,9 +35,11 @@ function Expect-Status([int]$expected, [scriptblock]$action, [string]$message) {
 }
 
 function Find-Slot([string]$professionalId, [int]$durationMinutes, [int]$minimumDayOffset) {
+    $agendaToday = [TimeZoneInfo]::ConvertTime([DateTimeOffset]::UtcNow, $agendaTimezone).Date
     foreach ($offset in $minimumDayOffset..($minimumDayOffset + 45)) {
-        $date = (Get-Date).Date.AddDays($offset).ToString('yyyy-MM-dd')
+        $date = $agendaToday.AddDays($offset).ToString('yyyy-MM-dd')
         $availability = Invoke-Api Get "/professionals/$professionalId/availability?date=$date&duration=$durationMinutes"
+        Assert-True ($availability.data.timezone -eq 'Europe/Brussels') 'A agenda não retornou o fuso de Bruxelas.'
         $slots = @($availability.data.slots)
         if ($slots.Count -gt 0) {
             return @{ date = $date; time = [string]$slots[0] }
@@ -73,17 +76,21 @@ try {
     $addresses = @((Invoke-Api Get '/me/addresses' $customerHeaders).data)
     $address = $addresses | Select-Object -First 1
     Assert-True ($null -ne $address) 'A conta cliente não possui endereço seed.'
+    Assert-True ($address.postalCode -match '^\d{8}$') 'O endereço brasileiro existente precisa continuar disponível.'
+
+    $lookup = (Invoke-Api Get '/postal-codes/1000').data
+    Assert-True ($lookup.postalCode -eq '1000' -and $lookup.city -eq 'Bruxelles') 'A consulta do código postal belga não retornou Bruxelas.'
 
     $temporaryAddress = (Invoke-Api Post '/me/addresses' $customerHeaders @{
-        label = 'Teste E2E'; street = 'Rua de Teste'; number = '42'; complement = 'Sala 1'
-        neighborhood = 'Centro'; city = 'São Paulo'; state = 'SP'; postalCode = '01001000'; isDefault = $false
+        label = 'Teste E2E'; street = 'Rue de la Loi'; number = '42'; complement = 'Boîte 1'
+        city = 'Bruxelles'; postalCode = '1000'; isDefault = $false
     }).data
     $updatedAddress = (Invoke-Api Put "/me/addresses/$($temporaryAddress.id)" $customerHeaders @{
-        label = 'Teste E2E atualizado'; street = 'Rua de Teste'; number = '43'; complement = ''
-        neighborhood = 'Centro'; city = 'São Paulo'; state = 'SP'; postalCode = '01001000'; isDefault = $false
+        label = 'Teste E2E atualizado'; street = 'Rue de la Loi'; number = '43'; complement = ''
+        city = 'Bruxelles'; postalCode = '1000'; isDefault = $false
     }).data
     Assert-True ($updatedAddress.label -eq 'Teste E2E atualizado') 'A edição de endereço não persistiu.'
-    Invoke-Api Delete "/me/addresses/$($temporaryAddress.id)" $customerHeaders | Out-Null
+    Assert-True ($updatedAddress.postalCode -eq '1000' -and $updatedAddress.state -eq '') 'A edição exigiu campos brasileiros.'
 
     Invoke-Api Post "/me/favorites/$($professional.id)" $customerHeaders | Out-Null
     $favorites = @((Invoke-Api Get '/me/favorites' $customerHeaders).data)
@@ -106,16 +113,18 @@ try {
     Assert-True ($usdQuote.currency -eq 'USD' -and $usdRatio -ge 0.19 -and $usdRatio -le 0.21) 'A cotação em USD não aplicou a moeda e a taxa configuradas.'
 
     $bookingPayload = $quotePayload.Clone()
-    $bookingPayload.addressId = $address.id
+    $bookingPayload.addressId = $temporaryAddress.id
     $bookingPayload.mode = 'direct'
     $bookingPayload.scheduledStart = $scheduledStart
-    $bookingPayload.timezone = 'America/Sao_Paulo'
     $bookingPayload.notes = 'Fluxo E2E direto'
     $bookingKey = "booking-e2e-$([guid]::NewGuid())"
     $bookingHeaders = $customerHeaders.Clone()
     $bookingHeaders['Idempotency-Key'] = $bookingKey
     $booking = (Invoke-Api Post '/bookings' $bookingHeaders $bookingPayload).data
     Assert-True ($booking.status -eq 'confirmed' -and $booking.allowedActions -contains 'cancel') 'A reserva direta não foi confirmada.'
+    $expectedStart = [TimeZoneInfo]::ConvertTimeToUtc([datetime]::ParseExact($scheduledStart, 'yyyy-MM-ddTHH:mm:ss', [cultureinfo]::InvariantCulture), $agendaTimezone)
+    Assert-True ($booking.timezone -eq 'Europe/Brussels' -and ([DateTimeOffset]$booking.scheduledStart).UtcDateTime -eq $expectedStart) 'A reserva mudou o horário escolhido em Bruxelas.'
+    Assert-True ($booking.addressSnapshot.postal_code -eq '1000') 'A reserva não preservou o código postal belga.'
     $customerBookingNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $customerHeaders).data) | Where-Object { $_.type -eq 'booking.confirmed' -and $_.data.bookingId -eq $booking.id } | Select-Object -First 1
     $providerBookingNotice = @((Invoke-Api Get '/me/notifications?perPage=50' $providerHeaders).data) | Where-Object { $_.type -eq 'booking.confirmed' -and $_.data.bookingId -eq $booking.id } | Select-Object -First 1
     Assert-True ($null -ne $customerBookingNotice -and $null -ne $providerBookingNotice) 'Cliente e profissional não receberam avisos da reserva confirmada.'
@@ -127,9 +136,12 @@ try {
 
     $rescheduleSlot = Find-Slot $professional.id $duration 2
     $rescheduled = (Invoke-Api Post "/bookings/$($booking.id)/reschedule" $customerHeaders @{
-        scheduledStart = "$($rescheduleSlot.date)T$($rescheduleSlot.time):00"; timezone = 'America/Sao_Paulo'
+        scheduledStart = "$($rescheduleSlot.date)T$($rescheduleSlot.time):00"
     }).data
     Assert-True ($rescheduled.status -eq 'confirmed' -and $rescheduled.allowedActions -contains 'reschedule') 'O cliente não conseguiu reagendar a reserva confirmada.'
+    $expectedStart = [TimeZoneInfo]::ConvertTimeToUtc([datetime]::ParseExact("$($rescheduleSlot.date)T$($rescheduleSlot.time):00", 'yyyy-MM-ddTHH:mm:ss', [cultureinfo]::InvariantCulture), $agendaTimezone)
+    Assert-True ($rescheduled.timezone -eq 'Europe/Brussels' -and ([DateTimeOffset]$rescheduled.scheduledStart).UtcDateTime -eq $expectedStart) 'O reagendamento mudou o horário escolhido em Bruxelas.'
+    Invoke-Api Delete "/me/addresses/$($temporaryAddress.id)" $customerHeaders | Out-Null
 
     $onTheWay = (Invoke-Api Post "/bookings/$($booking.id)/on-the-way" $providerHeaders @{}).data
     Assert-True ($onTheWay.status -eq 'provider_on_the_way' -and $onTheWay.allowedActions -contains 'start') 'O profissional não conseguiu avisar que está a caminho.'
@@ -150,7 +162,7 @@ try {
     $marketSlot = Find-Slot $professional.id $duration 3
     $marketPayload = @{
         serviceId = $service.id; addressId = $address.id; mode = 'marketplace'
-        scheduledStart = "$($marketSlot.date)T$($marketSlot.time):00"; timezone = 'America/Sao_Paulo'
+        scheduledStart = "$($marketSlot.date)T$($marketSlot.time):00"
         durationMinutes = $duration; quantity = 1; addonIds = @(); notes = 'Fluxo E2E marketplace'; currency = 'BRL'
     }
     $marketHeaders = $customerHeaders.Clone()

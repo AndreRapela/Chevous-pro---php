@@ -1,6 +1,8 @@
-import { ChangeDetectionStrategy, Component, OnInit, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, effect, inject, signal, untracked } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { Subscription, finalize } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { ServiceCategory } from '../../../../core/models';
 import { PageHeaderComponent, StatePanelComponent } from '../../../../shared/components';
@@ -25,10 +27,97 @@ import { displayReferenceBound, referenceAmountToCents } from '../../../../core/
         @if (loading()) { <cvp-state-panel kind="loading" /> }
         @else if (error()) { <cvp-state-panel kind="error" title="Dados indisponíveis" [message]="error()" (retry)="load()" /> }
         @else if (!filteredRows().length) { <cvp-state-panel kind="empty" title="Nenhum resultado" message="Ajuste a busca ou remova os filtros." /> }
-        @else { <div class="table-wrap"><table class="admin-table"><thead><tr>@for (column of config.columns; track column) { <th>{{ column }}</th> }<th>Status</th><th><span class="sr-only">Ações</span></th></tr></thead><tbody>@for (row of filteredRows(); track row.id) { <tr><td><strong [attr.data-cvp-no-localize]="key === 'providers' || key === 'customers' ? '' : null">{{ row.primary }}</strong><small>{{ row.secondary }}</small></td>@for (cell of row.cells; track $index) { <td [attr.data-cvp-no-localize]="personalCell($index) ? '' : null">{{ cell }}</td> }<td><span class="admin-status" [class]="'admin-status ' + row.tone">{{ row.status }}</span></td><td>@if (key === 'providers') { <div class="card-actions"><button class="btn btn-primary btn-small" type="button" (click)="requestAction(row, 'approved')">Aprovar</button><button class="btn btn-danger btn-small" type="button" (click)="requestAction(row, 'rejected')">Rejeitar</button></div> } @else if (key === 'customers') { <button class="btn btn-secondary btn-small" type="button" (click)="requestAction(row, row.rawStatus === 'suspended' ? 'active' : 'suspended')">{{ row.rawStatus === 'suspended' ? 'Ativar' : 'Suspender' }}</button> } @else if (key === 'support' && row.rawStatus === 'pending') { <div class="card-actions"><button class="btn btn-danger btn-small" type="button" (click)="requestAction(row, 'hide')">Ocultar</button><button class="btn btn-secondary btn-small" type="button" (click)="requestAction(row, 'retain')">Manter</button></div> } @else { <span class="muted">—</span> }</td></tr> }</tbody></table></div><div class="pagination"><span>Mostrando {{ filteredRows().length }} de {{ total() }} registros · página {{ page() }} de {{ lastPage() }}</span>@if (lastPage() > 1) { <div class="card-actions"><button class="btn btn-secondary btn-small" type="button" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Anterior</button><button class="btn btn-secondary btn-small" type="button" [disabled]="page() >= lastPage()" (click)="goTo(page() + 1)">Próxima</button></div> }</div> }
+        @else {
+          <div class="table-wrap">
+            <table class="admin-table">
+              <thead><tr>@for (column of config.columns; track column) { <th>{{ column }}</th> }<th>Status</th><th><span class="sr-only">Ações</span></th></tr></thead>
+              <tbody>
+                @for (row of filteredRows(); track row.id) {
+                  <tr>
+                    <td><strong [attr.data-cvp-no-localize]="canDeleteAccounts ? '' : null">{{ row.primary }}</strong><small>{{ row.secondary }}</small></td>
+                    @for (cell of row.cells; track $index) { <td [attr.data-cvp-no-localize]="personalCell($index) ? '' : null">{{ cell }}</td> }
+                    <td><span class="admin-status" [class]="'admin-status ' + row.tone">{{ row.status }}</span></td>
+                    <td>
+                      @if (canDeleteAccounts) {
+                        <div class="card-actions account-actions">
+                          @if (key === 'providers' && row.rawStatus === 'pending') {
+                            <button class="btn btn-primary btn-small" type="button" (click)="requestAction(row, 'approved')">Aprovar</button>
+                            <button class="btn btn-danger btn-small" type="button" (click)="requestAction(row, 'rejected')">Rejeitar</button>
+                          }
+                          @if (key === 'customers') {
+                            <button class="btn btn-secondary btn-small" type="button" (click)="requestAction(row, row.rawStatus === 'suspended' ? 'active' : 'suspended')">{{ row.rawStatus === 'suspended' ? 'Ativar' : 'Suspender' }}</button>
+                          }
+                          <button class="btn btn-danger btn-small" type="button" (click)="requestAccountDeletion(row, deletionDialog)">Excluir conta</button>
+                        </div>
+                      } @else if (key === 'support' && row.rawStatus === 'pending') {
+                        <div class="card-actions">
+                          <button class="btn btn-danger btn-small" type="button" (click)="requestAction(row, 'hide')">Ocultar</button>
+                          <button class="btn btn-secondary btn-small" type="button" (click)="requestAction(row, 'retain')">Manter</button>
+                        </div>
+                      } @else {
+                        <span class="muted">—</span>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+          <div class="pagination">
+            <span>Mostrando {{ filteredRows().length }} de {{ total() }} registros · página {{ page() }} de {{ lastPage() }}</span>
+            @if (lastPage() > 1) {
+              <div class="card-actions">
+                <button class="btn btn-secondary btn-small" type="button" [disabled]="page() <= 1" (click)="goTo(page() - 1)">Anterior</button>
+                <button class="btn btn-secondary btn-small" type="button" [disabled]="page() >= lastPage()" (click)="goTo(page() + 1)">Próxima</button>
+              </div>
+            }
+          </div>
+        }
         @if (pendingAction(); as pending) { <form class="inline-action-form admin-confirm-action" (submit)="confirmAction($event)"><h2>Confirmar: {{ actionLabel(pending.status) }}</h2><p>Esta ação será registrada no histórico administrativo.</p><label>Justificativa<textarea required minlength="3" maxlength="1000" placeholder="Explique o motivo da alteração"></textarea></label><div class="card-actions"><button class="btn btn-secondary btn-small" type="button" (click)="pendingAction.set(null)">Voltar</button><button class="btn btn-danger btn-small" type="submit">Confirmar ação</button></div></form> }
       </section>
+      <dialog #deletionDialog class="account-deletion-dialog" aria-labelledby="account-deletion-title" aria-describedby="account-deletion-description" (cancel)="preventDeletionDismissal($event)" (close)="closeAccountDeletion(deletionDialog)">
+        <h2 id="account-deletion-title">Excluir conta</h2>
+        @if (accountToDelete(); as account) {
+          <div class="account-deletion-identity" data-cvp-no-localize>
+            <strong>{{ account.primary }}</strong>
+            <span>{{ account.cells[0] }}</span>
+          </div>
+        }
+        <p id="account-deletion-description">A conta perderá o acesso. O histórico de reservas e pedidos será mantido.</p>
+        @if (deletionError()) { <div class="alert alert-error" role="alert">{{ deletionError() }}</div> }
+        <div class="card-actions">
+          <button class="btn btn-secondary" type="button" autofocus [disabled]="deleting()" (click)="deletionDialog.close()">Cancelar</button>
+          <button class="btn btn-danger" type="button" [disabled]="deleting()" (click)="deleteAccount(deletionDialog)">
+            {{ deleting() ? 'Excluindo…' : 'Confirmar exclusão' }}
+          </button>
+        </div>
+      </dialog>
     </section>
+  `,
+  styles: `
+    .account-actions { row-gap: .35rem; padding-top: 0; }
+    .account-deletion-dialog {
+      width: min(calc(100% - 1.5rem), 28rem);
+      padding: 1.25rem;
+      border: 1px solid var(--ink-200);
+      border-radius: var(--radius-md);
+      color: var(--ink-900);
+      background: var(--surface);
+      box-shadow: var(--shadow-lg);
+    }
+    .account-deletion-dialog::backdrop { background: rgb(16 24 22 / .55); }
+    .account-deletion-dialog h2 { font-size: 1.3rem; }
+    .account-deletion-identity {
+      display: grid;
+      gap: .15rem;
+      overflow-wrap: anywhere;
+      margin-bottom: .75rem;
+      padding: .65rem .8rem;
+      border-radius: var(--radius-sm);
+      background: var(--ink-100);
+    }
+    .account-deletion-identity span { color: var(--ink-600); }
+    .account-deletion-dialog .card-actions { justify-content: flex-end; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -36,8 +125,11 @@ export class AdminTableComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly data = inject(AdminTableDataService);
   private readonly marketplace = inject(MarketplaceService);
+  private readonly destroyRef = inject(DestroyRef);
+  private listRequest?: Subscription;
   readonly localization = inject(LocalizationService);
   readonly key: AdminPageKey = this.pageKey();
+  readonly canDeleteAccounts = this.key === 'customers' || this.key === 'providers';
   readonly config = ADMIN_PAGES[this.key];
   readonly rows = signal<AdminRow[]>([]);
   readonly total = signal(0);
@@ -49,6 +141,9 @@ export class AdminTableComponent implements OnInit {
   readonly actionError = signal('');
   readonly success = signal('');
   readonly acting = signal(false);
+  readonly accountToDelete = signal<AdminRow | null>(null);
+  readonly deleting = signal(false);
+  readonly deletionError = signal('');
   readonly categories = signal<ServiceCategory[]>([]);
   query = '';
   status = '';
@@ -58,7 +153,7 @@ export class AdminTableComponent implements OnInit {
     effect(() => {
       this.localization.currency();
       this.localization.language();
-      if (this.initialized) this.load();
+      if (this.initialized) untracked(() => this.load());
     });
   }
 
@@ -70,11 +165,56 @@ export class AdminTableComponent implements OnInit {
   }
 
   load(): void {
+    this.listRequest?.unsubscribe();
     this.loading.set(true);
     this.error.set('');
-    this.data.load(this.key, this.page()).subscribe({
-      next: (result) => { this.rows.set(result.rows); this.total.set(result.total); this.page.set(result.page); this.lastPage.set(result.lastPage); this.loading.set(false); },
+    this.listRequest = this.data.load(this.key, this.page()).pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (result) => {
+        if (result.page > result.lastPage) {
+          this.page.set(result.lastPage);
+          this.load();
+          return;
+        }
+        this.rows.set(result.rows);
+        this.total.set(result.total);
+        this.page.set(result.page);
+        this.lastPage.set(result.lastPage);
+        this.loading.set(false);
+      },
       error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
+    });
+  }
+
+  requestAccountDeletion(row: AdminRow, dialog: HTMLDialogElement): void {
+    this.accountToDelete.set(row);
+    this.deletionError.set('');
+    dialog.showModal();
+  }
+
+  preventDeletionDismissal(event: Event): void {
+    if (this.deleting()) event.preventDefault();
+  }
+
+  closeAccountDeletion(dialog: HTMLDialogElement): void {
+    if (!dialog.open) this.accountToDelete.set(null);
+  }
+
+  deleteAccount(dialog: HTMLDialogElement): void {
+    const account = this.accountToDelete();
+    if (!account || this.deleting()) return;
+    this.deleting.set(true);
+    this.deletionError.set('');
+    this.success.set('');
+    this.data.deleteUser(account.id).pipe(
+      takeUntilDestroyed(this.destroyRef),
+      finalize(() => this.deleting.set(false))
+    ).subscribe({
+      next: () => {
+        dialog.close();
+        this.success.set(this.localization.translate('Conta excluída.'));
+        this.load();
+      },
+      error: (failure: Error) => this.deletionError.set(failure.message)
     });
   }
 
@@ -96,10 +236,9 @@ export class AdminTableComponent implements OnInit {
     this.actionError.set('');
     this.data.reviewProvider(row.id, status, notes).subscribe({
       next: () => {
-        this.rows.update((items) => items.filter((item) => item.id !== row.id));
-        this.total.update((value) => Math.max(0, value - 1));
         this.success.set(status === 'approved' ? 'Perfil aprovado.' : 'Perfil rejeitado.');
         this.pendingAction.set(null);
+        this.load();
       },
       error: (failure: Error) => this.actionError.set(failure.message)
     });

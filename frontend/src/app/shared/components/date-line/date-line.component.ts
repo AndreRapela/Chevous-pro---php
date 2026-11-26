@@ -5,9 +5,10 @@ import { LocalizedDatePipe } from '../../localization/localized-format.pipe';
   selector: 'cvp-date-line',
   standalone: true,
   imports: [LocalizedDatePipe],
-  template: `<time [attr.datetime]="value">{{ value | appDate:'EEEE, d MMM, HH:mm' }}</time>`,
+  template: `<time [attr.datetime]="value">{{ value | appDate:'EEEE, d MMM, HH:mm':timezone }}</time>`,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DateLineComponent {
   @Input() value = '';
+  @Input() timezone?: string;
 }

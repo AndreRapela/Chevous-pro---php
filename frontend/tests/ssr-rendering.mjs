@@ -6,12 +6,18 @@ import { assertHomeServiceCard } from './home-service-card.mjs';
 import { assertHomeProviderCta } from './home-provider-cta.mjs';
 
 // A local read-only fixture exercises dynamic page SEO without accessing the user's API.
+const apiRequests = [];
 const api = createServer((request, response) => {
   const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+  apiRequests.push(path);
   assert.equal(request.method, 'GET', 'SSR fixtures must never receive a write.');
   const categories = [{ id: 'category-test', slug: 'cleaning', name: 'Cleaning', description: 'Home cleaning.', serviceCount: 0 }];
   const service = { id: 'clean-home', categoryId: 'cleaning', slug: 'limpeza-residencial', name: 'Limpeza residencial', description: 'Limpeza completa adaptada ao tamanho da sua casa.', unit: 'serviço', pricingType: 'fixed', priceFromCents: 12000, durationMinutes: 240 };
-  const data = path === '/api/v1/categories' ? categories : path === '/api/v1/services/limpeza-residencial' ? service : [];
+  const data = {
+    '/api/v1/home': { categories, services: [service], promotions: [], professionals: [] },
+    '/api/v1/categories': categories,
+    '/api/v1/services/limpeza-residencial': service
+  }[path] ?? [];
   response.writeHead(200, { 'content-type': 'application/json' });
   response.end(JSON.stringify({ data, meta: { page: 1, perPage: 3, total: 0, lastPage: 1 } }));
 });
@@ -55,6 +61,7 @@ try {
   const home = await request('/');
   const homeHtml = await home.text();
   assert.equal(home.status, 200, 'Home SSR deve responder 200.');
+  assert.deepEqual(apiRequests, ['/api/v1/home'], 'The home page makes one catalog request.');
   assertHomeServiceCard(homeHtml);
   assertHomeProviderCta(homeHtml);
   assert.equal((homeHtml.match(/<cvp-home-hero\b/g) ?? []).length, 1, 'Only the Home route must render its main banner, exactly once.');
@@ -92,7 +99,7 @@ try {
   assert.ok(!detailHtml.includes('<cvp-home-hero'), 'Service details must not repeat the Home banner.');
   assert.ok(detailHtml.includes('Home cleaning'), 'The service fixture must render its actual page, not a loading or error state.');
   assert.match(detailHtml, /<img[^>]*src="\/images\/profissional-limpeza-hero-887\.webp"/, 'Service details must retain the professional portrait.');
-  assert.ok(detailHtml.includes('service-detail-copy'), 'Service details must include their own green copy panel.');
+  assert.match(detailHtml, /class="container service-detail-grid"[^>]*>\s*<div[^>]*class="service-detail-copy"[\s\S]*?<div[^>]*class="service-detail-art"/, 'Service details must group their copy and portrait in the same banner.');
   assert.equal((detailHtml.match(/class="service-hero-orb service-hero-orb-/g) ?? []).length, 4, 'Service details must render the four Home-style decorations without repeating the Home banner.');
 
   for (const path of ['/profissionais', '/produtos', '/ajuda']) {

@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, afterNextRender, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
@@ -23,9 +23,6 @@ import { environment } from '../../../../../environments/environment';
       <a class="back-link" routerLink="/"><span aria-hidden="true">←</span> Voltar ao início</a>
       <h2>Entrar</h2>
       <p class="muted">Use seu e-mail e senha para continuar.</p>
-      @if (registrationSuccess) {
-        <div class="alert alert-success" role="status"><strong>Conta criada.</strong><span>Agora entre para acessar seu painel.</span></div>
-      }
       @if (error()) {
         <div class="alert alert-error" role="alert"><strong>Não foi possível entrar.</strong><span>{{ error() }}</span></div>
       }
@@ -36,7 +33,10 @@ import { environment } from '../../../../../environments/environment';
           @if (invalid('email')) { <small class="field-error">Informe um e-mail válido.</small> }
         </label>
         <label>
-          <span class="label-row"><span>Senha</span><a routerLink="/recuperar-senha">Esqueci minha senha</a></span>
+          <span class="label-row">
+            <span>Senha</span>
+            <a routerLink="/recuperar-senha" [state]="{ recoveryEmail: form.controls.email.value.trim() }" (mousedown)="$event.preventDefault()">Esqueci minha senha</a>
+          </span>
           <span class="password-input"><input [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="invalid('password')"><button type="button" (click)="togglePasswordVisibility()" [attr.aria-label]="passwordVisible() ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-pressed]="passwordVisible()">{{ passwordVisible() ? 'Ocultar' : 'Mostrar' }}</button></span>
           @if (invalid('password')) { <small class="field-error">A senha é obrigatória.</small> }
         </label>
@@ -50,9 +50,20 @@ import { environment } from '../../../../../environments/environment';
           <button type="button" [disabled]="auth.busy()" (click)="useDemo('provider')"><strong>Profissional</strong><span data-cvp-no-localize>{{ demoAccounts.provider[0] }}</span></button>
           <button type="button" [disabled]="auth.busy()" (click)="useDemo('admin')"><strong>Admin</strong><span data-cvp-no-localize>{{ demoAccounts.admin[0] }}</span></button>
         </div>
+      } @else if (demoPortalPath; as path) {
+        <div class="auth-divider"><span>ou acesse a demonstração</span></div>
+        <div class="demo-role-shortcuts" role="group" aria-label="Contas de demonstração">
+          <a class="btn btn-secondary" [href]="path + '?perfil=customer'">Cliente</a>
+          <a class="btn btn-secondary" [href]="path + '?perfil=provider'">Profissional</a>
+          <a class="btn btn-secondary" [href]="path + '?perfil=admin'">Admin</a>
+        </div>
       }
       <p class="auth-switch">Ainda não tem conta? <a routerLink="/cadastro">Crie sua conta</a></p>
     </cvp-auth-shell>
+  `,
+  styles: `
+    .demo-role-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
+    .demo-role-shortcuts .btn { min-height: 2.75rem; padding: .4rem .25rem; font-size: .82rem; text-align: center; overflow-wrap: anywhere; }
   `,
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -64,16 +75,25 @@ export class LoginComponent {
   readonly error = signal('');
   readonly passwordVisible = signal(false);
   readonly demoAccounts = environment.demoAccounts;
-  readonly registrationSuccess = this.route.snapshot.queryParamMap.get('cadastro') === 'sucesso';
+  readonly demoPortalPath = environment.demoPortalPath;
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],
     password: ['', Validators.required],
     remember: [false]
   });
 
+  constructor() {
+    if (environment.hostedDemo) {
+      afterNextRender(() => {
+        const role = this.route.snapshot.queryParamMap.get('perfil');
+        if (role === 'customer' || role === 'provider' || role === 'admin') this.useDemo(role);
+      });
+    }
+  }
+
   invalid(name: 'email' | 'password'): boolean {
     const control = this.form.controls[name];
-    return control.invalid && (control.touched || this.form.touched);
+    return control.invalid && control.touched;
   }
 
   togglePasswordVisibility(): void { this.passwordVisible.update((visible) => !visible); }
@@ -86,6 +106,10 @@ export class LoginComponent {
     const { email, password, remember } = this.form.getRawValue();
     this.auth.login({ email: email.trim().toLocaleLowerCase('pt-BR'), password, remember }).subscribe({
       next: (user) => {
+        if (user.emailVerified === false) {
+          void this.router.navigate(['/verificar-email'], { state: { verificationEmail: user.email } });
+          return;
+        }
         const requested = this.route.snapshot.queryParamMap.get('returnUrl');
         const target = requested?.startsWith('/') && !requested.startsWith('//') ? requested : this.auth.homeFor(user);
         void this.router.navigateByUrl(target);

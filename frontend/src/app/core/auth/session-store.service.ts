@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { User, UserRole } from '../models';
+import { environment } from '../../../environments/environment';
 
 const LEGACY_ACCESS_TOKEN_KEY = 'cvp_access_token';
 const LEGACY_REFRESH_TOKEN_KEY = 'cvp_refresh_token';
@@ -85,11 +86,11 @@ export class SessionStoreService {
   }
 
   private get sessionStorage(): Storage | null {
-    return isPlatformBrowser(this.platformId) ? sessionStorage : null;
+    return !environment.useMockApi && isPlatformBrowser(this.platformId) ? sessionStorage : null;
   }
 
   private get localStorage(): Storage | null {
-    return isPlatformBrowser(this.platformId) ? localStorage : null;
+    return !environment.useMockApi && isPlatformBrowser(this.platformId) ? localStorage : null;
   }
 
   private removeLegacyStorage(storage: Storage | null): void {

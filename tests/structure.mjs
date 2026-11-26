@@ -107,10 +107,10 @@ assert.match(globalStyles, /\.enhanced-chat-layout\s*\{[^}]*100dvh/s, 'O chat m�
 const publicServiceCard = await text('frontend/src/app/shared/components/service-card/service-card.component.ts');
 const publicServiceDetail = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.ts');
 const serviceDetailStyles = await text('frontend/src/app/features/public/pages/service-detail/service-detail.component.scss');
-assert.match(publicServiceDetail, /class="service-detail-copy"/, 'O detalhe deve separar a área de texto verde da foto circular.');
+assert.match(publicServiceDetail, /class="container service-detail-grid">\s*<div class="service-detail-copy">[\s\S]*?<div class="service-detail-art"/, 'Texto e retrato devem compartilhar a grade do banner.');
 assert.equal((publicServiceDetail.match(/class="service-hero-orb service-hero-orb-/g) ?? []).length, 4, 'A foto do detalhe deve receber quatro bolinhas, como na Home.');
 assert.match(publicServiceDetail, /@if \(!item\.isCustom\)\s*\{\s*<span class="service-hero-orb/, 'Serviços personalizados devem preservar o visual de iniciais sem decoração de foto.');
-assert.match(serviceDetailStyles, /\.service-detail-copy\s*\{[^}]*background:\s*var\(--brand-900\)/s, 'O texto do detalhe deve ter o fundo verde da Home.');
+assert.match(serviceDetailStyles, /\.service-detail-grid\s*\{[^}]*background:\s*var\(--brand-900\)/s, 'O fundo verde deve abranger o texto e o retrato.');
 assert.match(serviceDetailStyles, /animation:\s*home-orb-float/, 'As bolinhas devem reutilizar a animação da Home.');
 assert.match(serviceDetailStyles, /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.service-hero-orb\s*\{[^}]*animation:\s*none/s, 'A decoração deve respeitar movimento reduzido.');
 assert.doesNotMatch(publicServiceCard, /priceFromCents|A partir de/, 'Cards de serviço não devem mostrar um preço genérico.');
@@ -136,17 +136,24 @@ assert.match(documentSource, /<html lang="en-US">/, 'O idioma inicial do documen
 assert.match(documentSource, /http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/, 'A hospedagem estática deve impedir que o navegador reutilize HTML antigo.');
 const staticHostingRules = await text('frontend/public/.htaccess');
 assert.match(staticHostingRules, /Header always set Cache-Control "no-cache, no-store, must-revalidate"/, 'O documento HTML publicado deve ser sempre revalidado.');
-assert.match(staticHostingRules, /<FilesMatch "-\[A-Z0-9\]\{8\}\\\.\(css\|js\)\$">/, 'A regra de cache imutável deve reconhecer o hífen usado antes do hash dos assets.');
+const assetRule = staticHostingRules.match(/<FilesMatch "([^"]+\(css\|js\)[^"]*)">/)?.[1];
+assert.ok(assetRule, 'Arquivos com hash precisam de uma regra de cache.');
+for (const file of ['main-HS5D52ST.js', 'chunk-CCWN-0RU.js', 'chunk-Y2QJf_TY.js', 'styles-GLWVPLO5.css']) {
+  assert.match(file, new RegExp(assetRule));
+}
 assert.match(staticHostingRules, /Header always set Cache-Control "public, max-age=31536000, immutable"/, 'Arquivos com hash devem manter cache imutável de longa duração.');
 const brandComponent = await text('frontend/src/app/shared/components/brand/brand.component.ts');
 const brandLogo = await text('frontend/public/pro-logo.svg');
+const brandStyles = await text('frontend/src/styles.scss');
 assert.doesNotMatch(brandComponent, /brand-name/, 'A marca não deve recompor o nome fora do SVG oficial.');
-assert.match(brandComponent, /pro-logo\.svg\?v=20261009-aperture-logo/, 'O ajuste do logo deve invalidar a versão anterior no navegador.');
-assert.match(brandLogo, /<path id="letter-r" d="M95 40[^"]*V90H95Z"/, 'A letra r deve ser vetorial e menor que os obturadores do P e do o.');
+assert.match(brandStyles, /mask: url\('\/pro-logo\.svg\?v=\d{8}-[a-z-]+'\)/, 'A máscara do logo deve usar a versão atual do SVG.');
+assert.match(brandLogo, /<path id="letter-r" d="M95 40[^"]*V90H95Z"/, 'A letra r deve ser vetorial.');
 assert.match(brandLogo, /mask="url\(#p-shutter\)"/, 'O P deve ter o obturador da referência, não uma letra tipográfica comum.');
 assert.match(brandLogo, /mask="url\(#o-shutter\)"/, 'O o deve usar o mesmo desenho de obturador da referência.');
 assert.match(brandLogo, /viewBox="0 0 220 138"/, 'A marca deve preservar a proporção vertical da referência enviada.');
-assert.match(brandLogo, /fill="#006b4d"/, 'A marca deve usar o verde original da identidade visual.');
+assert.doesNotMatch(brandLogo, /<rect width="220" height="138"/, 'Somente as letras do SVG devem aparecer na máscara.');
+assert.match(brandStyles, /\.brand-logo\s*\{[^}]*background-color: var\(--brand-700\)/, 'As letras devem usar o verde nos fundos claros.');
+assert.match(brandStyles, /:is\(\.auth-brand-panel, \.site-header, \.site-footer, \.portal-sidebar\) \.brand-logo\s*\{\s*background-color: #fff;/, 'As letras devem ser brancas nos fundos escuros.');
 assert.match(documentSource, /name="theme-color" content="#006b4d"/, 'A cor do navegador deve acompanhar a identidade verde.');
 assert.match(brandLogo, />Chez vous pro<\/text>/, 'A assinatura deve aparecer centralizada abaixo de Pro.');
 assert.equal((brandLogo.match(/<use href="#slit"/g) ?? []).length, 5, 'O obturador deve conter seis lâminas, incluindo a forma-base.');
@@ -207,15 +214,15 @@ assert.doesNotMatch(apiRoutes, /coupons/i, 'A API não deve expor recursos de cu
 const engagement = await text('backend/src/Modules/Engagement/EngagementController.php');
 assert.match(engagement, /m\.id > :after/, 'Leitura de mensagens deve aceitar cursor incremental.');
 assert.match(engagement, /function messageUpdates\(/, 'Chat deve expor atualização autenticada de baixa latência.');
-assert.match(engagement, /function messageStream\(/, 'Chat deve expor um fluxo autenticado em tempo real.');
-assert.match(apiRoutes, /\/api\/v1\/conversations\/\{id\}\/stream/, 'Rota de stream do chat ausente.');
+assert.match(apiRoutes, /\/api\/v1\/conversations\/\{id\}\/events', \[\$engagement, 'messageUpdates'\], true/, 'A consulta incremental do chat deve exigir autenticação.');
 assert.match(apiRoutes, /\/api\/v1\/professionals\/\{id\}\/conversation/, 'Cliente deve poder iniciar conversa antes de contratar.');
 const apiIndex = await text('backend/public/index.php');
-assert.match(apiIndex, /\['rateLimiter'\]->check\([\s\S]*global:/, 'Atualizações do chat devem atravessar o limite global antes do roteamento.');
+assert.match(apiIndex, /\['rateLimiter'\]->check\([\s\S]*global:/, 'A API deve manter o limite global e o fallback SQL antes do roteamento.');
+const readLimiter = await text('backend/src/Core/PublicReadLimiter.php');
+assert.match(readLimiter, /conversations\/\[\^\/\]\+\/events[^\r\n]*\r?\n\s*return 'chat'/, 'O chat incremental deve ter um limite de leitura próprio.');
 assert.doesNotMatch(engagement, /chat-events:user:|chat-events:ip:/, 'Polling do chat não deve duplicar buckets persistentes além do limite global.');
-assert.match(engagement, /pollAfterSeconds.*10/, 'A API deve orientar a cadência de sincronização incremental sustentável.');
-assert.match(engagement, /deadline = microtime\(true\) \+ 25/, 'O stream deve encerrar em janela limitada para não reter workers indefinidamente.');
-assert.doesNotMatch(engagement, /ignore_user_abort\(true\)/, 'O stream deve parar quando o cliente fecha a conexão.');
+assert.match(engagement, /pollAfterSeconds.*3/, 'A API deve orientar a cadência da consulta incremental.');
+assert.doesNotMatch(engagement, /eventStream\(|usleep\(/, 'O chat deve responder sem manter processos PHP em espera.');
 assert.match(engagement, /LEFT JOIN conversation_participants contact_participant/, 'A lista do chat deve reutilizar join indexado para o contato, sem subconsultas repetidas.');
 assert.match(engagement, /INNER JOIN conversation_participants cp/, 'Mensagens devem ser restritas aos participantes da conversa.');
 assert.match(engagement, /senderName[\s\S]*messageType[\s\S]*createdAt/, 'Envio deve devolver um ChatMessage completo.');
@@ -258,23 +265,22 @@ const authService = await text('frontend/src/app/core/auth/auth.service.ts');
 assert.match(authService, /logout\(\): Observable<void>[\s\S]*tap\(\(\) => this\.session\.clear\(\)\)/, 'A sessão local só deve ser limpa após o servidor confirmar o logout.');
 assert.doesNotMatch(authService, /logout\(\): void[\s\S]*error: \(\) => undefined/, 'Falhas de logout não podem ser ocultadas do usuário.');
 const response = await text('backend/src/Core/Response.php');
-assert.match(response, /Cache-Control: no-store, private/, 'Respostas JSON da API não devem permanecer em cache.');
+assert.match(response, /Cache-Control: no-store, private/, 'Respostas JSON sem política explícita não devem permanecer em cache.');
 const account = await text('backend/src/Modules/Users/AccountController.php');
 assert.match(account, /avatar:user:/, 'Envio de avatar deve ter limite de frequência por usuário.');
 assert.match(account, /4_000_000/, 'Avatar deve limitar a quantidade de pixels decodificados.');
 const phpUploads = await text('backend/docker/php/uploads.ini');
-assert.match(phpUploads, /upload_max_filesize = 6M/, 'O PHP deve aceitar o corpo multipart do avatar de 5 MiB.');
+assert.ok(Number(phpUploads.match(/^upload_max_filesize\s*=\s*(\d+)M/m)?.[1]) >= 25, 'O PHP deve aceitar mídia de campanha de 25 MiB.');
+assert.ok(Number(phpUploads.match(/^post_max_size\s*=\s*(\d+)M/m)?.[1]) > 25, 'O PHP precisa de folga para o corpo multipart.');
 const nginxTemplate = await text('frontend/nginx.conf.template');
-assert.match(nginxTemplate, /client_max_body_size 6m/, 'A borda Nginx deve aceitar o corpo multipart do avatar de 5 MiB.');
+assert.ok(Number(nginxTemplate.match(/client_max_body_size (\d+)m/)?.[1]) > 25, 'O Nginx deve aceitar o corpo multipart da mídia de campanha.');
 
 const messageSync = await text('frontend/src/app/features/messaging/data-access/conversation-sync.service.ts');
-assert.match(messageSync, /exhaustMap/, 'Sincronização de mensagens não deve sobrepor requisições.');
+assert.match(messageSync, /exhaustMap/, 'A atualização da lista de conversas não deve sobrepor requisições.');
 assert.match(messageSync, /visibilityState/, 'Sincronização deve pausar quando a página não estiver visível.');
 assert.match(messageSync, /conversationMessageUpdates/, 'Mensagens novas devem usar atualização autenticada de baixa latência.');
-assert.match(messageSync, /liveStream/, 'Cliente deve abrir fluxo em tempo real para a conversa ativa.');
-assert.match(messageSync, /Authorization: `Bearer \$\{token\}`/, 'Fluxo em tempo real deve manter autenticação do chat.');
-assert.match(messageSync, /visible \? this\.liveStream/, 'O stream do chat deve ser interrompido em segundo plano para proteger bateria e capacidade do servidor.');
-assert.match(messageSync, /repeat\(/, 'O cliente deve abrir a próxima espera apenas após a anterior terminar.');
+assert.doesNotMatch(messageSync, /liveStream|\/stream|EventSource/, 'O chat deve manter um único transporte de atualização.');
+assert.match(messageSync, /visible\s*\?\s*defer\(nextBatch\)\.pipe\(repeat\(/, 'A consulta incremental deve esperar a anterior terminar e pausar quando oculta.');
 assert.match(messageSync, /messagesLatest/, 'A conversa deve iniciar pela janela recente, sem baixar todo o histórico.');
 assert.match(messageSync, /before: Number\.MAX_SAFE_INTEGER/, 'A janela recente deve ser solicitada pelo cursor anterior.');
 assert.doesNotMatch(messageSync, /expand\(/, 'A sincronização não deve drenar páginas ilimitadas no primeiro acesso.');
@@ -296,7 +302,7 @@ assert.match(productionEnvironment, /demoAccounts:\s*null/, 'O build de produç�
 assert.doesNotMatch(loginPage, /Cliente@123|Profissional@123|Admin@123/, 'A tela de login não deve embutir senhas de demonstração.');
 const dockerfile = await text('frontend/Dockerfile');
 assert.match(dockerfile, /ARG BUILD_CONFIGURATION=production/, 'A imagem isolada deve compilar em modo de produção por padrão.');
-assert.match(dockerfile, /--configuration=\$\{BUILD_CONFIGURATION\}/, 'O build do frontend deve aceitar a configuração definida pelo Compose.');
+assert.match(dockerfile, /--configuration=["']?\$\{BUILD_CONFIGURATION\}(?:,docker)?/, 'O build do frontend deve aceitar a configuração definida pelo Compose.');
 
 const providerDetail = await text('frontend/src/app/features/public/pages/provider-detail/provider-detail.component.ts');
 assert.match(providerDetail, /Avaliações verificadas/, 'Perfil público deve separar avaliações de reservas concluídas.');
@@ -324,8 +330,10 @@ const outboxMigration = await text('database/migrations/202609220001_add_outbox_
 assert.match(outboxMigration, /information_schema\.columns/, 'Migração da outbox deve ser segura para bancos existentes.');
 assert.doesNotMatch(outboxMigration, /ADD COLUMN IF NOT EXISTS/, 'Migração da outbox deve ser compatível com o MySQL suportado.');
 const worker = await text('backend/bin/worker.php');
-assert.match(worker, /attempt >= 8[\s\S]*deadLetter/, 'Eventos permanentemente inválidos devem sair da fila ativa após tentativas limitadas.');
-assert.match(worker, /payload = JSON_OBJECT\(\)/, 'O descarte da outbox não deve reter tokens sensíveis.');
+const outbox = await text('backend/src/Modules/Mail/MailOutbox.php');
+assert.match(worker, /\$outbox->process\(\)/, 'O worker deve processar a fila de e-mails.');
+assert.match(outbox, /attempt >= 8[\s\S]*?failed_at = UTC_TIMESTAMP\(\)/, 'Eventos permanentemente inválidos devem sair da fila ativa após tentativas limitadas.');
+assert.match(outbox, /failed_at = UTC_TIMESTAMP\(\)[^"]*payload = JSON_OBJECT\(\)/, 'O descarte da outbox não deve reter tokens sensíveis.');
 
 const compose = await text('compose.yaml');
 const productionCompose = await text('compose.production.yaml');
@@ -340,7 +348,8 @@ for (const service of ['database', 'api', 'web', 'ssr', 'worker']) {
   assert.match(compose, new RegExp(`^  ${service}:`, 'm'), `Serviço Compose ${service} ausente.`);
 }
 assert.ok((compose.match(/PROXY_SHARED_SECRET:/g) ?? []).length >= 3, 'Segredo interno deve chegar à API, web e worker.');
-assert.match(compose, /api:[\s\S]*healthcheck:[\s\S]*api\/v1\/health/, 'A API deve publicar um health check após aplicar as migrações.');
+assert.match(compose, /api:[\s\S]*healthcheck:[\s\S]*api\/v1\/health\/live/, 'A sonda de inicialização da API deve funcionar antes de iniciar o worker.');
+assert.match(compose, /worker:[\s\S]*healthcheck:[\s\S]*bin\/worker\.php", "--healthcheck"/, 'O Compose deve verificar o sinal do worker.');
 assert.match(compose, /worker:[\s\S]*depends_on:[\s\S]*api:[\s\S]*condition: service_healthy/, 'O worker deve aguardar a API migrada e saudável.');
 assert.match(compose, /ssr:[\s\S]*SSR_API_URL: http:\/\/api\/api\/v1/, 'SSR deve usar a API interna, sem depender do navegador.');
 assert.match(compose, /ssr:[\s\S]*SSR_PROXY_SHARED_SECRET/, 'SSR deve autenticar a propagação interna do IP até a API.');
@@ -367,6 +376,7 @@ const imageFiles = sourceFiles
   .map((path) => path.replaceAll('\\', '/'))
   .sort();
 assert.deepEqual(imageFiles, [
+  'backend/src/Modules/Mail/assets/pro-logo.png',
   'frontend/public/favicon.svg',
   'frontend/public/images/eletricista-login-v1-1280.webp',
   'frontend/public/images/eletricista-login-v1-640.webp',

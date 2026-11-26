@@ -1,11 +1,14 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { BehaviorSubject, catchError, map, of, switchMap, tap } from 'rxjs';
 import { MarketplaceService } from '../../../../core/data-access/marketplace.service';
 import { Product } from '../../../../core/models';
+import { SeoService } from '../../../../core/seo/seo.service';
 import { StatePanelComponent } from '../../../../shared/components';
 import { LocalizedMoneyPipe } from '../../../../shared/localization/localized-format.pipe';
-import { SeoService } from '../../../../core/seo/seo.service';
+import { pageFromMeta, totalFromMeta } from '../../../../shared/utils/pagination.util';
 
 @Component({
   selector: 'cvp-products',
@@ -15,7 +18,7 @@ import { SeoService } from '../../../../core/seo/seo.service';
     <section class="page-hero store-hero">
       <div class="container store-hero-inner">
         <div><span class="eyebrow">Loja ChezVoust</span><h1>Produtos para facilitar o cuidado com a casa.</h1><p>Utilidades selecionadas para limpeza, organização e manutenção da sua rotina.</p></div>
-        <form class="search-field store-search" role="search" (ngSubmit)="load()">
+        <form class="search-field store-search" role="search" (ngSubmit)="search()">
           <span aria-hidden="true">⌕</span><label class="sr-only" for="product-search">Buscar produtos</label>
           <input id="product-search" name="productQuery" [(ngModel)]="query" placeholder="Buscar na loja">
           <button class="btn btn-primary btn-small" type="submit">Buscar</button>
@@ -23,11 +26,11 @@ import { SeoService } from '../../../../core/seo/seo.service';
       </div>
     </section>
 
-    <section class="section store-results" aria-labelledby="products-title">
+    <section class="section store-results" aria-labelledby="products-title" [attr.aria-busy]="loading()">
       <div class="container">
-        <div class="section-heading"><div><span class="eyebrow">Escolhas para sua casa</span><h2 id="products-title">Produtos disponíveis</h2></div>@if (!loading() && !error()) { <span class="muted">{{ products().length }} {{ products().length === 1 ? 'produto' : 'produtos' }}</span> }</div>
+        <div class="section-heading"><div><span class="eyebrow">Escolhas para sua casa</span><h2 id="products-title">Produtos disponíveis</h2></div>@if (!loading() && !error()) { <span class="muted">{{ total() }} {{ total() === 1 ? 'produto' : 'produtos' }}</span> }</div>
         @if (loading()) { <cvp-state-panel kind="loading" message="Carregando os produtos da loja." /> }
-        @else if (error()) { <cvp-state-panel kind="error" title="Não conseguimos carregar a loja" [message]="error()" (retry)="load()" /> }
+        @else if (error()) { <cvp-state-panel kind="error" title="Não conseguimos carregar a loja" [message]="error()" (retry)="retry()" /> }
         @else if (!products().length) { <cvp-state-panel kind="empty" title="Nenhum produto encontrado" message="Tente buscar por outro termo." /> }
         @else {
           <div class="product-grid">
@@ -51,7 +54,15 @@ import { SeoService } from '../../../../core/seo/seo.service';
               </article>
             }
           </div>
-          <p class="store-disclaimer">O checkout atual é uma demonstração visual: nenhuma cobrança é processada e nenhum dado bancário é armazenado.</p>
+        }
+        @if (!loading() && !error() && (lastPage() > 1 || page() > 1)) {
+          <nav class="result-pagination" aria-label="Paginação de produtos">
+            <span>{{ page() }} / {{ lastPage() }}</span>
+            <div>
+              <button class="btn btn-secondary btn-small" type="button" [disabled]="page() <= 1" (click)="goToPage(page() - 1)">Anterior</button>
+              <button class="btn btn-secondary btn-small" type="button" [disabled]="page() >= lastPage()" (click)="goToPage(page() + 1)">Próxima</button>
+            </div>
+          </nav>
         }
       </div>
     </section>
@@ -61,21 +72,51 @@ import { SeoService } from '../../../../core/seo/seo.service';
 export class ProductsComponent implements OnInit {
   private readonly marketplace = inject(MarketplaceService);
   private readonly seo = inject(SeoService);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly requests = new BehaviorSubject({ query: '', page: 1 });
   readonly products = signal<Product[]>([]);
+  readonly total = signal(0);
+  readonly page = signal(1);
+  readonly lastPage = signal(1);
   readonly loading = signal(true);
   readonly error = signal('');
   query = '';
 
   ngOnInit(): void {
     this.seo.update({ title: 'Produtos para casa | Pro', description: 'Encontre utilidades selecionadas para cuidar, organizar e manter sua casa.', canonicalPath: '/produtos' });
-    this.load();
+    this.requests.pipe(
+      tap(() => {
+        this.loading.set(true);
+        this.error.set('');
+      }),
+      switchMap(({ query, page }) => this.marketplace.productsPage({ q: query || undefined, page, perPage: 24 }).pipe(
+        map((response) => ({ response, page })),
+        catchError((failure: Error) => of({ error: failure.message }))
+      )),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe((result) => {
+      if ('response' in result) {
+        const { data, meta } = result.response;
+        this.products.set(data);
+        this.total.set(meta?.['total'] == null ? data.length : totalFromMeta(meta));
+        this.page.set(meta?.['page'] == null ? result.page : pageFromMeta(meta, 'page'));
+        this.lastPage.set(pageFromMeta(meta, 'lastPage'));
+      } else {
+        this.error.set(result.error);
+      }
+      this.loading.set(false);
+    });
   }
 
-  load(): void {
-    this.loading.set(true); this.error.set('');
-    this.marketplace.products({ q: this.query.trim() || undefined }).subscribe({
-      next: (products) => { this.products.set(products); this.loading.set(false); },
-      error: (failure: Error) => { this.error.set(failure.message); this.loading.set(false); }
-    });
+  search(): void {
+    this.requests.next({ query: this.query.trim(), page: 1 });
+  }
+
+  retry(): void {
+    this.requests.next(this.requests.value);
+  }
+
+  goToPage(page: number): void {
+    this.requests.next({ ...this.requests.value, page: Math.max(1, Math.min(page, this.lastPage())) });
   }
 }

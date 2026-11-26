@@ -10,6 +10,7 @@ use ChezVoust\Core\Request;
 use ChezVoust\Core\Response;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
+use ChezVoust\Modules\Catalog\ServiceVisibility;
 
 final class ProviderController extends Controller
 {
@@ -38,7 +39,7 @@ final class ProviderController extends Controller
     public function profile(Request $request, array $params, ?array $auth): Response
     {
         $row = $this->requireRow(
-            'SELECT u.public_id AS id, u.name, u.email, u.phone, p.headline, p.bio,
+            'SELECT u.public_id AS id, u.name, u.email, u.phone, (u.email_verified_at IS NOT NULL) AS emailVerified, p.headline, p.bio,
                     p.years_experience AS yearsExperience, p.base_city AS baseCity, p.base_state AS baseState,
                     p.service_radius_km AS serviceRadiusKm, p.verification_status AS verificationStatus,
                     p.verification_notes AS verificationNotes, p.rating_avg AS rating,
@@ -192,6 +193,7 @@ final class ProviderController extends Controller
 
     public function createCustomService(Request $request, array $params, ?array $auth): Response
     {
+        $this->requireVerifiedEmail($auth);
         $data = Validator::validate($request->body, [
             'name' => ['required', 'string', 'min:2', 'max:120'],
             'priceCents' => ['required', 'integer', 'min:1000', 'max:10000000'],
@@ -203,6 +205,7 @@ final class ProviderController extends Controller
 
         $this->db->beginTransaction();
         try {
+            $this->assertCustomPublication((int) $auth['id']);
             $duplicate = $this->db->prepare('SELECT id FROM services WHERE name = :name LIMIT 1 FOR UPDATE');
             $duplicate->execute(['name' => $name]);
             if ($duplicate->fetchColumn()) {
@@ -222,9 +225,9 @@ final class ProviderController extends Controller
             $this->db->prepare(
                 'INSERT INTO services
                     (public_id, category_id, name, slug, short_description, description, pricing_type, price_cents,
-                     unit_label, default_duration_minutes, minimum_quantity, maximum_quantity, active, featured, sort_order, created_at, updated_at)
+                     unit_label, default_duration_minutes, minimum_quantity, maximum_quantity, provider_created, active, featured, sort_order, created_at, updated_at)
                  VALUES (:public_id, :category_id, :name, :slug, :short_description, :description, \'fixed\', :price,
-                         \'serviço\', 120, 1, 10000, 1, 0, 999, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+                         \'serviço\', 120, 1, 10000, 1, 1, 0, 999, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
             )->execute([
                 'public_id' => $publicId, 'category_id' => $category['id'], 'name' => $name, 'slug' => $slug,
                 'short_description' => $description, 'description' => $description, 'price' => $data['priceCents'],
@@ -251,17 +254,29 @@ final class ProviderController extends Controller
             'priceCents' => ['nullable', 'integer', 'min:1000', 'max:10000000'],
             'active' => ['sometimes', 'boolean'],
         ]);
-        $service = $this->requireRow('SELECT id FROM services WHERE public_id = :id AND active = 1', ['id' => $params['serviceId']], 'Serviço não encontrado.');
-        $this->db->prepare(
-            'INSERT INTO professional_services (professional_id, service_id, price_cents, active, created_at, updated_at)
-             VALUES (:professional_id, :service_id, :price, :active, UTC_TIMESTAMP(), UTC_TIMESTAMP())
-             ON DUPLICATE KEY UPDATE price_cents = VALUES(price_cents), active = VALUES(active), updated_at = UTC_TIMESTAMP()'
-        )->execute([
-            'professional_id' => $auth['id'],
-            'service_id' => $service['id'],
-            'price' => $data['priceCents'] ?? null,
-            'active' => isset($data['active']) ? (int) (bool) $data['active'] : 1,
-        ]);
+        $active = (bool) ($data['active'] ?? true);
+        $this->db->beginTransaction();
+        try {
+            $service = $this->requireRow('SELECT id, provider_created FROM services WHERE public_id = :id AND active = 1', ['id' => $params['serviceId']], 'Serviço não encontrado.');
+            if ($service['provider_created'] && $active) {
+                $this->requireVerifiedEmail($auth);
+                $this->assertCustomPublication((int) $auth['id']);
+            }
+            $this->db->prepare(
+                'INSERT INTO professional_services (professional_id, service_id, price_cents, active, created_at, updated_at)
+                 VALUES (:professional_id, :service_id, :price, :active, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+                 ON DUPLICATE KEY UPDATE price_cents = VALUES(price_cents), active = VALUES(active), updated_at = UTC_TIMESTAMP()'
+            )->execute([
+                'professional_id' => $auth['id'],
+                'service_id' => $service['id'],
+                'price' => $data['priceCents'] ?? null,
+                'active' => (int) $active,
+            ]);
+            $this->db->commit();
+        } catch (\Throwable $exception) {
+            $this->db->rollBack();
+            throw $exception;
+        }
         return $this->providerServiceResponse($params['serviceId'], (int) $auth['id']);
     }
 
@@ -273,9 +288,9 @@ final class ProviderController extends Controller
         );
         $statement->execute(['professional_id' => $auth['id'], 'service_id' => $params['serviceId']]);
         $this->db->prepare(
-            'UPDATE services s INNER JOIN service_categories c ON c.id = s.category_id
+            'UPDATE services s
              SET s.active = 0, s.updated_at = UTC_TIMESTAMP()
-             WHERE s.public_id = :service_id AND c.slug = \'outros\'
+             WHERE s.public_id = :service_id AND s.provider_created = 1
                AND NOT EXISTS (SELECT 1 FROM professional_services ps WHERE ps.service_id = s.id)'
         )->execute(['service_id' => $params['serviceId']]);
         return Response::noContent();
@@ -353,10 +368,10 @@ final class ProviderController extends Controller
             'SELECT public_id AS id, exception_date AS date, type,
                     TIME_FORMAT(start_time, \'%H:%i\') AS startTime,
                     TIME_FORMAT(end_time, \'%H:%i\') AS endTime, reason
-             FROM availability_exceptions WHERE professional_id = :id AND exception_date >= CURRENT_DATE()
+             FROM availability_exceptions WHERE professional_id = :id AND exception_date >= :today
              ORDER BY exception_date, start_time'
         );
-        $statement->execute(['id' => $auth['id']]);
+        $statement->execute(['id' => $auth['id'], 'today' => date('Y-m-d')]);
         return Response::data($statement->fetchAll());
     }
 
@@ -412,7 +427,7 @@ final class ProviderController extends Controller
         $statement = $this->db->prepare(
             "SELECT b.public_id AS id, b.status,
                     DATE_FORMAT(b.scheduled_start, '%Y-%m-%dT%H:%i:%sZ') AS scheduledStart,
-                    DATE_FORMAT(b.scheduled_end, '%Y-%m-%dT%H:%i:%sZ') AS scheduledEnd,
+                    DATE_FORMAT(b.scheduled_end, '%Y-%m-%dT%H:%i:%sZ') AS scheduledEnd, b.timezone,
                     b.total_cents AS totalCents, b.currency,
                     s.name AS serviceName, u.name AS customerName,
                     JSON_UNQUOTE(JSON_EXTRACT(b.address_snapshot, '$.city')) AS city,
@@ -435,7 +450,7 @@ final class ProviderController extends Controller
         $statement = $this->db->prepare(
             "SELECT DISTINCT b.public_id AS id,
                     DATE_FORMAT(b.scheduled_start, '%Y-%m-%dT%H:%i:%sZ') AS scheduledStart,
-                    b.duration_minutes AS durationMinutes,
+                    b.duration_minutes AS durationMinutes, b.timezone,
                     b.quantity, b.area_sqm AS areaSqm, b.subtotal_cents AS suggestedSubtotalCents, b.currency,
                     s.name AS serviceName, a.city, a.state,
                     DATE_FORMAT(b.created_at, '%Y-%m-%dT%H:%i:%sZ') AS createdAt
@@ -524,6 +539,19 @@ final class ProviderController extends Controller
         $statement->execute(['id' => $professionalId]);
         if ($statement->fetchColumn() !== 'approved') {
             throw new ApiException(403, 'PROVIDER_NOT_APPROVED', 'Seu cadastro profissional precisa estar aprovado para acessar oportunidades.');
+        }
+    }
+
+    private function assertCustomPublication(int $professionalId): void
+    {
+        $eligible = ServiceVisibility::eligibleProfessional();
+        $statement = $this->db->prepare(
+            "SELECT u.id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id
+             WHERE u.id = :id AND {$eligible} FOR UPDATE"
+        );
+        $statement->execute(['id' => $professionalId]);
+        if (!$statement->fetchColumn()) {
+            throw new ApiException(403, 'PROVIDER_NOT_APPROVED', 'Seu perfil precisa estar aprovado para publicar serviços personalizados.');
         }
     }
 

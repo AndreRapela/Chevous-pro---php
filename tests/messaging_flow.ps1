@@ -80,7 +80,9 @@ try {
     $liveCursor = Latest-Sequence $conversationId $providerHeaders
     $emptySync = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
     Assert-True (@($emptySync.data).Count -eq 0) 'A sincronização incremental devolveu mensagens já processadas.'
-    Assert-True ([int]$emptySync.meta.pollAfterSeconds -eq 10) 'A API não informou a cadência esperada para a próxima sincronização.'
+    Assert-True ([int]$emptySync.meta.pollAfterSeconds -eq 3) 'A API não informou a cadência esperada para a próxima sincronização.'
+    $legacyStream = Invoke-WebRequest -Uri "$baseUrl/conversations/$conversationId/stream" -Headers $providerHeaders -TimeoutSec 5
+    Assert-True ($legacyStream.StatusCode -eq 204) 'O endpoint antigo deve encerrar sem reter o worker.'
     $liveBody = "e2e-live-$(New-SafeMessageToken)"
     $liveMessage = (Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages" -Method Post -Headers $customerHeaders -ContentType 'application/json' -Body (@{ body = $liveBody } | ConvertTo-Json)).data
     $liveResponse = Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=$liveCursor&limit=50" -Headers $providerHeaders
@@ -108,7 +110,7 @@ try {
 
     $foreignStatus = 0
     try {
-        Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/messages?after=0&limit=1" -Headers $adminHeaders | Out-Null
+        Invoke-RestMethod -Uri "$baseUrl/conversations/$conversationId/events?after=0&limit=1" -Headers $adminHeaders | Out-Null
         $foreignStatus = 200
     } catch {
         $foreignStatus = [int]$_.Exception.Response.StatusCode

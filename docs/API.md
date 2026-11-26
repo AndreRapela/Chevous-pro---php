@@ -65,7 +65,8 @@ Erro de validação:
 
 | Método | Rota | Observação |
 | --- | --- | --- |
-| GET | `/health` | Estado do processo HTTP; não substitui health check profundo do banco. |
+| GET | `/health` | Estado do banco e do worker. Retorna HTTP 503 se o sinal do worker estiver ausente, vencido ou indicar falha. |
+| GET | `/health/live` | Estado da API e do banco. Usado pelo Docker Compose antes de iniciar o worker. |
 | GET | `/app-config` | Configurações públicas e seguras da aplicação. |
 | GET | `/home` | Promoções, categorias e profissionais em destaque. |
 | GET | `/categories` | Categorias ativas. |
@@ -96,7 +97,13 @@ Erro de validação:
 | POST | `/auth/password/reset` | Redefine senha com token descartável. |
 | POST | `/auth/forgot-password` | Alias de `/auth/password/forgot`. |
 | POST | `/auth/reset-password` | Alias de `/auth/password/reset`. |
-| POST | `/auth/email/verify` | Confirma e-mail com token descartável. |
+| POST | `/auth/email/verify` | Confirma e-mail com o `token` do link ou com `email` e `code` (texto de seis dígitos). O código mais recente vale por 15 minutos e tem limite de tentativas. |
+| POST | `/auth/email/resend` | Solicita novo código e link de confirmação. O link vale por 24 horas. Recebe `email` e `locale` opcional. A resposta é a mesma para endereços pendentes, já confirmados ou inexistentes. |
+| GET | `/me/email-change` | Retorna o endereço pendente de confirmação na conta autenticada. |
+| POST | `/me/email-change` | Recebe o novo `email` e a `currentPassword` da conta autenticada. Envia código e link ao novo endereço. |
+| POST | `/me/email-change/resend` | Reenvia a confirmação ao endereço pendente da conta autenticada e substitui a prova anterior. |
+| POST | `/me/email-change/verify` | Confirma a troca pelo `code` de seis dígitos na conta autenticada. |
+| POST | `/auth/email/change/verify` | Confirma a troca pelo `token` do link. O endereço anterior vale até a troca ser confirmada. |
 | POST | `/auth/logout` | Autenticado; revoga a sessão atual. |
 | POST | `/auth/logout-all` | Autenticado; revoga todas as sessões da conta. |
 | GET | `/auth/sessions` | Lista os dispositivos conectados e identifica a sessão atual. |
@@ -107,11 +114,12 @@ Erro de validação:
 | GET/POST | `/me/addresses` | Lista e cria endereços próprios. |
 | PUT/DELETE | `/me/addresses/{id}` | Atualiza ou remove logicamente endereço próprio. |
 
-O backend persiste sessões, tokens de verificação e recuperação. O Compose executa
-`backend/bin/worker.php` a cada 30 segundos; fora dos containers, essa execução precisa
-ser agendada manualmente. O driver `log` registra somente o tipo e o agregado do evento,
-sem expor o token. Em `APP_ENV=local` com debug, a própria resposta da API pode fornecer
-o token de demonstração. Não existe entrega de e-mail transacional real.
+O cadastro e a recuperação de senha também aceitam `locale`. Os e-mails
+usam o idioma escolhido no site. O driver `log` registra o tipo do
+evento e o Compose executa `backend/bin/worker.php` entre os ciclos da
+fila. Em instalações com `php-mail`, requisições da API também
+processam eventos vencidos para nova tentativa. O sinal do worker continua
+sendo monitorado separadamente. [Operação da fila](OPERATIONS.md#fila-de-e-mails)
 
 O access token permanece apenas em memória no navegador. O refresh token fica em cookie
 `HttpOnly`, `Secure` em produção e `SameSite=Strict`; não há refresh token em JSON nem
@@ -190,7 +198,8 @@ recorrência automática são **roadmap**.
 | POST/DELETE | `/me/favorites/{professionalId}` | Adiciona/remove favorito. |
 | GET | `/conversations` | Conversas das quais o usuário participa. |
 | GET/POST | `/conversations/{id}/messages` | Lista/envia mensagens de texto. |
-| GET | `/conversations/{id}/events?after={sequence}&limit=50` | Consulta incremental autenticada. Devolve imediatamente as mensagens posteriores ao cursor e informa em `meta.pollAfterSeconds` quando a próxima consulta deve ocorrer (atualmente, 5 s). |
+| GET | `/conversations/{id}/events?after={sequence}&limit=50` | Consulta incremental autenticada. Devolve imediatamente as mensagens posteriores ao cursor e informa em `meta.pollAfterSeconds` quando consultar de novo, normalmente após 3 s. O cliente pode consultar imediatamente se recebeu uma página cheia. |
+| GET | `/conversations/{id}/stream` | Rota antiga. Retorna HTTP 204 aos participantes. Clientes novos usam `/events`. |
 | POST | `/conversations/{id}/read` | Atualiza leitura do participante. |
 | GET | `/notifications` | Lista notificações; `/me/notifications` é alias. |
 | POST | `/notifications/{id}/read` | Marca uma notificação; há alias sob `/me`. |
@@ -240,6 +249,7 @@ Todas as rotas abaixo exigem papel `admin`:
 | GET | `/admin/dashboard` | Métricas agregadas. |
 | GET | `/admin/users` | Usuários paginados. |
 | PATCH | `/admin/users/{id}/status` | Ativa ou suspende conta. |
+| DELETE | `/admin/users/{id}` | Encerra contas de clientes e prestadores, revoga sessões e preserva o histórico. Retorna `204`. |
 | GET | `/admin/professionals/pending` | Perfis aguardando análise. |
 | POST | `/admin/professionals/{id}/review` | Aprova/rejeita/suspende perfil. |
 | POST/PATCH | `/admin/categories`, `/admin/categories/{id}` | Cria/atualiza categoria. |

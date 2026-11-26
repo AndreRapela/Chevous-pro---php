@@ -26,7 +26,7 @@ export class AdminTableDataService {
       return this.marketplace.adminUsers({ role: 'customer', page }).pipe(map((response) => this.result(response.data.map((item) => this.userRow(item)), response.meta)));
     }
     if (key === 'providers') {
-      return this.marketplace.adminPendingProviders({ page }).pipe(map((response) => this.result(response.data.map((item) => this.providerRow(item)), response.meta)));
+      return this.marketplace.adminUsers({ role: 'provider', page }).pipe(map((response) => this.result(response.data.map((item) => this.providerRow(item)), response.meta)));
     }
     if (key === 'catalog') {
       return this.marketplace.services().pipe(map((items) => ({
@@ -52,20 +52,34 @@ export class AdminTableDataService {
     return this.marketplace.adminUserStatus(id, status, reason);
   }
 
+  deleteUser(id: string) {
+    return this.marketplace.adminDeleteUser(id);
+  }
+
   resolveContentReport(id: string, action: 'hide' | 'retain', note: string) {
     return this.marketplace.adminResolveContentReport(id, action, note);
   }
 
-  private bookingRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); return { id: this.text(item, 'id'), primary: this.text(item, 'serviceName', 'Serviço'), secondary: this.shortId(this.text(item, 'id')), cells: [`${this.text(item, 'customerName')} / ${this.text(item, 'professionalName', this.localization.translate('A definir'))}`, this.date(this.text(item, 'scheduledStart')), this.money(this.amount(item, 'totalCents'), this.currency(item))], status: this.label(status), tone: this.statusTone(status), rawStatus: status }; }
+  private bookingRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); return { id: this.text(item, 'id'), primary: this.text(item, 'serviceName', 'Serviço'), secondary: this.shortId(this.text(item, 'id')), cells: [`${this.text(item, 'customerName')} / ${this.text(item, 'professionalName', this.localization.translate('A definir'))}`, this.date(this.text(item, 'scheduledStart'), this.text(item, 'timezone') || undefined), this.money(this.amount(item, 'totalCents'), this.currency(item))], status: this.label(status), tone: this.statusTone(status), rawStatus: status }; }
   private userRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); return { id: this.text(item, 'id'), primary: this.text(item, 'name'), secondary: this.shortId(this.text(item, 'id')), cells: [this.text(item, 'email'), this.date(this.text(item, 'createdAt')), this.text(item, 'role')], status: this.label(status), tone: this.statusTone(status), rawStatus: status }; }
-  private providerRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'verificationStatus', 'pending'); return { id: this.text(item, 'id'), primary: this.text(item, 'name'), secondary: this.text(item, 'headline', 'Perfil profissional'), cells: [this.text(item, 'email'), `${this.text(item, 'city')}, ${this.text(item, 'state')}`, this.date(this.text(item, 'createdAt'))], status: status === 'pending' ? 'Aguardando análise' : this.label(status), tone: 'warning', rawStatus: status }; }
+  private providerRow(value: unknown): AdminRow {
+    const item = this.record(value);
+    const status = item['status'] === 'suspended' ? 'suspended' : this.text(item, 'verificationStatus', 'active');
+    const labels: Record<string, string> = { pending: 'Aguardando análise', approved: 'Aprovado', rejected: 'Rejeitado', suspended: 'Suspenso', active: 'Ativo' };
+    const location = [this.text(item, 'city', ''), this.text(item, 'state', '')].filter(Boolean).join(', ') || '—';
+    return {
+      id: this.text(item, 'id'), primary: this.text(item, 'name'), secondary: this.text(item, 'headline', 'Perfil profissional'),
+      cells: [this.text(item, 'email'), location, this.date(this.text(item, 'createdAt'))],
+      status: labels[status] ?? this.label(status), tone: this.statusTone(status), rawStatus: status
+    };
+  }
   private reportRow(value: unknown): AdminRow { const item = this.record(value); const status = this.text(item, 'status'); const type = this.text(item, 'contentType').replaceAll('_', ' '); return { id: this.text(item, 'id'), primary: type, secondary: this.shortId(this.text(item, 'contentId')), cells: [this.text(item, 'reporterName'), this.text(item, 'reason'), this.date(this.text(item, 'createdAt'))], status: this.label(status), tone: status === 'pending' ? 'warning' : status === 'resolved' ? 'danger' : 'neutral', rawStatus: status }; }
   private record(value: unknown): Record<string, unknown> { return value && typeof value === 'object' ? value as Record<string, unknown> : {}; }
   private text(item: Record<string, unknown>, key: string, fallback = '—'): string { const value = item[key]; return typeof value === 'string' && value ? value : fallback; }
   private amount(item: Record<string, unknown>, key: string): number { const value = Number(item[key]); return Number.isFinite(value) ? value : 0; }
   private money(cents: number, sourceCurrency: 'BRL' | 'EUR' | 'USD' = 'BRL'): string { return this.localization.formatMoney(cents / 100, sourceCurrency); }
   private currency(item: Record<string, unknown>): 'BRL' | 'EUR' | 'USD' { const currency = this.text(item, 'currency', 'BRL').toUpperCase(); return currency === 'EUR' || currency === 'USD' ? currency : 'BRL'; }
-  private date(value: string): string { const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value) ? `${value.replace(' ', 'T')}Z` : value; const date = new Date(normalized); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat(this.localization.locale(), { dateStyle: 'short', timeStyle: 'short' }).format(date); }
+  private date(value: string, timeZone?: string): string { const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value) ? `${value.replace(' ', 'T')}Z` : value; const date = new Date(normalized); return Number.isNaN(date.getTime()) ? '—' : new Intl.DateTimeFormat(this.localization.locale(), { dateStyle: 'short', timeStyle: 'short', timeZone }).format(date); }
   private label(value: string): string { return value.replaceAll('_', ' ').replace(/^./, (letter) => letter.toUpperCase()); }
   private shortId(value: string): string { return value ? value.slice(0, 8).toUpperCase() : '—'; }
   private categoryLabel(value: string): string {

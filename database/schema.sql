@@ -59,6 +59,18 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
     CONSTRAINT fk_email_verification_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS account_email_changes (
+    user_id BIGINT UNSIGNED NOT NULL,
+    email VARCHAR(190) NOT NULL,
+    token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    password_digest CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NOT NULL,
+    PRIMARY KEY (user_id),
+    UNIQUE KEY uq_account_email_change_token (token_hash),
+    CONSTRAINT fk_account_email_change_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS password_reset_tokens (
     id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     user_id BIGINT UNSIGNED NOT NULL,
@@ -188,6 +200,7 @@ CREATE TABLE IF NOT EXISTS services (
     default_duration_minutes SMALLINT UNSIGNED NOT NULL DEFAULT 120,
     minimum_quantity DECIMAL(10,2) NOT NULL DEFAULT 1,
     maximum_quantity DECIMAL(10,2) NOT NULL DEFAULT 10000,
+    provider_created TINYINT(1) NOT NULL DEFAULT 0,
     active TINYINT(1) NOT NULL DEFAULT 1,
     featured TINYINT(1) NOT NULL DEFAULT 0,
     sort_order SMALLINT UNSIGNED NOT NULL DEFAULT 0,
@@ -277,6 +290,12 @@ CREATE TABLE IF NOT EXISTS promotions (
     cta_label VARCHAR(60) NULL,
     cta_url VARCHAR(255) NULL,
     image_url VARCHAR(1024) NULL,
+    media_type VARCHAR(10) NOT NULL DEFAULT 'image',
+    media_frame JSON NULL,
+    video_duration_ms INT UNSIGNED NULL,
+    rotation_weight TINYINT UNSIGNED NOT NULL DEFAULT 3,
+    button_placement VARCHAR(20) NOT NULL DEFAULT 'banner',
+    secondary_links JSON NULL,
     badge_text VARCHAR(80) NULL,
     terms_text VARCHAR(300) NULL,
     background_color VARCHAR(20) NOT NULL DEFAULT '#08B86F',
@@ -290,6 +309,14 @@ CREATE TABLE IF NOT EXISTS promotions (
     PRIMARY KEY (id),
     UNIQUE KEY uq_promotions_public_id (public_id),
     KEY idx_promotions_active_period (active, starts_at, ends_at, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS promotion_uploads (
+    filename VARCHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    created_at DATETIME NOT NULL,
+    expires_at DATETIME NULL,
+    PRIMARY KEY (filename),
+    KEY idx_promotion_uploads_expiry (expires_at, filename)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS products (
@@ -314,6 +341,34 @@ CREATE TABLE IF NOT EXISTS products (
     UNIQUE KEY uq_products_public_id (public_id),
     UNIQUE KEY uq_products_slug (slug),
     KEY idx_products_public_catalog (active, sort_order, featured, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS product_orders (
+    public_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    checkout_key CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    product_id BIGINT UNSIGNED NOT NULL,
+    product_name VARCHAR(160) NOT NULL,
+    product_slug VARCHAR(180) NOT NULL,
+    quantity TINYINT UNSIGNED NOT NULL,
+    unit_amount_cents INT UNSIGNED NOT NULL,
+    shipping_cents INT UNSIGNED NOT NULL,
+    currency CHAR(3) NOT NULL,
+    status ENUM('pending','paid','expired') NOT NULL DEFAULT 'pending',
+    provider_session_id VARCHAR(191) CHARACTER SET ascii COLLATE ascii_bin NULL,
+    provider_checkout_url VARCHAR(1024) NULL,
+    provider_request JSON NULL,
+    is_test TINYINT(1) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    reconcile_at DATETIME NULL,
+    paid_at DATETIME NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (public_id),
+    UNIQUE KEY uq_product_orders_checkout_key (checkout_key),
+    UNIQUE KEY uq_product_orders_session (provider_session_id),
+    KEY idx_product_orders_product_expiry (product_id, status, expires_at),
+    KEY idx_product_orders_reconcile (status, reconcile_at, public_id),
+    KEY idx_product_orders_created (created_at),
+    CONSTRAINT fk_product_orders_product FOREIGN KEY (product_id) REFERENCES products(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS app_settings (

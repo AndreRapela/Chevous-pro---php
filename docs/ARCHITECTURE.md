@@ -168,11 +168,11 @@ fazem parte desse fluxo atual.
 - favoritos pertencem ao cliente;
 - conversas são vinculadas à reserva e limitadas aos participantes;
 - mensagens atuais são texto sem anexo;
-- o cliente Angular inicia a conversa pelos 50 itens mais recentes e solicita histórico
-  anterior sob demanda; atualizações posteriores usam `sequence`, sem requisições
-  sobrepostas. A conversa ativa mantém uma única espera autenticada de até 15 segundos
-  e reabre-a assim que ela termina, entregando novas mensagens com latência de até um
-  segundo; a lista é atualizada a cada quinze segundos;
+- o cliente Angular inicia a conversa pelos 50 itens mais recentes e solicita o histórico
+  anterior sob demanda. A conversa ativa consulta mensagens posteriores ao cursor
+  `sequence` por uma única requisição autenticada por vez. A API responde
+  imediatamente e sugere um intervalo de 3 segundos entre consultas. A lista de
+  conversas é atualizada a cada minuto;
 - a sincronização é suspensa quando a aba fica oculta e retomada imediatamente ao voltar,
   reduzindo tráfego e trabalho do PHP/MySQL;
 - cada envio recebe uma `Idempotency-Key`: mensagem, atualização da conversa e notificação
@@ -188,11 +188,9 @@ O Compose atual:
 - constrói PHP 8.4/Apache, aplica migrações incrementais versionadas e só então executa o seed local;
 - monta o diretório do backend e um volume separado para `storage` local;
 - constrói Angular para produção e o serve por Nginx na porta configurada;
-- publica um health check da API depois das migrações e faz web/worker aguardarem esse estado;
-- executa `worker.php` a cada 30 segundos em um serviço dedicado.
-
-O health check de inicialização confirma o processo HTTP migrado, mas não substitui uma
-sonda profunda de dependências para um ambiente distribuído de produção.
+- verifica a API e o banco em `/api/v1/health/live` depois das migrações, antes de iniciar web e worker;
+- executa `worker.php` em um serviço dedicado e aguarda 30 segundos entre ciclos;
+- usa o sinal de execução gravado no banco para verificar o worker no Compose e em `/api/v1/health`.
 
 Com `AUTO_SEED=true` — valor local padrão — o seed recria dados demonstrativos e senhas
 conhecidas quando o serviço API inicia. O comportamento pode ser desabilitado e deve

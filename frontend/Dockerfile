@@ -6,7 +6,8 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 ARG BUILD_CONFIGURATION=production
-RUN npm run build -- --configuration=${BUILD_CONFIGURATION} --optimization=true --source-map=false --output-hashing=all
+# Keep the stylesheet applicable without an inline handler, which the CSP blocks.
+RUN npm run build -- --configuration="${BUILD_CONFIGURATION},docker" --source-map=false --output-hashing=all
 
 FROM node:22-alpine AS ssr
 

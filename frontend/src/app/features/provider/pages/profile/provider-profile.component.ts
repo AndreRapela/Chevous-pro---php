@@ -59,7 +59,8 @@ import { cleanServiceName, CUSTOM_SERVICE_VALUE, serviceInitial, serviceNameExis
             @if (customServiceMode()) {
               <label class="custom-service-name">Nome do novo serviço
                 <span class="custom-service-name-field"><span class="custom-service-preview" aria-hidden="true">{{ serviceInitial(customServiceName()) }}</span><input maxlength="120" [value]="customServiceName()" (input)="customServiceName.set($any($event.target).value)" placeholder="Ex.: Limpeza de aquário" autocomplete="off"></span>
-                @if (customServiceNameExists()) { <small class="field-error">Esse nome já existe. Selecione o serviço correspondente na lista.</small> }
+                @if (customServiceRestriction(); as restriction) { <small class="field-error">{{ restriction }}</small> }
+                @else if (customServiceNameExists()) { <small class="field-error">Esse nome já existe. Selecione o serviço correspondente na lista.</small> }
                 @else { <small>A imagem será criada com a primeira letra do nome.</small> }
               </label>
             }
@@ -131,7 +132,7 @@ export class ProviderProfileComponent implements OnInit {
   customServiceNameExists(): boolean { return serviceNameExists(this.customServiceName(), [...this.catalog(), ...this.services()]); }
   canAddSelectedService(): boolean {
     const id = this.selectedServiceId();
-    if (id === this.customServiceValue) return cleanServiceName(this.customServiceName()).length >= 2 && !this.customServiceNameExists();
+    if (id === this.customServiceValue) return !this.customServiceRestriction() && cleanServiceName(this.customServiceName()).length >= 2 && !this.customServiceNameExists();
     return Boolean(id) && !this.hasService(id);
   }
   addSelectedService(price: string): void {
@@ -140,6 +141,8 @@ export class ProviderProfileComponent implements OnInit {
   }
   addCustomService(price: string): void {
     if (this.acting()) return;
+    const restriction = this.customServiceRestriction();
+    if (restriction) { this.actionError.set(restriction); return; }
     const name = cleanServiceName(this.customServiceName());
     const priceCents = this.toBaseCents(price);
     if (name.length < 2) { this.actionError.set('Informe um nome com pelo menos 2 caracteres.'); return; }
@@ -152,6 +155,10 @@ export class ProviderProfileComponent implements OnInit {
   hasService(id: string): boolean { return this.services().some((service) => service.id === id); }
   serviceInitial(name: string): string { return serviceInitial(name); }
   verificationStatus(): string { return String(this.profile()['verificationStatus'] ?? 'pending'); }
+  customServiceRestriction(): string {
+    if (this.verificationStatus() !== 'approved') return 'Seu perfil precisa estar aprovado para publicar serviços personalizados.';
+    return Number(this.profile()['emailVerified']) === 1 ? '' : 'Confirme seu e-mail para publicar serviços personalizados.';
+  }
   verificationTitle(): string { return ({ approved: 'Perfil aprovado', pending: 'Perfil em análise', rejected: 'Perfil rejeitado', suspended: 'Perfil suspenso' } as Record<string, string>)[this.verificationStatus()] ?? 'Perfil em análise'; }
   verificationDescription(): string { return this.verificationStatus() === 'approved' ? 'Habilitado para receber oportunidades na plataforma.' : this.verificationStatus() === 'pending' ? 'Complete serviços e agenda enquanto aguarda a análise.' : String(this.profile()['verificationNotes'] ?? 'Entre em contato com o suporte para revisar a situação.'); }
   field(name: string): string { const value = this.profile()[name]; return typeof value === 'string' ? value : ''; }

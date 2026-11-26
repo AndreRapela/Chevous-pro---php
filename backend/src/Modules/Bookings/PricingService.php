@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace ChezVoust\Modules\Bookings;
 
 use ChezVoust\Core\ApiException;
+use ChezVoust\Modules\Catalog\ServiceVisibility;
 use PDO;
 
 final class PricingService
@@ -23,14 +24,19 @@ final class PricingService
             throw new ApiException(422, 'UNSUPPORTED_CURRENCY', 'The selected currency is not supported.');
         }
         $exchangeRate = (float) $rates[$currency];
+        $visibility = $professionalId === null
+            ? ServiceVisibility::inCatalog()
+            : ServiceVisibility::forProfessional('s', 'u', 'p');
         $statement = $this->db->prepare(
-            'SELECT s.id, s.public_id, s.category_id, s.name, s.pricing_type, s.price_cents,
+            "SELECT s.id, s.public_id, s.category_id, s.name, s.pricing_type, s.price_cents,
                     s.default_duration_minutes, s.minimum_quantity, s.maximum_quantity,
                     ps.price_cents AS professional_price
              FROM services s
              INNER JOIN service_categories c ON c.id = s.category_id AND c.active = 1
              LEFT JOIN professional_services ps ON ps.service_id = s.id AND ps.professional_id = :professional_id AND ps.active = 1
-             WHERE s.public_id = :service_id AND s.active = 1 LIMIT 1'
+             LEFT JOIN users u ON u.id = ps.professional_id
+             LEFT JOIN professional_profiles p ON p.user_id = u.id
+             WHERE s.public_id = :service_id AND {$visibility} LIMIT 1"
         );
         $statement->execute([
             'professional_id' => $professionalId ?? 0,

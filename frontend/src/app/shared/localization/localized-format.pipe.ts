@@ -1,6 +1,7 @@
 import { formatDate } from '@angular/common';
 import { Pipe, PipeTransform, inject } from '@angular/core';
 import { AppCurrency, LocalizationService } from '../../core/localization/localization.service';
+import { agendaOffset } from '../utils/booking-time.util';
 
 @Pipe({ name: 'appMoney', standalone: true, pure: false })
 export class LocalizedMoneyPipe implements PipeTransform {
@@ -15,7 +16,12 @@ export class LocalizedDatePipe implements PipeTransform {
   private readonly localization = inject(LocalizationService);
   transform(value: string | number | Date | null | undefined, format = 'mediumDate', timezone?: string): string {
     if (value === null || value === undefined || value === '') return '';
-    try { return formatDate(value, format, this.localization.locale(), timezone); } catch { return String(value); }
+    try {
+      const offset = timezone?.includes('/') ? agendaOffset(new Date(value), timezone) : timezone;
+      return formatDate(value, format, this.localization.locale(), offset);
+    } catch {
+      return String(value);
+    }
   }
 }
 

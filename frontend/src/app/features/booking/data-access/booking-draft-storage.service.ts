@@ -1,6 +1,7 @@
 import { isPlatformBrowser } from '@angular/common';
 import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 import { BookingFormValue } from '../models/booking-form.model';
+import { environment } from '../../../../environments/environment';
 
 interface StoredBookingDraft {
   version: 2;
@@ -13,7 +14,7 @@ interface StoredBookingDraft {
 @Injectable({ providedIn: 'root' })
 export class BookingDraftStorageService {
   private readonly platformId = inject(PLATFORM_ID);
-  private readonly key = 'cvp_booking_draft';
+  private readonly key = environment.useMockApi ? 'cvp_demo_booking_draft' : 'cvp_booking_draft';
 
   load(serviceId: string): StoredBookingDraft | null {
     if (!isPlatformBrowser(this.platformId)) return null;

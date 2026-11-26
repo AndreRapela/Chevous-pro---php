@@ -1,13 +1,15 @@
 :host { display: block; }
 
-.service-detail-copy {
-  min-width: 0;
-  padding: clamp(1.35rem, 3vw, 2.5rem);
-  border-radius: 1.5rem;
-  color: #fff;
+.service-detail-grid {
+  gap: clamp(1rem, 3vw, 2.5rem);
+  padding: clamp(1.1rem, 4vw, 2.5rem);
+  overflow: hidden;
+  border-radius: clamp(1.1rem, 3vw, 1.5rem);
   background: var(--brand-900);
+  background-image: radial-gradient(ellipse at 82% 74%, rgb(0 107 77 / .8), transparent 58%);
 }
-.service-detail-copy h1 { margin-top: 0; color: #fff; }
+.service-detail-copy { min-width: 0; color: #fff; }
+.service-detail-copy h1 { margin-top: 0; overflow-wrap: anywhere; color: #fff; }
 .service-detail-copy p { color: var(--brand-100); }
 .service-detail-copy .kicker { margin-bottom: 1rem; border-color: rgba(255, 255, 255, .25); color: #fff; background: rgba(255, 255, 255, .1); }
 .service-detail-copy .hero-actions { gap: .85rem; }
@@ -34,6 +36,7 @@
   justify-self: center;
   overflow: hidden;
   border-radius: 50%;
+  box-shadow: 0 0 0 1px rgb(255 255 255 / .16);
 }
 
 .service-visual > img {
@@ -70,7 +73,11 @@
 }
 
 @media (max-width: 47.99rem) {
-  .service-detail-copy { border-radius: 1.1rem; }
+  .service-detail-grid {
+    gap: .65rem;
+    background-image: radial-gradient(ellipse at 50% 86%, rgb(0 107 77 / .8), transparent 55%);
+  }
+  .service-detail-art { --portrait-size: clamp(11rem, 40vw, 14rem); padding: .9rem 1.25rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

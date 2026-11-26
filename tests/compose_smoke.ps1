@@ -31,9 +31,32 @@ try {
     }
 
     $health = Invoke-RestMethod -Method Get -Uri "$webUrl/api/v1/health"
-    if ($null -eq $health.data) {
-        throw 'O endpoint de saúde não retornou o envelope esperado.'
+    if ($health.data.status -ne 'ok' -or $health.data.checks.database -ne 'ok' -or $health.data.checks.worker -ne 'ok') {
+        throw 'O endpoint de saúde deve confirmar o banco e um ciclo recente do worker.'
     }
+
+    $privacyProbe = 'cvp-link-privacy-' + [guid]::NewGuid().ToString('N')
+    $queryMarker = "$privacyProbe-query"
+    $referrerMarker = "$privacyProbe-referrer"
+    foreach ($path in @('/redefinir-senha', '/verificar-email')) {
+        $page = Invoke-WebRequest -Uri "$webUrl$($path)?token=$queryMarker" -UserAgent $privacyProbe
+        if ((@($page.Headers['Referrer-Policy']) -join ', ') -ne 'no-referrer') {
+            throw "A página $path deve responder com Referrer-Policy no-referrer."
+        }
+    }
+    $null = Invoke-WebRequest -Uri "$webUrl/api/v1/health?token=$queryMarker" -UserAgent $privacyProbe -Headers @{
+        Referer = "$webUrl/verificar-email?token=$referrerMarker"
+    }
+    foreach ($service in @('web', 'api')) {
+        $logs = @(docker compose logs --no-color --since 2m $service | Where-Object { $_.Contains($privacyProbe) })
+        if ($LASTEXITCODE -ne 0 -or -not ($logs -match '"GET /api/v1/health HTTP/')) {
+            throw "O log de acesso de $service deve registrar o caminho da chamada de teste."
+        }
+        if ($logs -match "$queryMarker|$referrerMarker") {
+            throw "O log de acesso de $service registrou a consulta ou o Referer da chamada de teste."
+        }
+    }
+    Write-Output 'PASS privacidade dos links: Referrer-Policy e logs de acesso do Nginx e do Apache.'
 
     $accounts = @(
         @{ email = 'cliente@chezvoust.test'; password = 'Cliente@123'; role = 'customer' },

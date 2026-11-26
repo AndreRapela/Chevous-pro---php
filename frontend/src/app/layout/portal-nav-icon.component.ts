@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
 
-export type PortalIcon = 'home' | 'calendar' | 'messages' | 'favorites' | 'profile' | 'requests' | 'activity' | 'catalog' | 'moderation' | 'settings';
+export type PortalIcon = 'home' | 'calendar' | 'messages' | 'favorites' | 'profile' | 'requests' | 'activity' | 'catalog' | 'moderation' | 'settings' | 'bag' | 'info' | 'help';
 
 @Component({
   selector: 'cvp-portal-nav-icon',
@@ -15,6 +15,9 @@ export type PortalIcon = 'home' | 'calendar' | 'messages' | 'favorites' | 'profi
       @case ('requests') { <rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M8 9h8M8 13h8M8 17h5"/> }
       @case ('activity') { <path d="M4 17h3l2-5 3 8 3-12 2 9h3"/> }
       @case ('catalog') { <rect x="3" y="4" width="18" height="16" rx="3"/><path d="M8 8h8M8 12h8M8 16h5"/> }
+      @case ('bag') { <path d="M5 8h14l2 12H3L5 8Z"/><path d="M9 10V7a3 3 0 0 1 6 0v3"/> }
+      @case ('info') { <circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/> }
+      @case ('help') { <circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4 2c-1 .7-1.5 1.2-1.5 2.5m0 2.5h.01"/> }
       @case ('moderation') { <path d="M12 3 5 6v5c0 4.5 2.8 8 7 10 4.2-2 7-5.5 7-10V6Z"/><path d="m9 12 2 2 4-5"/> }
       @case ('settings') { <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8.6 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H3v-4h.09A1.7 1.7 0 0 0 4.6 8.6a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V3h4v.09A1.7 1.7 0 0 0 15.4 4.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06A1.7 1.7 0 0 0 19.4 9c.4.28.75.62 1 1 .25.33.4.73.4 1.1V13c0 .37-.15.77-.4 1.1-.25.38-.6.72-1 1Z"/> }
       @default { <circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c0-4 2.5-6 6-6s6 2 6 6M15 15c3 0 5 1.5 5 4"/> }

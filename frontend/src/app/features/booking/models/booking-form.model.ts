@@ -1,5 +1,6 @@
 import { FormBuilder, Validators } from '@angular/forms';
 import { Service } from '../../../core/models';
+import { POSTAL_CODE_PATTERN, validateAddressRegion } from '../../../shared/utils/postal-code.util';
 import { homeSizeRange } from '../utils/booking-home-size.util';
 
 export function createBookingForm(formBuilder: FormBuilder) {
@@ -10,14 +11,14 @@ export function createBookingForm(formBuilder: FormBuilder) {
     addonIds: formBuilder.nonNullable.control<string[]>([]),
     notes: ['', Validators.maxLength(500)],
     address: formBuilder.nonNullable.group({
-      postalCode: ['', [Validators.required, Validators.pattern(/^\d{5}-\d{3}$/)]],
+      postalCode: ['', [Validators.required, Validators.pattern(POSTAL_CODE_PATTERN)]],
       street: ['', Validators.required],
       number: ['', Validators.required],
       complement: [''],
-      neighborhood: ['', Validators.required],
-      city: ['São Paulo', Validators.required],
-      state: ['SP', Validators.required]
-    }),
+      neighborhood: [''],
+      city: ['', Validators.required],
+      state: ['']
+    }, { validators: validateAddressRegion }),
     date: ['', Validators.required],
     time: ['', Validators.required],
     providerId: ['', Validators.required],

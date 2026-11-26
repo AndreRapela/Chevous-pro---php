@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
+import { nextPromotionIndex, PROMOTION_SLOT_MS } from '../src/app/shared/utils/promotion-rotation.util.ts';
 
 // Palette/selector regressions, not a substitute for browser or full WCAG auditing.
 const source = readFileSync(new URL('../src/styles.scss', import.meta.url), 'utf8')
@@ -49,8 +50,10 @@ describe('original green brand palette', () => {
     assert.match(logo, /<path id="letter-r"/);
     assert.doesNotMatch(logo, /<tspan|>Pr</);
     assert.match(logo, /font-weight="700"[^>]*>Chez vous pro<\/text>/);
-    assert.match(brand, /src="\/pro-logo\.svg\?v=20261009-aperture-logo"/);
-    assert.match(brand, /alt="" width="220" height="138"/);
+    assert.match(source, /mask: url\('\/pro-logo\.svg\?v=\d{8}-[a-z-]+'\)/);
+    assert.match(source, /\.brand-logo\s*\{[^}]*aspect-ratio: 220 \/ 138/);
+    assert.match(brand, /aria-label="ChezVoust Pro, home"/);
+    assert.match(brand, /class="brand-logo" aria-hidden="true"/);
     assert.ok(!logo.includes('<image'), 'The brand must stay vector-based rather than embedding the reference photograph.');
   });
   it('keeps secondary reading text above 4.5:1 across the main light surfaces', () => {
@@ -256,12 +259,21 @@ describe('original green brand palette', () => {
     assert.equal(declaration('.home-discount-art img', 'position'), 'absolute');
     const template = readFileSync(new URL('../src/app/features/public/pages/home/home.component.ts', import.meta.url), 'utf8');
     assert.match(template, /<section class="section home-section home-deals"/);
-    assert.match(template, /<a class="home-discount-banner"[^>]*\[attr\.href\]="promotion\(\)\.ctaUrl"/);
-    assert.match(template, /<span class="btn home-discount-cta">/);
-    assert.ok(!template.includes('<a class="btn home-discount-cta"'));
-    assert.match(template, /\[src\]="promotion\(\)\.imageUrl"/);
-    assert.match(template, /<h3>\{\{ promotion\(\)\.title \}\}<\/h3>/);
-    assert.match(template, /ctaUrl/);
+    assert.match(template, /<article class="home-discount-banner"/);
+    assert.match(template, /<a class="btn home-discount-cta" \[href\]="campaign\.ctaUrl"/);
+    assert.match(template, /<cvp-promotion-media \[src\]="campaign\.imageUrl"/);
+    assert.match(template, /<h3>\{\{ campaign\.title \}\}<\/h3>/);
+    assert.doesNotMatch(template, /campaign-arrow|campaign-dots/);
+  });
+  it('draws promotions by weight every minute while excluding the current campaign', () => {
+    const campaigns = [{ rotationWeight: 1 }, { rotationWeight: 3 }, { rotationWeight: 5 }];
+    assert.equal(PROMOTION_SLOT_MS, 60_000);
+    assert.equal(nextPromotionIndex(campaigns, -1, () => 0), 0);
+    assert.equal(nextPromotionIndex(campaigns, -1, () => 0.40), 1);
+    assert.equal(nextPromotionIndex(campaigns, -1, () => 0.45), 2);
+    assert.equal(nextPromotionIndex(campaigns, 2, () => 0.99), 1);
+    assert.equal(nextPromotionIndex(campaigns.slice(0, 2), 1, () => 0.99), 0);
+    assert.equal(nextPromotionIndex(campaigns.slice(0, 1), 0, () => 0.9), 0);
   });
   it('matches the compact mobile reference without changing the desktop hero', () => {
     assert.equal(declaration('cvp-home-hero .hero-banner', 'border-radius'), '0');

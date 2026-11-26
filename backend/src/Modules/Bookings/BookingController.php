@@ -98,18 +98,9 @@ final class BookingController extends Controller
             ['id' => $data['addressId'], 'user_id' => $auth['id']],
             'Endereço não encontrado.'
         );
-        $timezoneName = (string) ($data['timezone'] ?? $this->config['timezone']);
-        try {
-            $timezone = new DateTimeZone($timezoneName);
-        } catch (\Throwable) {
-            throw new ApiException(422, 'INVALID_TIMEZONE', 'Fuso horário inválido.');
-        }
-        $parsedStart = new DateTimeImmutable((string) $data['scheduledStart'], $timezone);
-        $startUtc = $parsedStart->setTimezone(new DateTimeZone('UTC'));
-        $startLocal = $startUtc->setTimezone($timezone);
-        if ($startUtc->getTimestamp() < time() + 1800 || $startUtc->getTimestamp() > time() + 180 * 86400) {
-            throw new ApiException(422, 'INVALID_SCHEDULE', 'Escolha um horário entre 30 minutos e 180 dias a partir de agora.');
-        }
+        $timezoneName = $this->config['timezone'];
+        $startUtc = $this->parseScheduledStart($data);
+        $startLocal = $startUtc->setTimezone(new DateTimeZone($timezoneName));
 
         $professional = null;
         if (!empty($data['professionalId'])) {
@@ -243,7 +234,7 @@ final class BookingController extends Controller
         $statement = $this->db->prepare(
             "SELECT b.public_id AS id, b.mode, b.status, b.duration_minutes AS durationMinutes, b.notes,
                     DATE_FORMAT(b.scheduled_start, '%Y-%m-%dT%H:%i:%sZ') AS scheduledStart,
-                    DATE_FORMAT(b.scheduled_end, '%Y-%m-%dT%H:%i:%sZ') AS scheduledEnd,
+                    DATE_FORMAT(b.scheduled_end, '%Y-%m-%dT%H:%i:%sZ') AS scheduledEnd, b.timezone,
                     b.subtotal_cents AS subtotalCents, b.discount_cents AS discountCents,
                     b.service_fee_cents AS serviceFeeCents, b.total_cents AS totalCents, b.currency,
                     b.address_snapshot AS addressSnapshot, b.pricing_snapshot AS pricingSnapshot,
@@ -305,6 +296,7 @@ final class BookingController extends Controller
             throw new ApiException(403, 'FORBIDDEN', 'Você não participa desta reserva.');
         }
         $booking['addressSnapshot'] = json_decode((string) $booking['addressSnapshot'], true);
+        $booking['agendaTimezone'] = $this->config['timezone'];
         $booking['pricingSnapshot'] = json_decode((string) $booking['pricingSnapshot'], true);
         $booking['allowedActions'] = $this->allowedActions(
             (string) $auth['role'],
@@ -351,7 +343,7 @@ final class BookingController extends Controller
             $statement = $this->db->prepare(
                 'SELECT o.id AS offer_id, o.booking_id, o.professional_id, o.amount_cents,
                         b.public_id AS booking_public_id, b.customer_id, b.status, b.scheduled_start,
-                        b.scheduled_end, b.timezone, b.discount_cents
+                        b.scheduled_end, b.discount_cents
                  FROM booking_offers o INNER JOIN bookings b ON b.id = o.booking_id
                  INNER JOIN users provider_user ON provider_user.id = o.professional_id AND provider_user.status = \'active\'
                  INNER JOIN professional_profiles provider_profile
@@ -371,7 +363,7 @@ final class BookingController extends Controller
             }
             $startUtc = new DateTimeImmutable($offer['scheduled_start'], new DateTimeZone('UTC'));
             $endUtc = new DateTimeImmutable($offer['scheduled_end'], new DateTimeZone('UTC'));
-            $startLocal = $startUtc->setTimezone(new DateTimeZone($offer['timezone']));
+            $startLocal = $startUtc->setTimezone(new DateTimeZone($this->config['timezone']));
             $this->reserveSchedule((int) $offer['professional_id'], $startLocal, $startUtc, $endUtc, (int) $offer['booking_id']);
 
             $fee = 0;
@@ -483,16 +475,8 @@ final class BookingController extends Controller
             'scheduledStart' => ['required', 'date'],
             'timezone' => ['nullable', 'string', 'max:80'],
         ]);
-        $timezoneName = (string) ($data['timezone'] ?? $this->config['timezone']);
-        try {
-            $timezone = new DateTimeZone($timezoneName);
-            $startUtc = (new DateTimeImmutable((string) $data['scheduledStart'], $timezone))->setTimezone(new DateTimeZone('UTC'));
-        } catch (\Throwable) {
-            throw new ApiException(422, 'INVALID_SCHEDULE', 'Data, horário ou fuso horário inválido.');
-        }
-        if ($startUtc->getTimestamp() < time() + 1800 || $startUtc->getTimestamp() > time() + 180 * 86400) {
-            throw new ApiException(422, 'INVALID_SCHEDULE', 'Escolha um horário entre 30 minutos e 180 dias a partir de agora.');
-        }
+        $timezoneName = $this->config['timezone'];
+        $startUtc = $this->parseScheduledStart($data);
 
         $this->db->beginTransaction();
         try {
@@ -508,7 +492,7 @@ final class BookingController extends Controller
             if ($booking['status'] !== 'confirmed' || $booking['professional_id'] === null) {
                 throw new ApiException(409, 'INVALID_BOOKING_STATE', 'Somente reservas confirmadas com profissional definido podem ser reagendadas.');
             }
-            $startLocal = $startUtc->setTimezone($timezone);
+            $startLocal = $startUtc->setTimezone(new DateTimeZone($timezoneName));
             $endUtc = $startUtc->modify('+' . (int) $booking['duration_minutes'] . ' minutes');
             $this->reserveSchedule((int) $booking['professional_id'], $startLocal, $startUtc, $endUtc, (int) $booking['id']);
             $this->db->prepare(
@@ -637,9 +621,33 @@ final class BookingController extends Controller
         return $quote;
     }
 
+    private function parseScheduledStart(array $data): DateTimeImmutable
+    {
+        $value = $data['scheduledStart'];
+        try {
+            $inputTimezone = new DateTimeZone($data['timezone'] ?? $this->config['timezone']);
+            $start = new DateTimeImmutable($value, $inputTimezone);
+        } catch (\Throwable) {
+            throw new ApiException(422, 'INVALID_SCHEDULE', 'Data, horário ou fuso horário inválido.');
+        }
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::\d{2})?$/D', $value, $local) === 1
+            && $start->format('Y-m-d H:i') !== $local[1] . ' ' . $local[2]) {
+            throw new ApiException(422, 'INVALID_SCHEDULE', 'Este horário não existe no fuso selecionado. Escolha outro horário.');
+        }
+        $now = time();
+        if ($start->getTimestamp() < $now + 1800 || $start->getTimestamp() > $now + 180 * 86400) {
+            throw new ApiException(422, 'INVALID_SCHEDULE', 'Escolha um horário entre 30 minutos e 180 dias a partir de agora.');
+        }
+        return $start->setTimezone(new DateTimeZone('UTC'));
+    }
+
     private function reserveSchedule(int $professionalId, DateTimeImmutable $startLocal, DateTimeImmutable $startUtc, DateTimeImmutable $endUtc, ?int $ignoreBookingId): void
     {
         $date = $startLocal->format('Y-m-d');
+        $endLocal = $endUtc->setTimezone($startLocal->getTimezone());
+        if ($endLocal->format('Y-m-d') !== $date) {
+            throw new ApiException(422, 'PROFESSIONAL_UNAVAILABLE', 'O profissional não atende nesse horário.');
+        }
         $this->db->prepare(
             'INSERT INTO schedule_day_locks (professional_id, work_date, updated_at)
              VALUES (:professional_id, :work_date, UTC_TIMESTAMP())
@@ -654,7 +662,7 @@ final class BookingController extends Controller
         );
         $rule->execute([
             'professional_id' => $professionalId, 'weekday' => (int) $startLocal->format('w'),
-            'start_time' => $startLocal->format('H:i:s'), 'end_time' => $endUtc->setTimezone($startLocal->getTimezone())->format('H:i:s'),
+            'start_time' => $startLocal->format('H:i:s'), 'end_time' => $endLocal->format('H:i:s'),
         ]);
         if (!$rule->fetchColumn()) {
             throw new ApiException(422, 'PROFESSIONAL_UNAVAILABLE', 'O profissional não atende nesse horário.');
@@ -665,7 +673,7 @@ final class BookingController extends Controller
         );
         $exception->execute([
             'professional_id' => $professionalId, 'date' => $date,
-            'start_time' => $startLocal->format('H:i:s'), 'end_time' => $endUtc->setTimezone($startLocal->getTimezone())->format('H:i:s'),
+            'start_time' => $startLocal->format('H:i:s'), 'end_time' => $endLocal->format('H:i:s'),
         ]);
         if ($exception->fetchColumn()) {
             throw new ApiException(422, 'PROFESSIONAL_UNAVAILABLE', 'O profissional está indisponível nesse horário.');

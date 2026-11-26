@@ -1,17 +1,20 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Observable, finalize, map, tap } from 'rxjs';
 import { ApiService } from '../http/api.service';
+import { LocalizationService } from '../localization/localization.service';
 import { AuthSession, AuthSessionInfo, User, UserRole } from '../models';
 import { SessionStoreService } from './session-store.service';
 
 export interface LoginPayload { email: string; password: string; remember?: boolean; }
 export interface RegisterPayload { name: string; email: string; phone: string; password: string; }
-interface RegisterResponse { user: User; message: string; }
+export interface EmailChangeChallenge { email: string; debugVerificationToken?: string; debugVerificationCode?: string; }
+interface RegisterResponse { user: User; message: string; debugVerificationToken?: string; debugVerificationCode?: string; }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly api = inject(ApiService);
   private readonly session = inject(SessionStoreService);
+  private readonly localization = inject(LocalizationService);
   readonly user = this.session.user;
   readonly authenticated = computed(() => !!this.session.user() && !!this.session.accessToken);
   readonly busy = signal(false);
@@ -26,10 +29,10 @@ export class AuthService {
     );
   }
 
-  register(payload: RegisterPayload, role: Extract<UserRole, 'customer' | 'provider'> = 'customer'): Observable<User> {
+  register(payload: RegisterPayload, role: Extract<UserRole, 'customer' | 'provider'> = 'customer'): Observable<RegisterResponse> {
     this.busy.set(true);
-    return this.api.post<RegisterResponse>(`auth/register/${role}`, payload).pipe(
-      map((response) => this.normalizeUser(response.user)),
+    return this.api.post<RegisterResponse>(`auth/register/${role}`, { ...payload, locale: this.localization.locale() }).pipe(
+      map((response) => ({ ...response, user: this.normalizeUser(response.user) })),
       finalize(() => this.busy.set(false))
     );
   }
@@ -58,8 +61,8 @@ export class AuthService {
     return this.api.post<unknown>('auth/password/change', { currentPassword, newPassword }).pipe(map(() => undefined));
   }
 
-  forgotPassword(email: string): Observable<void> {
-    return this.api.post<unknown>('auth/password/forgot', { email }).pipe(map(() => undefined));
+  forgotPassword(email: string): Observable<{ debugResetToken?: string }> {
+    return this.api.post<{ debugResetToken?: string }>('auth/password/forgot', { email, locale: this.localization.locale() });
   }
 
   resetPassword(token: string, password: string): Observable<void> {
@@ -68,6 +71,38 @@ export class AuthService {
 
   verifyEmail(token: string): Observable<void> {
     return this.api.post<unknown>('auth/email/verify', { token }).pipe(map(() => undefined));
+  }
+
+  verifyEmailCode(email: string, code: string): Observable<void> {
+    return this.api.post<unknown>('auth/email/verify', { email, code }).pipe(map(() => undefined));
+  }
+
+  resendEmailVerification(email: string): Observable<void> {
+    return this.api.post<unknown>('auth/email/resend', { email, locale: this.localization.locale() }).pipe(map(() => undefined));
+  }
+
+  pendingEmailChange(): Observable<{ email: string | null }> {
+    return this.api.get<{ email: string | null }>('me/email-change');
+  }
+
+  requestEmailChange(email: string, currentPassword: string): Observable<EmailChangeChallenge> {
+    return this.api.post<EmailChangeChallenge>('me/email-change', { email, currentPassword, locale: this.localization.locale() });
+  }
+
+  resendEmailChange(): Observable<EmailChangeChallenge> {
+    return this.api.post<EmailChangeChallenge>('me/email-change/resend', { locale: this.localization.locale() });
+  }
+
+  confirmEmailChange(proof: { token: string } | { code: string }): Observable<void> {
+    const path = 'token' in proof ? 'auth/email/change/verify' : 'me/email-change/verify';
+    return this.api.post<unknown>(path, proof).pipe(map(() => undefined));
+  }
+
+  refreshProfile(): Observable<User> {
+    return this.api.get<User>('me').pipe(
+      map((user) => this.normalizeUser(user)),
+      tap((user) => this.session.updateUser(user))
+    );
   }
 
   updateProfile(payload: Partial<Pick<User, 'name' | 'phone'>>): Observable<User> {

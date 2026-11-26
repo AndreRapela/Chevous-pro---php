@@ -1,6 +1,6 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^api/ - [L]
+  RewriteRule ^(?:api|demo)(?:/|$) - [L]
   RewriteRule \.[^/]+$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
@@ -8,13 +8,15 @@
 </IfModule>
 
 <IfModule mod_headers.c>
+  Header always set Referrer-Policy "no-referrer" "expr=%{THE_REQUEST} =~ m#\s/(?:redefinir-senha|verificar-email)(?:[/?]|\s)#"
+
   <FilesMatch "^(index\.html)?$">
     Header always set Cache-Control "no-cache, no-store, must-revalidate"
     Header always set Pragma "no-cache"
     Header always set Expires "0"
   </FilesMatch>
 
-  <FilesMatch "-[A-Z0-9]{8}\.(css|js)$">
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(css|js)$">
     Header always set Cache-Control "public, max-age=31536000, immutable"
   </FilesMatch>
 </IfModule>

@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
+import { BOOKING_TIMEZONE, agendaOffset } from '../../shared/utils/booking-time.util';
 import { Observable, defer, of, throwError } from 'rxjs';
 import { MOCK_BOOKINGS, MOCK_CATEGORIES, MOCK_PROVIDERS, MOCK_SERVICES } from './mock-data';
+import { MAX_PROMOTION_VIDEOS, PROMOTION_SLOT_MS, rotationWeight } from '../../shared/utils/promotion-rotation.util';
 import { ApiClientError, ApiEnvelope, AppNotification, AuthSession, AvailabilityException, Booking, BookingDraft, BookingQuote, ChatMessage, Conversation, Product, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Promotion, ProviderService, Service, User, UserRole } from '../models';
 import { cleanServiceName, serviceNameExists } from '../../shared/utils/service-name.util';
 
@@ -22,7 +24,15 @@ export class MockApiService {
   private addresses: Row[] = [{ id: 'addr-demo', label: 'Casa', postalCode: '04001-000', street: 'Rua das Flores', number: '120', neighborhood: 'Vila Mariana', city: 'São Paulo', state: 'SP' }];
   private favorites = [...MOCK_PROVIDERS.slice(0, 2)];
   private activeUser: User | null = null;
-  private providerProfile: Row = { id: 'ana-clara', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', phone: '11999990000', headline: 'Especialista em limpeza residencial', bio: 'Atendimento cuidadoso e organizado.', yearsExperience: 6, baseCity: 'São Paulo', baseState: 'SP', serviceRadiusKm: 10, verificationStatus: 'approved', rating: 4.96, reviewsCount: 128, completedJobs: 214 };
+  private emailChangeState?: { userId: string; email: string; debugVerificationCode: string; debugVerificationToken: string };
+  private readonly mockEmails = new Map<string, string>();
+  private adminUsersState: Row[] = [
+    { id: 'pending-provider', role: 'provider', name: 'Paulo Nascimento', email: 'paulo@exemplo.test', phone: '11911112222', status: 'active', verificationStatus: 'pending', headline: 'Jardinagem', bio: '', city: 'Campinas', state: 'SP', yearsExperience: 3, createdAt: '2026-08-18 12:00:00' },
+    { id: 'provider-1', role: 'provider', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', status: 'active', verificationStatus: 'approved', city: 'São Paulo', state: 'SP', createdAt: '2026-01-12 12:00:00' },
+    { id: 'customer-1', role: 'customer', name: 'Marina Costa', email: 'cliente@chezvoust.test', phone: '11999991234', status: 'active', createdAt: '2026-01-10 12:00:00' }
+  ];
+  private deletedMockUserIds = new Set<string>();
+  private providerProfile: Row = { id: 'ana-clara', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', emailVerified: true, phone: '11999990000', headline: 'Especialista em limpeza residencial', bio: 'Atendimento cuidadoso e organizado.', yearsExperience: 6, baseCity: 'São Paulo', baseState: 'SP', serviceRadiusKm: 10, verificationStatus: 'approved', rating: 4.96, reviewsCount: 128, completedJobs: 214 };
   private providerServicesState: ProviderService[] = MOCK_SERVICES.slice(0, 3).map((service) => ({ id: service.id, name: service.name, slug: service.slug, pricingType: this.pricingType(service), catalogPriceCents: service.priceFromCents, customPriceCents: service.priceFromCents, active: true, isCustom: Boolean(service.isCustom) }));
   private availabilityState = [{ id: 'av-1', weekday: 1, startTime: '08:00', endTime: '17:00' }, { id: 'av-2', weekday: 3, startTime: '08:00', endTime: '17:00' }, { id: 'av-3', weekday: 5, startTime: '08:00', endTime: '16:00' }];
   private availabilityExceptionsState: AvailabilityException[] = [];
@@ -52,8 +62,24 @@ export class MockApiService {
   }
 
   private resolve(method: string, path: string, body: unknown, params: QueryParams): Observable<ApiEnvelope<unknown>> {
-    if (method === 'GET' && path === 'home') return this.ok({ promotions: this.promotionsState.filter((item) => item.active), categories: MOCK_CATEGORIES, professionals: MOCK_PROVIDERS });
+    if (method === 'GET' && path === 'home') {
+      return this.ok({
+        promotions: this.orderedPromotions().filter((item) => item.active),
+        categories: MOCK_CATEGORIES,
+        services: this.servicesState.slice(0, 4),
+        professionals: MOCK_PROVIDERS
+      });
+    }
     if (method === 'GET' && path === 'categories') return this.ok(MOCK_CATEGORIES);
+    const checkoutProduct = path.match(/^products\/([^/]+)\/checkout$/);
+    if (method === 'GET' && checkoutProduct) {
+      const product = this.productsState.find((item) => item.active && item.slug === decodeURIComponent(checkoutProduct[1]!));
+      if (!product) return this.notFound('Produto indisponível para pagamento.');
+      return this.ok({ name: product.name, slug: product.slug, description: product.shortDescription, imageUrl: product.imageUrl,
+        available: Math.min(product.inventoryCount, 10), currency: product.currency, unitCents: product.priceCents,
+        shippingCents: 0, enabled: false, testMode: false });
+    }
+    if (method === 'GET' && path === 'admin/product-orders') return this.ok([], { page: 1, lastPage: 1 });
     if (method === 'GET' && path === 'products') {
       const q = String(params['q'] ?? '').trim().toLocaleLowerCase('pt-BR');
       const items = this.productsState.filter((item) => item.active && (!q || `${item.name} ${item.shortDescription}`.toLocaleLowerCase('pt-BR').includes(q)));
@@ -100,12 +126,44 @@ export class MockApiService {
     if (method === 'POST' && path === 'auth/password/forgot') return this.ok({ message: 'Se a conta existir, enviaremos as instruções.' });
     if (method === 'POST' && path === 'auth/password/reset') return this.ok({ message: 'Senha atualizada com sucesso.' });
     if (method === 'POST' && path === 'auth/email/verify') return this.ok({ message: 'E-mail verificado com sucesso.' });
+    if (method === 'POST' && path === 'auth/email/resend') return this.ok({ message: 'Se houver uma conta pendente com esse e-mail, enviaremos um novo link.' });
     if (method === 'POST' && path === 'auth/password/change') return this.ok({ message: 'Senha atualizada.' });
     if (method === 'POST' && path === 'auth/logout') { this.activeUser = null; return this.ok(undefined); }
     if (method === 'POST' && path === 'auth/logout-all') { this.activeUser = null; return this.ok(undefined); }
     if (method === 'GET' && path === 'auth/sessions') return this.ok([{ id: 'mock-session-current', ipAddress: '127.0.0.1', userAgent: 'Mock browser', device: 'Demo browser', current: true, createdAt: new Date().toISOString(), lastUsedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 86400000).toISOString() }]);
     if (method === 'DELETE' && /^auth\/sessions\/[^/]+$/.test(path)) return this.ok(undefined);
     if (method === 'GET' && path === 'me') return this.ok(this.currentUser());
+    if (path === 'me/email-change' && method === 'GET') {
+      return this.ok({ email: this.emailChangeState?.userId === this.currentUser().id ? this.emailChangeState.email : null });
+    }
+    if (path === 'me/email-change' && method === 'POST') {
+      const email = String((body as Row)['email'] ?? '').toLowerCase();
+      if (!String((body as Row)['currentPassword'] ?? '')) return this.fail('INVALID_CURRENT_PASSWORD', 'A senha atual está incorreta.', 422);
+      if (this.accounts()[email]) return this.fail('EMAIL_ALREADY_USED', 'Já existe uma conta com este e-mail.', 409);
+      return this.mockEmailChallenge(email);
+    }
+    if (path === 'me/email-change/resend' && method === 'POST') {
+      if (this.emailChangeState?.userId !== this.currentUser().id) return this.notFound('Solicite uma nova troca de e-mail no perfil.');
+      return this.mockEmailChallenge(this.emailChangeState.email);
+    }
+    if (method === 'POST' && (path === 'me/email-change/verify' || path === 'auth/email/change/verify')) {
+      const pending = this.emailChangeState;
+      const proof = body as Row;
+      const valid = pending && (path.startsWith('me/')
+        ? this.currentUser().id === pending.userId && proof['code'] === pending.debugVerificationCode
+        : proof['token'] === pending.debugVerificationToken);
+      if (!valid) return this.fail('INVALID_VERIFICATION_CODE', 'Código inválido ou expirado. Use o código mais recente.', 422);
+      this.mockEmails.set(pending.userId, pending.email);
+      if (this.activeUser?.id === pending.userId) this.activeUser = { ...this.activeUser, email: pending.email, emailVerified: true };
+      this.emailChangeState = undefined;
+      return this.ok({ message: 'Seu novo e-mail foi confirmado.' });
+    }
+    if (method === 'GET' && path === 'postal-codes/1000') {
+      return this.ok({ postalCode: '1000', street: '', neighborhood: '', city: 'Bruxelles', state: '', localities: ['Bruxelles'] });
+    }
+    if (method === 'GET' && /^postal-codes\/\d{4}$/.test(path)) {
+      return this.notFound('Código postal não encontrado. Confira os números ou preencha o endereço manualmente.');
+    }
     if (method === 'GET' && /^postal-codes\/\d{8}$/.test(path)) {
       const cep = path.slice(-8);
       if (cep === '01001000') return this.ok({ postalCode: '01001-000', street: 'Praça da Sé', neighborhood: 'Sé', city: 'São Paulo', state: 'SP' });
@@ -130,7 +188,7 @@ export class MockApiService {
     const offers = path.match(/^bookings\/([^/]+)\/offers$/); if (method === 'GET' && offers) return this.ok([]);
     const acceptOffer = path.match(/^bookings\/([^/]+)\/offers\/([^/]+)\/accept$/); if (method === 'POST' && acceptOffer) return this.notFound('Proposta não encontrada.');
     const cancel = path.match(/^bookings\/([^/]+)\/cancel$/); if (method === 'POST' && cancel) { const item = this.updateBooking(cancel[1] ?? '', { status: 'cancelled', canCancel: false, allowedActions: [] }); return item ? this.ok(item) : this.notFound('Reserva não encontrada.'); }
-    const reschedule = path.match(/^bookings\/([^/]+)\/reschedule$/); if (method === 'POST' && reschedule) { const value = body as Row; const item = this.updateBooking(reschedule[1] ?? '', { scheduledAt: String(value['scheduledStart']), allowedActions: ['cancel', 'reschedule', 'message'] }); return item ? this.ok(item) : this.notFound('Reserva não encontrada.'); }
+    const reschedule = path.match(/^bookings\/([^/]+)\/reschedule$/); if (method === 'POST' && reschedule) { const value = body as Row; const item = this.updateBooking(reschedule[1] ?? '', { scheduledAt: this.mockScheduledAt(String(value['scheduledStart'])), timezone: BOOKING_TIMEZONE, allowedActions: ['cancel', 'reschedule', 'message'] }); return item ? this.ok(item) : this.notFound('Reserva não encontrada.'); }
     const review = path.match(/^bookings\/([^/]+)\/reviews$/); if (method === 'POST' && review) { const value = body as Row; this.updateBooking(review[1] ?? '', { canReview: false, allowedActions: [] }); return this.ok({ id: `review-${Date.now()}`, rating: Number(value['rating']), comment: String(value['comment'] ?? ''), customerName: 'Marina Costa', createdAt: new Date().toISOString() }); }
     const startBooking = path.match(/^bookings\/([^/]+)\/start$/); if (method === 'POST' && startBooking) { const item = this.updateBooking(startBooking[1] ?? '', { status: 'in_progress', allowedActions: ['complete', 'message'] }); return item ? this.ok(item) : this.notFound('Reserva não encontrada.'); }
     const onTheWay = path.match(/^bookings\/([^/]+)\/on-the-way$/); if (method === 'POST' && onTheWay) { const item = this.updateBooking(onTheWay[1] ?? '', { status: 'provider_on_the_way', allowedActions: ['start', 'message'] }); return item ? this.ok(item) : this.notFound('Reserva não encontrada.'); }
@@ -170,22 +228,75 @@ export class MockApiService {
     const offer = path.match(/^provider\/bookings\/([^/]+)\/offers$/); if (method === 'POST' && offer) { this.openRequestsState = this.openRequestsState.filter((item) => item['id'] !== offer[1]); return this.ok({ id: `offer-${Date.now()}`, bookingId: offer[1], ...(body as Row) }); }
 
     if (method === 'GET' && path === 'admin/dashboard') return this.ok({ metrics: { bookings: this.bookings.length, confirmedBookings: this.bookings.filter((item) => item.status === 'confirmed').length, completedBookings: this.bookings.filter((item) => item.status === 'completed').length, professionalsPending: 1, professionals: MOCK_PROVIDERS.length, customers: 3 }, recentBookings: this.bookings.map((item) => this.adminBooking(item)) });
-    if (method === 'GET' && path === 'admin/users') { const role = String(params['role'] ?? ''); const users = this.adminUsers().filter((item) => !role || item['role'] === role); return this.ok(users, { total: users.length }); }
-    if (method === 'GET' && path === 'admin/professionals/pending') return this.ok([{ id: 'pending-provider', name: 'Paulo Nascimento', email: 'paulo@exemplo.test', phone: '11911112222', headline: 'Jardinagem', bio: '', city: 'Campinas', state: 'SP', yearsExperience: 3, verificationStatus: 'pending', createdAt: '2026-08-18 12:00:00' }], { total: 1 });
+    if (method === 'GET' && path === 'admin/users') {
+      const role = params['role'];
+      const users = this.adminUsersState.filter((item) => !role || item['role'] === role);
+      const page = this.paginate(users, params);
+      return this.ok(page.items, page.meta);
+    }
+    const deleteUser = path.match(/^admin\/users\/([^/]+)$/);
+    if (method === 'DELETE' && deleteUser) {
+      if (this.activeUser?.role !== 'admin') return this.fail('FORBIDDEN', 'Você não possui permissão para esta ação.', 403);
+      const id = decodeURIComponent(deleteUser[1]);
+      if (id === this.activeUser.id) return this.fail('ADMIN_ACCOUNT_PROTECTED', 'Contas administrativas estão protegidas contra exclusão.', 403);
+      if (this.deletedMockUserIds.has(id)) return this.ok(undefined);
+      if (!this.adminUsersState.some((item) => item['id'] === id)) return this.notFound('Usuário não encontrado.');
+      this.adminUsersState = this.adminUsersState.filter((item) => item['id'] !== id);
+      this.deletedMockUserIds.add(id);
+      return this.ok(undefined);
+    }
+    if (method === 'GET' && path === 'admin/professionals/pending') {
+      const pending = this.adminUsersState.filter((item) => item['verificationStatus'] === 'pending' && item['status'] === 'active');
+      const page = this.paginate(pending, params);
+      return this.ok(page.items, page.meta);
+    }
     if (method === 'GET' && path === 'admin/bookings') return this.ok(this.bookings.map((item) => this.adminBooking(item)), { total: this.bookings.length });
-    if (method === 'GET' && path === 'admin/promotions') return this.ok(this.promotionsState);
-    if (method === 'POST' && path === 'admin/promotions') { const value = body as Partial<Promotion>; const promotion: Promotion = { id: `promotion-${Date.now()}`, title: String(value.title ?? 'Nova campanha'), subtitle: String(value.subtitle ?? ''), ctaLabel: String(value.ctaLabel ?? 'Ver produtos'), ctaUrl: String(value.ctaUrl ?? '/produtos'), imageUrl: value.imageUrl ?? null, badgeText: String(value.badgeText ?? ''), termsText: String(value.termsText ?? ''), backgroundColor: String(value.backgroundColor ?? '#096653'), textColor: String(value.textColor ?? '#FFFFFF'), active: true, sortOrder: Number(value.sortOrder) || 0 }; this.promotionsState = [promotion, ...this.promotionsState]; return this.ok(promotion); }
-    const adminPromotion = path.match(/^admin\/promotions\/([^/]+)$/); if (method === 'PATCH' && adminPromotion) { let updated: Promotion | undefined; this.promotionsState = this.promotionsState.map((item) => item.id === adminPromotion[1] ? (updated = { ...item, ...(body as Partial<Promotion>) }) : item); return updated ? this.ok(updated) : this.notFound('Campanha não encontrada.'); }
+    if (method === 'GET' && path === 'admin/promotions') return this.ok(this.orderedPromotions());
+    if (method === 'POST' && path === 'admin/promotions') {
+      const value = body as Partial<Promotion>;
+      const promotion: Promotion = {
+        id: crypto.randomUUID(),
+        title: value.title ?? 'Nova campanha',
+        subtitle: value.subtitle ?? '',
+        ctaLabel: value.ctaLabel ?? 'Ver produtos',
+        ctaUrl: value.ctaUrl ?? '/produtos',
+        imageUrl: value.imageUrl ?? null,
+        mediaType: value.mediaType ?? 'image',
+        mediaFrame: value.mediaFrame ?? null,
+        videoDurationMs: value.videoDurationMs ?? null,
+        rotationWeight: rotationWeight(value.rotationWeight),
+        buttonPlacement: value.buttonPlacement ?? 'banner',
+        secondaryLinks: value.secondaryLinks ?? [],
+        badgeText: value.badgeText ?? '',
+        termsText: value.termsText ?? '',
+        backgroundColor: value.backgroundColor ?? '#096653',
+        textColor: value.textColor ?? '#FFFFFF',
+        active: value.active ?? true,
+        sortOrder: value.sortOrder ?? 0
+      };
+      return this.savePromotion(promotion);
+    }
+    const adminPromotion = path.match(/^admin\/promotions\/([^/]+)$/);
+    if (method === 'PATCH' && adminPromotion) {
+      const current = this.promotionsState.find((item) => item.id === adminPromotion[1]);
+      return current ? this.savePromotion({ ...current, ...(body as Partial<Promotion>) }, current) : this.notFound('Campanha não encontrada.');
+    }
     if (method === 'GET' && path === 'admin/products') return this.ok(this.productsState);
     if (method === 'POST' && path === 'admin/products') { const value = body as Partial<Product>; const product: Product = { id: `product-${Date.now()}`, name: String(value.name ?? 'Novo produto'), slug: String(value.slug ?? value.name ?? 'produto').toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), shortDescription: String(value.shortDescription ?? ''), priceCents: Number(value.priceCents) || 0, compareAtPriceCents: value.compareAtPriceCents == null ? null : Number(value.compareAtPriceCents), currency: value.currency ?? 'BRL', imageUrl: value.imageUrl ?? null, purchaseUrl: String(value.purchaseUrl ?? '/ajuda'), badgeText: String(value.badgeText ?? ''), inventoryCount: Number(value.inventoryCount) || 0, featured: Boolean(value.featured), active: value.active ?? true, sortOrder: Number(value.sortOrder) || 0 }; this.productsState = [...this.productsState, product]; return this.ok(product); }
     const adminProduct = path.match(/^admin\/products\/([^/]+)$/); if (method === 'PATCH' && adminProduct) { let updated: Product | undefined; this.productsState = this.productsState.map((item) => item.id === adminProduct[1] ? (updated = { ...item, ...(body as Partial<Product>) }) : item); return updated ? this.ok(updated) : this.notFound('Produto não encontrado.'); }
     if (method === 'POST' && path === 'admin/services') { const value = body as Row; const name = String(value['name'] ?? 'Novo serviço'); const service: Service = { id: `service-${Date.now()}`, categoryId: String(value['categoryId'] ?? ''), slug: name.toLocaleLowerCase('pt-BR').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''), name, description: String(value['shortDescription'] ?? ''), symbol: this.initials(name), priceFromCents: Number(value['priceCents']) || 0, unit: value['pricingType'] === 'hourly' ? 'hora' : value['pricingType'] === 'area' ? 'm²' : 'serviço', pricingType: String(value['pricingType'] ?? 'fixed') as Service['pricingType'], durationMinutes: Number(value['defaultDurationMinutes']) || 120 }; this.servicesState = [...this.servicesState, service]; return this.ok(service); }
-    if (method === 'POST' && /^admin\/professionals\/[^/]+\/review$/.test(path)) return this.ok({ success: true });
+    const providerReview = path.match(/^admin\/professionals\/([^/]+)\/review$/);
+    if (method === 'POST' && providerReview) {
+      const provider = this.adminUsersState.find((item) => item['id'] === providerReview[1] && item['role'] === 'provider');
+      if (!provider) return this.notFound('Profissional não encontrado.');
+      provider['verificationStatus'] = (body as Row)['status'];
+      return this.ok({ success: true });
+    }
     if (method === 'PATCH' && /^admin\/users\/[^/]+\/status$/.test(path)) return this.ok({ success: true });
     return this.notFound('Recurso de demonstração não encontrado.');
   }
 
-  private login(credentials: Credentials): Observable<ApiEnvelope<unknown>> { const accounts = this.accounts(); const account = accounts[String(credentials.email ?? '').toLocaleLowerCase('pt-BR')]; if (!account || !String(credentials.password ?? '').trim()) return this.fail('invalid_credentials', 'E-mail ou senha incorretos.', 401); this.activeUser = account; const session: AuthSession = { user: account, accessToken: `mock-access-${account.role}`, tokenType: 'Bearer', expiresIn: 3600 }; return this.ok(session); }
+  private login(credentials: Credentials): Observable<ApiEnvelope<unknown>> { const accounts = this.accounts(); const account = accounts[String(credentials.email ?? '').toLocaleLowerCase('pt-BR')]; if (!account || this.deletedMockUserIds.has(account.id) || !String(credentials.password ?? '').trim()) return this.fail('invalid_credentials', 'E-mail ou senha incorretos.', 401); this.activeUser = account; const session: AuthSession = { user: account, accessToken: `mock-access-${account.role}`, tokenType: 'Bearer', expiresIn: 3600 }; return this.ok(session); }
   private quote(value: Row): Observable<ApiEnvelope<unknown>> {
     const service = this.servicesState.find((item) => item.id === value['serviceId']);
     if (!service) return this.notFound('Serviço não encontrado.');
@@ -208,7 +319,8 @@ export class MockApiService {
     const booking: Booking = {
       id: `bk-${Date.now()}`, code: `CVP-${String(Date.now()).slice(-6)}`, service, provider,
       customerName: this.currentUser().name, status: isMarketplace ? 'open' : 'confirmed',
-      scheduledAt: `${value.date}T${value.time}:00-03:00`, addressLabel: `${value.address.neighborhood}, ${value.address.city}`,
+      scheduledAt: this.mockScheduledAt(`${value.date}T${value.time}:00`), timezone: BOOKING_TIMEZONE,
+      addressLabel: [value.address.neighborhood, value.address.city].filter(Boolean).join(', '),
       notes: value.notes,
       price: { subtotalCents: subtotal, serviceFeeCents: fee, discountCents: discount, totalCents: quote?.totalCents ?? subtotal + fee - discount, currency: value.currency },
       canCancel: true, canReview: false, canMessage: !isMarketplace, conversationId,
@@ -219,15 +331,34 @@ export class MockApiService {
     this.chatState[conversationId] = [];
     return this.ok(booking);
   }
+  private mockScheduledAt(local: string): string {
+    return local + agendaOffset(new Date(local + 'Z'), BOOKING_TIMEZONE);
+  }
   private updateBooking(id: string, changes: Partial<Booking>): Booking | undefined { let result: Booking | undefined; this.bookings = this.bookings.map((item) => { if (item.id !== id) return item; result = { ...item, ...changes }; return result; }); return result; }
   private providerJob(booking: Booking): Row { return { id: booking.id, status: booking.status, scheduledStart: booking.scheduledAt, totalCents: booking.price.totalCents, currency: booking.price.currency, serviceName: booking.service.name, customerName: booking.customerName, city: booking.addressLabel.split(', ').at(-1) ?? '', state: 'SP', conversationId: booking.conversationId }; }
   private publicAvailability(params: QueryParams): Observable<ApiEnvelope<unknown>> { const date = String(params['date'] ?? ''); if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return this.ok({ rules: this.availabilityState, exceptions: this.availabilityExceptionsState, slots: [] }); const weekday = new Date(`${date}T12:00:00`).getDay(); const duration = Math.max(30, Number(params['durationMinutes']) || 60); const blocked = this.availabilityExceptionsState.some((item) => item.date === date && item.type === 'unavailable' && !item.startTime && !item.endTime); const slots: string[] = []; if (!blocked) for (const rule of this.availabilityState.filter((item) => item.weekday === weekday)) { let cursor = this.minutes(rule.startTime); const end = this.minutes(rule.endTime); while (cursor + duration <= end) { const slot = this.clock(cursor); const conflict = this.availabilityExceptionsState.some((item) => item.date === date && item.type === 'unavailable' && item.startTime && item.endTime && cursor < this.minutes(item.endTime) && cursor + duration > this.minutes(item.startTime)); if (!conflict) slots.push(slot); cursor += 30; } } return this.ok({ rules: this.availabilityState, exceptions: this.availabilityExceptionsState.filter((item) => item.date === date), slots }); }
   private minutes(time: string): number { const [hour = '0', minute = '0'] = time.split(':'); return Number(hour) * 60 + Number(minute); }
   private clock(minutes: number): string { return `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`; }
   private adminBooking(booking: Booking): Row { return { id: booking.id, status: booking.status, scheduledStart: booking.scheduledAt, totalCents: booking.price.totalCents, createdAt: '2026-08-19 12:00:00', customerName: booking.customerName, professionalName: booking.provider.name, serviceName: booking.service.name }; }
-  private adminUsers(): Row[] { return [{ id: 'customer-1', role: 'customer', name: 'Marina Costa', email: 'cliente@chezvoust.test', phone: '11999991234', status: 'active', createdAt: '2026-01-10 12:00:00' }, { id: 'provider-1', role: 'provider', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', phone: '11999990000', status: 'active', createdAt: '2026-01-12 12:00:00' }]; }
   private currentUser(): User { return this.activeUser ?? Object.values(this.accounts())[0]!; }
-  private accounts(): Record<string, User> { return { 'cliente@chezvoust.test': { id: 'customer-1', name: 'Marina Costa', email: 'cliente@chezvoust.test', phone: '11999991234', role: 'customer', initials: 'MC', city: 'São Paulo' }, 'profissional@chezvoust.test': { id: 'provider-1', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', role: 'provider', initials: 'AS', city: 'São Paulo' }, 'admin@chezvoust.test': { id: 'admin-1', name: 'Caio Martins', email: 'admin@chezvoust.test', role: 'admin', initials: 'CM', city: 'São Paulo' } }; }
+  private accounts(): Record<string, User> {
+    const users: User[] = [
+      { id: 'customer-1', name: 'Marina Costa', email: 'cliente@chezvoust.test', phone: '11999991234', role: 'customer', initials: 'MC', city: 'São Paulo' },
+      { id: 'provider-1', name: 'Ana Clara Souza', email: 'profissional@chezvoust.test', role: 'provider', initials: 'AS', city: 'São Paulo' },
+      { id: 'admin-1', name: 'Caio Martins', email: 'admin@chezvoust.test', role: 'admin', initials: 'CM', city: 'São Paulo' }
+    ];
+    return Object.fromEntries(users.map((user) => {
+      const email = this.mockEmails.get(user.id) ?? user.email;
+      return [email, { ...user, email }];
+    }));
+  }
+
+  private mockEmailChallenge(email: string) {
+    const debugVerificationCode = String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    const debugVerificationToken = (crypto.randomUUID() + crypto.randomUUID()).replaceAll('-', '');
+    this.emailChangeState = { userId: this.currentUser().id, email, debugVerificationCode, debugVerificationToken };
+    return this.ok({ email, debugVerificationCode, debugVerificationToken });
+  }
   private pricingType(service: { unit: string }): 'fixed' | 'hourly' | 'area' { return service.unit === 'hora' ? 'hourly' : service.unit === 'm²' ? 'area' : 'fixed'; }
   private initials(name: string): string { return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join(''); }
   private paginate<T>(items: T[], params: QueryParams): { items: T[]; meta: Record<string, number> } {
@@ -236,6 +367,30 @@ export class MockApiService {
     const page = Math.min(lastPage, Math.max(1, Number(params['page']) || 1));
     return { items: items.slice((page - 1) * perPage, page * perPage), meta: { page, perPage, total: items.length, lastPage } };
   }
+  private savePromotion(promotion: Promotion, previous?: Promotion) {
+    const isVideo = promotion.mediaType === 'video' && !!promotion.imageUrl;
+    const wasVideo = previous?.mediaType === 'video' && !!previous?.imageUrl;
+    if (isVideo && !wasVideo && this.promotionsState.filter((item) => item.mediaType === 'video' && item.imageUrl).length >= MAX_PROMOTION_VIDEOS) {
+      return this.fail('PROMOTION_VIDEO_LIMIT', 'É possível cadastrar no máximo 10 vídeos de campanha.', 422);
+    }
+    if (isVideo && (!wasVideo || previous?.imageUrl !== promotion.imageUrl)) {
+      if ((promotion.videoDurationMs ?? 0) > PROMOTION_SLOT_MS) {
+        return this.fail('PROMOTION_VIDEO_TOO_LONG', 'O vídeo da campanha deve ter no máximo 1 minuto.', 422);
+      }
+      if (!promotion.videoDurationMs || promotion.videoDurationMs <= 0) {
+        return this.fail('PROMOTION_VIDEO_UNKNOWN_DURATION', 'Não foi possível confirmar a duração do vídeo.', 422);
+      }
+    }
+    this.promotionsState = previous
+      ? this.promotionsState.map((item) => item.id === previous.id ? promotion : item)
+      : [promotion, ...this.promotionsState];
+    return this.ok(promotion);
+  }
+
+  private orderedPromotions(): Promotion[] {
+    return [...this.promotionsState].sort((left, right) => (left.sortOrder ?? 0) - (right.sortOrder ?? 0));
+  }
+
   private ok<T>(data: T, meta?: Record<string, unknown>): Observable<ApiEnvelope<T>> { return of({ data, ...(meta ? { meta } : {}) }); }
   private fail(code: string, message: string, status: number): Observable<never> { return throwError(() => new ApiClientError(code, message, status, undefined, 'mock-request')); }
   private notFound(message: string): Observable<never> { return this.fail('not_found', message, 404); }

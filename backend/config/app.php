@@ -20,6 +20,7 @@ $outboxEncryptionKey = Env::get('OUTBOX_ENCRYPTION_KEY', $isLocalEnvironment ? $
 $cookieSecure = Env::bool('REFRESH_COOKIE_SECURE', !$isLocalEnvironment);
 $autoSeed = Env::bool('AUTO_SEED', false);
 $mailDriver = Env::get('MAIL_DRIVER', 'disabled');
+$mailFrom = Env::get('MAIL_FROM', '');
 
 if (!$isLocalEnvironment) {
     $unsafeSecrets = [
@@ -53,11 +54,14 @@ if (!$isLocalEnvironment) {
     if ($autoSeed) {
         throw new RuntimeException('AUTO_SEED não pode ser habilitado fora do ambiente local.');
     }
-    if ($mailDriver !== 'resend') {
-        throw new RuntimeException('MAIL_DRIVER=resend é obrigatório fora do ambiente local.');
+    if (!in_array($mailDriver, ['resend', 'php-mail'], true)) {
+        throw new RuntimeException('Um serviço de e-mail ativo é obrigatório fora do ambiente local.');
     }
-    if (Env::get('MAIL_FROM', '') === '' || Env::get('RESEND_API_KEY', '') === '') {
+    if ($mailDriver === 'resend' && ($mailFrom === '' || Env::get('RESEND_API_KEY', '') === '')) {
         throw new RuntimeException('MAIL_FROM e RESEND_API_KEY são obrigatórios fora do ambiente local.');
+    }
+    if ($mailDriver === 'php-mail' && (!function_exists('mail') || !filter_var($mailFrom, FILTER_VALIDATE_EMAIL))) {
+        throw new RuntimeException('O envio pelo PHP requer a função mail e um MAIL_FROM válido.');
     }
 }
 
@@ -66,13 +70,27 @@ return [
     'env' => $environment,
     'debug' => $debug,
     'url' => rtrim(Env::get('APP_URL', 'http://localhost:8080'), '/'),
-    'timezone' => Env::get('APP_TIMEZONE', 'America/Sao_Paulo'),
+    'timezone' => Env::get('APP_TIMEZONE', 'Europe/Brussels'),
+    'worker_heartbeat_max_age_seconds' => max(60, Env::int('WORKER_HEARTBEAT_MAX_AGE_SECONDS', 180)),
     'locale' => Env::get('APP_LOCALE', 'pt-BR'),
     'currency' => Env::get('APP_CURRENCY', 'BRL'),
     'currency_rates' => [
         'BRL' => 1.0,
         'USD' => (float) Env::get('USD_PER_BRL', '0.20'),
         'EUR' => (float) Env::get('EUR_PER_BRL', '0.17'),
+    ],
+    'store_payment' => [
+        'mode' => Env::get('STORE_PAYMENT_MODE', 'disabled'),
+        'allow_test' => $isLocalEnvironment,
+        'allow_live' => !$isLocalEnvironment,
+        'secret_key' => Env::get('STRIPE_SECRET_KEY', ''),
+        'webhook_secret' => Env::get('STRIPE_WEBHOOK_SECRET', ''),
+        'return_origin' => rtrim(Env::get('APP_URL', 'http://localhost:4200'), '/'),
+        'countries' => array_values(array_unique(array_filter(
+            array_map(static fn (string $country): string => strtoupper(trim($country)), explode(',', Env::get('STORE_SHIPPING_COUNTRIES', ''))),
+            static fn (string $country): bool => preg_match('/^[A-Z]{2}$/D', $country) === 1
+        ))),
+        'shipping_brl_cents' => Env::int('STORE_SHIPPING_BRL_CENTS', -1),
     ],
     'cors_origins' => $origins,
     'proxy_shared_secret' => $proxySharedSecret,
@@ -104,7 +122,7 @@ return [
     ],
     'mail' => [
         'driver' => $mailDriver,
-        'from' => Env::get('MAIL_FROM', ''),
+        'from' => $mailFrom,
         'resend_api_key' => Env::get('RESEND_API_KEY', ''),
     ],
     'auto_seed' => $autoSeed,

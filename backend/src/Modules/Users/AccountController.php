@@ -133,8 +133,8 @@ final class AccountController extends Controller
             )->execute([
                 'public_id' => $publicId, 'user_id' => $auth['id'], 'label' => $data['label'], 'street' => $data['street'],
                 'number' => $data['number'], 'complement' => $data['complement'] ?? null, 'neighborhood' => $data['neighborhood'],
-                'city' => $data['city'], 'state' => strtoupper((string) $data['state']),
-                'postal_code' => preg_replace('/\D+/', '', (string) $data['postalCode']), 'is_default' => !empty($data['isDefault']) ? 1 : 0,
+                'city' => $data['city'], 'state' => $data['state'],
+                'postal_code' => $data['postalCode'], 'is_default' => !empty($data['isDefault']) ? 1 : 0,
             ]);
             $this->db->commit();
         } catch (\Throwable $exception) {
@@ -166,7 +166,7 @@ final class AccountController extends Controller
             )->execute([
                 'label' => $data['label'], 'street' => $data['street'], 'number' => $data['number'],
                 'complement' => $data['complement'] ?? null, 'neighborhood' => $data['neighborhood'], 'city' => $data['city'],
-                'state' => strtoupper((string) $data['state']), 'postal_code' => preg_replace('/\D+/', '', (string) $data['postalCode']),
+                'state' => $data['state'], 'postal_code' => $data['postalCode'],
                 'is_default' => !empty($data['isDefault']) ? 1 : 0, 'id' => $address['id'],
             ]);
             $this->db->commit();
@@ -194,12 +194,19 @@ final class AccountController extends Controller
 
     private function validatedAddress(array $body): array
     {
-        return Validator::validate($body, [
+        $data = Validator::validate($body, [
             'label' => ['required', 'string', 'min:2', 'max:60'], 'street' => ['required', 'string', 'min:2', 'max:180'],
             'number' => ['required', 'string', 'max:20'], 'complement' => ['nullable', 'string', 'max:100'],
-            'neighborhood' => ['required', 'string', 'max:100'], 'city' => ['required', 'string', 'max:100'],
-            'state' => ['required', 'string', 'min:2', 'max:2'], 'postalCode' => ['required', 'string', 'min:8', 'max:9'],
+            'neighborhood' => ['nullable', 'string', 'max:100'], 'city' => ['required', 'string', 'min:1', 'max:100'],
+            'state' => ['nullable', 'string', 'max:2'], 'postalCode' => ['required', 'string'],
             'isDefault' => ['sometimes', 'boolean'],
         ]);
+        $data['postalCode'] = PostalCode::normalize($data['postalCode']);
+        $data['neighborhood'] = trim($data['neighborhood'] ?? '');
+        $data['state'] = strtoupper(trim($data['state'] ?? ''));
+        if (strlen($data['postalCode']) === 8 && (strlen($data['state']) !== 2 || $data['neighborhood'] === '')) {
+            throw new ApiException(422, 'INVALID_ADDRESS_REGION', 'Informe o bairro e o estado do endereço brasileiro.');
+        }
+        return $data;
     }
 }

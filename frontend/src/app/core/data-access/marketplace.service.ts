@@ -1,33 +1,47 @@
-import { Injectable, inject } from '@angular/core';
-import { EMPTY, Observable, catchError, expand, map, of, reduce, shareReplay, switchMap } from 'rxjs';
+import { isPlatformServer } from '@angular/common';
+import { Injectable, PLATFORM_ID, TransferState, inject, makeStateKey } from '@angular/core';
+import { EMPTY, Observable, catchError, expand, map, of, reduce, switchMap, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { ApiQuery, ApiService } from '../http/api.service';
 import { AppCurrency, LocalizationService } from '../localization/localization.service';
 import { normalizeProviderServicePrices } from '../../shared/utils/provider-service.util';
+import { rotationWeight } from '../../shared/utils/promotion-rotation.util';
 import { PostalCodeAddress, postalCodeDigits } from '../../shared/utils/postal-code.util';
+import { BOOKING_TIMEZONE } from '../../shared/utils/booking-time.util';
 import {
   Address, AppNotification, AvailabilityException, AvailabilityRule, Booking, BookingDraft, BookingOffer, BookingQuote, BookingStatus, ChatMessage,
   BookingConfirmation, Conversation, DashboardMetric, ProviderDashboard, ProviderJob,
-  HomeContent, Product, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Promotion, ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
+  HomeContent, Product, ProfessionalComment, ProfessionalCourse, ProfessionalExperience, Promotion, PromotionLink, PromotionMediaFrame, ProviderProfile, ProviderRequest, ProviderService, PublicAvailability, Review, Service, ServiceCategory
 } from '../models';
 
 type UnknownRecord = Record<string, unknown>;
+const HOME_STATE = makeStateKey<HomeContent | null>('cvp.public-home');
 
 @Injectable({ providedIn: 'root' })
 export class MarketplaceService {
   private readonly api = inject(ApiService);
   private readonly localization = inject(LocalizationService);
-  private readonly categoriesRequest$ = this.api.get<unknown[]>('categories').pipe(
-    map((items) => items.map((item) => this.category(item))),
-    shareReplay({ bufferSize: 1, refCount: false })
-  );
-
-  categories() { return this.categoriesRequest$; }
+  private readonly transferState = inject(TransferState);
+  private readonly isServer = isPlatformServer(inject(PLATFORM_ID));
+  categories() {
+    return this.api.get<unknown[]>('categories').pipe(map((items) => items.map((item) => this.category(item))));
+  }
   home(): Observable<HomeContent> {
+    const rendered = this.transferState.get(HOME_STATE, null);
+    if (rendered) {
+      this.transferState.remove(HOME_STATE);
+      return of(rendered);
+    }
     return this.api.get<unknown>('home').pipe(map((value) => {
       const item = this.record(value);
-      const promotions = Array.isArray(item['promotions']) ? item['promotions'].map((promotion) => this.promotionModel(promotion)) : [];
-      return { promotions };
+      return {
+        promotions: this.array(item['promotions']).map((promotion) => this.promotionModel(promotion)),
+        categories: this.array(item['categories']).map((category) => this.category(category)),
+        services: this.array(item['services']).map((service) => this.serviceModel(service)),
+        professionals: this.array(item['professionals']).map((provider) => this.providerModel(provider))
+      };
+    }), tap((content) => {
+      if (this.isServer) this.transferState.set(HOME_STATE, content);
     }));
   }
   productsPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('products', query).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.productModel(item)) }))); }
@@ -61,7 +75,7 @@ export class MarketplaceService {
   createProviderComment(id: string, comment: string) { return this.api.post<unknown>(`professionals/${encodeURIComponent(id)}/comments`, { comment }).pipe(map((item) => this.commentModel(item))); }
   startProfessionalConversation(id: string) { return this.api.post<{ conversationId: string }>(`professionals/${encodeURIComponent(id)}/conversation`, {}); }
   publicProviderAvailability(id: string, query: ApiQuery = {}) { return this.api.get<PublicAvailability>(`professionals/${encodeURIComponent(id)}/availability`, query); }
-  lookupPostalCode(cep: string) { return this.api.get<PostalCodeAddress>(`postal-codes/${postalCodeDigits(cep)}`); }
+  lookupPostalCode(code: string) { return this.api.get<PostalCodeAddress>(`postal-codes/${postalCodeDigits(code)}`); }
   bookings(query: ApiQuery = {}) { return this.allPages<unknown>('bookings', query).pipe(map((items) => items.map((item) => this.bookingModel(item)))); }
   booking(id: string) { return this.api.get<unknown>(`bookings/${encodeURIComponent(id)}`).pipe(map((item) => this.bookingModel(item))); }
 
@@ -77,7 +91,7 @@ export class MarketplaceService {
       switchMap((address) => this.api.post<unknown>('bookings', {
         ...this.quotePayload(draft), addressId: address.id,
         mode: draft.providerId ? 'direct' : 'marketplace', scheduledStart: `${draft.date}T${draft.time}:00`,
-        timezone: 'America/Sao_Paulo', durationMinutes: quote.durationMinutes,
+        durationMinutes: quote.durationMinutes,
         quantity: quote.quantity, areaSqm: quote.areaSqm ?? draft.homeSize, notes: draft.notes || null
       }, { headers: { 'Idempotency-Key': idempotencyKey } })),
       map((item) => this.bookingModel(item))
@@ -98,11 +112,18 @@ export class MarketplaceService {
   startBooking(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/start`, {}).pipe(map((item) => this.bookingModel(item))); }
   markBookingOnTheWay(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/on-the-way`, {}).pipe(map((item) => this.bookingModel(item))); }
   completeBooking(id: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/complete`, {}).pipe(map((item) => this.bookingModel(item))); }
-  rescheduleBooking(id: string, date: string, time: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/reschedule`, { scheduledStart: `${date}T${time}:00`, timezone: 'America/Sao_Paulo' }).pipe(map((item) => this.bookingModel(item))); }
+  rescheduleBooking(id: string, date: string, time: string) { return this.api.post<unknown>(`bookings/${encodeURIComponent(id)}/reschedule`, { scheduledStart: `${date}T${time}:00` }).pipe(map((item) => this.bookingModel(item))); }
   conversationsPage(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('conversations', { page: query['page'], perPage: query['perPage'] ?? 30 }).pipe(map((response) => ({ ...response, data: (response.data ?? []).map((item) => this.conversationModel(item)) }))); }
   conversations() { return this.conversationsPage().pipe(map((response) => response.data)); }
   conversationMessages(id: string, query: ApiQuery = {}) { return this.api.get<unknown[]>(`conversations/${id}/messages`, query).pipe(map((items) => items.map((item) => this.chatMessageModel(item)))); }
-  conversationMessageUpdates(id: string, after: number) { return this.api.get<unknown[]>(`conversations/${encodeURIComponent(id)}/events`, { after, limit: 50 }).pipe(map((items) => items.map((item) => this.chatMessageModel(item)))); }
+  conversationMessageUpdates(id: string, after: number, limit: number) {
+    return this.api.getEnvelope<unknown[]>(`conversations/${encodeURIComponent(id)}/events`, { after, limit }).pipe(
+      map((response) => ({
+        messages: response.data.map((item) => this.chatMessageModel(item)),
+        pollAfterSeconds: response.meta?.['pollAfterSeconds']
+      }))
+    );
+  }
   sendMessage(id: string, body: string, idempotencyKey: string) { return this.api.post<unknown>(`conversations/${encodeURIComponent(id)}/messages`, { body }, { headers: { 'Idempotency-Key': idempotencyKey } }).pipe(map((item) => this.chatMessageModel(item))); }
   markConversationRead(id: string, lastSequence: number) { return this.api.post<void>(`conversations/${id}/read`, { lastSequence }); }
 
@@ -152,19 +173,27 @@ export class MarketplaceService {
   providerAvailabilityExceptions() { return this.api.get<AvailabilityException[]>('provider/availability-exceptions'); }
   createProviderAvailabilityException(payload: Omit<AvailabilityException, 'id'>) { return this.api.post<AvailabilityException>('provider/availability-exceptions', payload); }
   removeProviderAvailabilityException(id: string) { return this.api.delete<void>(`provider/availability-exceptions/${encodeURIComponent(id)}`); }
-  providerJobs() { return this.api.get<ProviderJob[]>('provider/jobs').pipe(map((items) => items.map((item) => ({ ...item, scheduledStart: this.normalizeDate(item.scheduledStart), scheduledEnd: item.scheduledEnd ? this.normalizeDate(item.scheduledEnd) : undefined })))); }
-  providerOpenRequests() { return this.api.get<ProviderRequest[]>('provider/open-requests').pipe(map((items) => items.map((item) => ({ ...item, scheduledStart: this.normalizeDate(item.scheduledStart), createdAt: this.normalizeDate(item.createdAt) })))); }
+  providerJobs() { return this.api.get<ProviderJob[]>('provider/jobs').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: this.normalizeDate(item.scheduledStart), scheduledEnd: item.scheduledEnd ? this.normalizeDate(item.scheduledEnd) : undefined })))); }
+  providerOpenRequests() { return this.api.get<ProviderRequest[]>('provider/open-requests').pipe(map((items) => items.map((item) => ({ ...item, timezone: item.timezone || BOOKING_TIMEZONE, scheduledStart: this.normalizeDate(item.scheduledStart), createdAt: this.normalizeDate(item.createdAt) })))); }
   createOffer(bookingId: string, amountCents: number, message: string) { return this.api.post<unknown>(`provider/bookings/${bookingId}/offers`, { amountCents, message }); }
 
   adminDashboard() { return this.api.get<Record<string, unknown>>('admin/dashboard'); }
   adminUsers(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/users', query); }
-  adminPendingProviders(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/professionals/pending', query); }
+  adminDeleteUser(id: string) { return this.api.delete<void>(`admin/users/${encodeURIComponent(id)}`); }
   adminBookings(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/bookings', query); }
   adminContentReports(query: ApiQuery = {}) { return this.api.getEnvelope<unknown[]>('admin/content-reports', query); }
   adminResolveContentReport(id: string, action: 'hide' | 'retain', note: string) { return this.api.post<unknown>(`admin/content-reports/${encodeURIComponent(id)}/resolve`, { action, note }); }
   reportContent(contentType: 'professional_comment' | 'review' | 'message', contentId: string, reason: string) { return this.api.post<unknown>('content-reports', { contentType, contentId, reason }); }
   adminCreateService(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/services', payload); }
   adminPromotions() { return this.api.get<unknown[]>('admin/promotions').pipe(map((items) => items.map((item) => this.promotionModel(item)))); }
+  adminUploadPromotionMedia(file: File) {
+    if (environment.useMockApi) {
+      return of({ url: URL.createObjectURL(file), mediaType: file.type.startsWith('video/') ? 'video' as const : 'image' as const, videoDurationMs: null });
+    }
+    const form = new FormData();
+    form.append('media', file, file.name);
+    return this.api.upload<{ url: string; mediaType: 'image' | 'video'; videoDurationMs: number | null }>('admin/promotion-media', form);
+  }
   adminCreatePromotion(payload: Record<string, unknown>) { return this.api.post<unknown>('admin/promotions', payload); }
   adminUpdatePromotion(id: string, payload: Record<string, unknown>) { return this.api.patch<unknown>(`admin/promotions/${encodeURIComponent(id)}`, payload); }
   adminProducts() { return this.api.get<unknown[]>('admin/products').pipe(map((items) => items.map((item) => this.productModel(item)))); }
@@ -203,11 +232,47 @@ export class MarketplaceService {
       id: this.string(item['id']), title: this.string(item['title'], 'Produtos para sua casa'),
       subtitle: this.string(item['subtitle']), ctaLabel: this.string(item['ctaLabel'], 'Ver produtos'),
       ctaUrl: this.string(item['ctaUrl'], '/produtos'), imageUrl: this.string(item['imageUrl']) || null,
+      mediaType: this.string(item['mediaType'], 'image') === 'video' ? 'video' : 'image',
+      mediaFrame: this.promotionFrame(item['mediaFrame']),
+      videoDurationMs: this.number(item['videoDurationMs']) || null,
+      rotationWeight: rotationWeight(this.number(item['rotationWeight'])),
+      buttonPlacement: ['below', 'both'].includes(this.string(item['buttonPlacement'])) ? this.string(item['buttonPlacement']) as Promotion['buttonPlacement'] : 'banner',
+      secondaryLinks: Array.isArray(item['secondaryLinks'])
+        ? item['secondaryLinks'].map((value): PromotionLink => {
+            const link = this.record(value);
+            const placement = link['placement'];
+            return {
+              label: this.string(link['label']), url: this.string(link['url']),
+              placement: placement === 'banner' || placement === 'both' ? placement : 'below'
+            };
+          }).filter((link) => link.label && link.url).slice(0, 3)
+        : [],
       badgeText: this.string(item['badgeText'], 'Novidades na loja'), termsText: this.string(item['termsText']),
       backgroundColor: this.string(item['backgroundColor'], '#096653'), textColor: this.string(item['textColor'], '#FFFFFF'),
       active: item['active'] === undefined ? true : Boolean(Number(item['active'])),
       startsAt: this.string(item['startsAt']) || null, endsAt: this.string(item['endsAt']) || null,
       sortOrder: this.number(item['sortOrder'])
+    };
+  }
+
+  private promotionFrame(value: unknown): PromotionMediaFrame | null {
+    const frame = this.record(value);
+    const fit = frame['fit'];
+    if (fit !== 'contain' && fit !== 'cover') return null;
+
+    const key = this.record(frame['backgroundKey']);
+    const color = this.string(key['color']);
+    return {
+      fit,
+      x: Math.max(0, Math.min(100, this.number(frame['x'], 50))),
+      y: Math.max(0, Math.min(100, this.number(frame['y'], 50))),
+      size: Math.max(40, Math.min(100, this.number(frame['size'], 100))),
+      layout: frame['layout'] === 'background' ? 'background' : 'side',
+      posterUrl: this.string(frame['posterUrl']) || null,
+      backgroundKey: /^#[\da-f]{6}$/i.test(color) ? {
+        color,
+        tolerance: Math.max(5, Math.min(100, this.number(key['tolerance'], 65)))
+      } : null
     };
   }
 
@@ -276,6 +341,7 @@ export class MarketplaceService {
       service: { id: this.string(item['serviceId']), categoryId: '', slug: '', name: serviceName, description: '', symbol: this.initials(serviceName), priceFromCents: totalCents, unit: 'serviço', durationMinutes: this.number(item['durationMinutes'], 120) },
       provider: { id: this.string(item['professionalId']), name: professionalName, initials: this.initials(professionalName), headline: '', bio: '', city: '', neighborhood: '', verified: true, rating: 5, reviewCount: 0, completedJobs: 0, responseTime: '', priceFromCents: 0, serviceIds: [], qualities: [], nextAvailability: '', reviews: [] },
       customerName: this.string(item['customerName'], 'Cliente'), status, scheduledAt: this.normalizeDate(this.string(item['scheduledAt'] ?? item['scheduledStart'])),
+      timezone: this.string(item['timezone']) || BOOKING_TIMEZONE, agendaTimezone: this.string(item['agendaTimezone']) || BOOKING_TIMEZONE,
       addressLabel: [this.string(address['neighborhood']), this.string(address['city'])].filter(Boolean).join(', ') || 'Endereço da reserva', notes: this.string(item['notes']),
       price: { subtotalCents: this.number(item['subtotalCents'] ?? pricing['subtotalCents'], totalCents), serviceFeeCents: this.number(item['serviceFeeCents'] ?? pricing['serviceFeeCents']), discountCents: this.number(item['discountCents'] ?? pricing['discountCents']), totalCents, currency: this.currency(item['currency'] ?? pricing['currency']) },
       canCancel: actions.length ? actions.includes('cancel') : ['open', 'confirmed'].includes(status),
@@ -334,7 +400,9 @@ export class MarketplaceService {
   private ensureAddress(address: Address): Observable<Address> {
     const normalize = (value: unknown) => String(value ?? '').trim().toLocaleLowerCase('pt-BR');
     return this.api.get<Address[]>('me/addresses').pipe(
-      map((items) => items.find((item) => normalize(item.postalCode) === normalize(address.postalCode) && normalize(item.street) === normalize(address.street) && normalize(item.number) === normalize(address.number))),
+      map((items) => items.find((item) => postalCodeDigits(item.postalCode) === postalCodeDigits(address.postalCode)
+        && normalize(item.street) === normalize(address.street) && normalize(item.number) === normalize(address.number)
+        && normalize(item.complement) === normalize(address.complement) && normalize(item.city) === normalize(address.city))),
       switchMap((existing) => existing ? of(existing) : this.api.post<Address>('me/addresses', { ...address, label: address.label || 'Casa', isDefault: false }))
     );
   }
@@ -377,6 +445,7 @@ export class MarketplaceService {
   private isUuid(value: string): boolean { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value); }
 
   private record(value: unknown): UnknownRecord { return value !== null && typeof value === 'object' ? value as UnknownRecord : {}; }
+  private array(value: unknown): unknown[] { return Array.isArray(value) ? value : []; }
   private string(value: unknown, fallback = ''): string { return typeof value === 'string' && value.trim() ? value : fallback; }
   private number(value: unknown, fallback = 0): number { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : fallback; }
   private boolean(value: unknown): boolean { return value === true || value === 1 || value === '1' || value === 'true'; }

@@ -4,18 +4,22 @@ declare(strict_types=1);
 
 namespace ChezVoust\Modules\Admin;
 
+use ChezVoust\Modules\Catalog\PromotionVideo;
+
 use ChezVoust\Core\ApiException;
 use ChezVoust\Core\Audit;
 use ChezVoust\Core\Controller;
+use ChezVoust\Core\PublicReadLimiter;
 use ChezVoust\Core\Request;
 use ChezVoust\Core\Response;
 use ChezVoust\Core\Uuid;
 use ChezVoust\Core\Validator;
 use PDO;
+use Throwable;
 
 final class AdminController extends Controller
 {
-    public function __construct(PDO $db, array $config, private readonly Audit $audit)
+    public function __construct(PDO $db, array $config, private readonly Audit $audit, private readonly PromotionUploads $uploads)
     {
         parent::__construct($db, $config);
     }
@@ -26,7 +30,8 @@ final class AdminController extends Controller
             'SELECT
                 (SELECT COUNT(*) FROM users WHERE role = \'customer\' AND deleted_at IS NULL) AS customers,
                 (SELECT COUNT(*) FROM users WHERE role = \'provider\' AND deleted_at IS NULL) AS professionals,
-                (SELECT COUNT(*) FROM professional_profiles WHERE verification_status = \'pending\') AS professionalsPending,
+                (SELECT COUNT(*) FROM professional_profiles p INNER JOIN users u ON u.id = p.user_id
+                  WHERE p.verification_status = \'pending\' AND u.status = \'active\' AND u.deleted_at IS NULL) AS professionalsPending,
                 (SELECT COUNT(*) FROM bookings) AS bookings,
                 (SELECT COUNT(*) FROM bookings WHERE status = \'confirmed\') AS confirmedBookings,
                 (SELECT COUNT(*) FROM bookings WHERE status = \'completed\') AS completedBookings'
@@ -47,30 +52,35 @@ final class AdminController extends Controller
     public function users(Request $request, array $params, ?array $auth): Response
     {
         [$page, $perPage, $offset] = $this->pagination($request, 30, 100);
-        $where = ['deleted_at IS NULL'];
+        $where = ['u.deleted_at IS NULL'];
         $values = [];
         if (!empty($request->query['role'])) {
-            $where[] = 'role = :role';
+            $where[] = 'u.role = :role';
             $values['role'] = (string) $request->query['role'];
         }
         if (!empty($request->query['status'])) {
-            $where[] = 'status = :status';
+            $where[] = 'u.status = :status';
             $values['status'] = (string) $request->query['status'];
         }
         if (!empty($request->query['q'])) {
-            $where[] = '(name LIKE :q_name OR email LIKE :q_email)';
+            $where[] = '(u.name LIKE :q_name OR u.email LIKE :q_email)';
             $search = '%' . mb_substr((string) $request->query['q'], 0, 100) . '%';
             $values['q_name'] = $search;
             $values['q_email'] = $search;
         }
         $whereSql = implode(' AND ', $where);
-        $count = $this->db->prepare("SELECT COUNT(*) FROM users WHERE {$whereSql}");
+        $count = $this->db->prepare("SELECT COUNT(*) FROM users u WHERE {$whereSql}");
         $count->execute($values);
         $total = (int) $count->fetchColumn();
+        $order = ($values['role'] ?? null) === 'provider'
+            ? "(p.verification_status = 'pending' AND u.status = 'active') DESC, u.created_at DESC, u.id DESC"
+            : 'u.created_at DESC, u.id DESC';
         $statement = $this->db->prepare(
-            "SELECT public_id AS id, role, name, email, phone, status, email_verified_at AS emailVerifiedAt,
-                    last_login_at AS lastLoginAt, created_at AS createdAt
-             FROM users WHERE {$whereSql} ORDER BY created_at DESC LIMIT {$perPage} OFFSET {$offset}"
+            "SELECT u.public_id AS id, u.role, u.name, u.email, u.phone, u.status, u.email_verified_at AS emailVerifiedAt,
+                    u.last_login_at AS lastLoginAt, u.created_at AS createdAt, p.headline, p.base_city AS city,
+                    p.base_state AS state, p.verification_status AS verificationStatus
+             FROM users u LEFT JOIN professional_profiles p ON p.user_id = u.id
+             WHERE {$whereSql} ORDER BY {$order} LIMIT {$perPage} OFFSET {$offset}"
         );
         $statement->execute($values);
         return Response::data($statement->fetchAll(), 200, [
@@ -83,12 +93,12 @@ final class AdminController extends Controller
         $data = Validator::validate($request->body, [
             'status' => ['required', 'string', 'in:active,suspended'], 'reason' => ['nullable', 'string', 'max:500'],
         ]);
-        $user = $this->requireRow('SELECT id, public_id, role FROM users WHERE public_id = :id AND deleted_at IS NULL', ['id' => $params['id']], 'Usuário não encontrado.');
-        if ((int) $user['id'] === (int) $auth['id']) {
-            throw new ApiException(422, 'SELF_STATUS_CHANGE', 'Você não pode suspender sua própria conta administrativa.');
-        }
         $this->db->beginTransaction();
         try {
+            $user = $this->requireRow('SELECT id, public_id FROM users WHERE public_id = :id AND deleted_at IS NULL FOR UPDATE', ['id' => $params['id']], 'Usuário não encontrado.');
+            if ((int) $user['id'] === (int) $auth['id']) {
+                throw new ApiException(422, 'SELF_STATUS_CHANGE', 'Você não pode suspender sua própria conta administrativa.');
+            }
             $this->db->prepare('UPDATE users SET status = :status, updated_at = UTC_TIMESTAMP() WHERE id = :id')
                 ->execute(['status' => $data['status'], 'id' => $user['id']]);
             if ($data['status'] === 'suspended') {
@@ -112,19 +122,51 @@ final class AdminController extends Controller
         return Response::data(['id' => $user['public_id'], 'status' => $data['status']]);
     }
 
+    public function deleteUser(Request $request, array $params, ?array $auth): Response
+    {
+        $this->db->beginTransaction();
+        try {
+            $user = $this->requireRow(
+                'SELECT id, public_id, role, deleted_at FROM users WHERE public_id = :id FOR UPDATE',
+                ['id' => $params['id']],
+                'Usuário não encontrado.'
+            );
+            if (!in_array($user['role'], ['customer', 'provider'], true)) {
+                throw new ApiException(403, 'ADMIN_ACCOUNT_PROTECTED', 'Contas administrativas estão protegidas contra exclusão.');
+            }
+            if ($user['deleted_at'] === null) {
+                // Keep historical relationships and release the original address for a new registration.
+                $this->db->prepare(
+                    "UPDATE users SET status = 'suspended', email = :retired_email, password_hash = '',
+                            phone = NULL, deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() WHERE id = :id"
+                )->execute(['retired_email' => 'deleted:' . $user['public_id'], 'id' => $user['id']]);
+                $this->db->prepare('UPDATE auth_sessions SET revoked_at = UTC_TIMESTAMP() WHERE user_id = :id AND revoked_at IS NULL')
+                    ->execute(['id' => $user['id']]);
+                $this->audit->record((int) $auth['id'], 'admin.user_deleted', 'user', $user['public_id'], $request, ['role' => $user['role']]);
+            }
+            $this->db->commit();
+        } catch (Throwable $exception) {
+            if ($this->db->inTransaction()) {
+                $this->db->rollBack();
+            }
+            throw $exception;
+        }
+        return Response::noContent();
+    }
+
     public function pendingProfessionals(Request $request, array $params, ?array $auth): Response
     {
         [$page, $perPage, $offset] = $this->pagination($request, 30, 100);
         $total = (int) $this->db->query(
             'SELECT COUNT(*) FROM professional_profiles p INNER JOIN users u ON u.id = p.user_id
-             WHERE p.verification_status = \'pending\' AND u.status = \'active\''
+             WHERE p.verification_status = \'pending\' AND u.status = \'active\' AND u.deleted_at IS NULL'
         )->fetchColumn();
         $rows = $this->db->query(
             'SELECT u.public_id AS id, u.name, u.email, u.phone, p.headline, p.bio,
                     p.base_city AS city, p.base_state AS state, p.years_experience AS yearsExperience,
                     p.verification_status AS verificationStatus, p.created_at AS createdAt
              FROM professional_profiles p INNER JOIN users u ON u.id = p.user_id
-             WHERE p.verification_status = \'pending\' AND u.status = \'active\'
+             WHERE p.verification_status = \'pending\' AND u.status = \'active\' AND u.deleted_at IS NULL
              ORDER BY p.created_at LIMIT ' . $perPage . ' OFFSET ' . $offset
         )->fetchAll();
         return Response::data($rows, 200, [
@@ -140,7 +182,7 @@ final class AdminController extends Controller
             'featured' => ['sometimes', 'boolean'],
         ]);
         $professional = $this->requireRow(
-            'SELECT u.id, u.public_id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id WHERE u.public_id = :id',
+            'SELECT u.id, u.public_id FROM users u INNER JOIN professional_profiles p ON p.user_id = u.id WHERE u.public_id = :id AND u.deleted_at IS NULL',
             ['id' => $params['id']],
             'Profissional não encontrado.'
         );
@@ -235,12 +277,34 @@ final class AdminController extends Controller
 
     public function promotions(Request $request, array $params, ?array $auth): Response
     {
-        return Response::data($this->db->query(
+        $promotions = $this->db->query(
             'SELECT public_id AS id, title, subtitle, cta_label AS ctaLabel, cta_url AS ctaUrl,
-                    image_url AS imageUrl, badge_text AS badgeText, terms_text AS termsText,
+                    image_url AS imageUrl, media_type AS mediaType, media_frame AS mediaFrame, button_placement AS buttonPlacement,
+                    video_duration_ms AS videoDurationMs, rotation_weight AS rotationWeight,
+                    secondary_links AS secondaryLinks, badge_text AS badgeText, terms_text AS termsText,
                     background_color AS backgroundColor, text_color AS textColor, active, starts_at AS startsAt,
-                    ends_at AS endsAt, sort_order AS sortOrder FROM promotions ORDER BY sort_order, created_at DESC'
-        )->fetchAll());
+                    ends_at AS endsAt, sort_order AS sortOrder FROM promotions ORDER BY sort_order, created_at DESC, promotions.id DESC'
+        )->fetchAll();
+        foreach ($promotions as &$promotion) {
+            $promotion['mediaFrame'] = isset($promotion['mediaFrame']) ? json_decode($promotion['mediaFrame'], true) : null;
+            $promotion['secondaryLinks'] = is_string($promotion['secondaryLinks'] ?? null)
+                ? (json_decode($promotion['secondaryLinks'], true) ?: [])
+                : [];
+        }
+        unset($promotion);
+        register_shutdown_function(function (): void {
+            try {
+                ignore_user_abort(true);
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                $this->uploads->cleanUp();
+                (new PublicReadLimiter(dirname(__DIR__, 3) . '/storage/rate-limits'))->prune();
+            } catch (Throwable $failure) {
+                error_log('[ChezVoust Pro] Falha na limpeza de campanhas: ' . $failure::class);
+            }
+        });
+        return Response::data($promotions);
     }
 
     public function createPromotion(Request $request, array $params, ?array $auth): Response
@@ -249,27 +313,42 @@ final class AdminController extends Controller
             'title' => ['required', 'string', 'min:3', 'max:160'], 'subtitle' => ['nullable', 'string', 'max:300'],
             'ctaLabel' => ['nullable', 'string', 'max:60'], 'ctaUrl' => ['nullable', 'string', 'max:255'],
             'imageUrl' => ['nullable', 'string', 'max:1024'], 'badgeText' => ['nullable', 'string', 'max:80'],
+            'mediaType' => ['nullable', 'string', 'in:image,video'],
+            'mediaFrame' => ['nullable', 'array'],
+            'videoDurationMs' => ['nullable', 'integer', 'min:1', 'max:60000'],
+            'rotationWeight' => ['sometimes', 'integer', 'min:1', 'max:5'],
+            'buttonPlacement' => ['nullable', 'string', 'in:banner,below,both'],
+            'active' => ['sometimes', 'boolean'],
             'termsText' => ['nullable', 'string', 'max:300'],
             'backgroundColor' => ['nullable', 'string', 'max:20'], 'textColor' => ['nullable', 'string', 'max:20'],
             'startsAt' => ['nullable', 'date'], 'endsAt' => ['nullable', 'date'], 'sortOrder' => ['nullable', 'integer', 'min:0', 'max:999'],
         ]);
         $this->validateWebPath($data['ctaUrl'] ?? null);
         $this->validateWebPath($data['imageUrl'] ?? null);
+        $secondaryLinks = $this->validatePromotionLinks($request->body['secondaryLinks'] ?? []);
         $publicId = Uuid::v4();
-        $this->db->prepare(
+        $duration = $this->writePromotion($publicId, $data, function (?int $duration) use ($data, $publicId, $secondaryLinks): void {
+          $this->db->prepare(
             'INSERT INTO promotions
-                (public_id, title, subtitle, cta_label, cta_url, image_url, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
-             VALUES (:public_id, :title, :subtitle, :cta_label, :cta_url, :image_url, :badge_text, :terms_text, :background_color, :text_color, 1,
+                (public_id, title, subtitle, cta_label, cta_url, image_url, media_type, media_frame, video_duration_ms, rotation_weight, button_placement, secondary_links, badge_text, terms_text, background_color, text_color, active, starts_at, ends_at, sort_order, created_at, updated_at)
+             VALUES (:public_id, :title, :subtitle, :cta_label, :cta_url, :image_url, :media_type, :media_frame, :video_duration_ms, :rotation_weight, :button_placement, :secondary_links, :badge_text, :terms_text, :background_color, :text_color, :active,
                      :starts_at, :ends_at, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
         )->execute([
             'public_id' => $publicId, 'title' => $data['title'], 'subtitle' => $data['subtitle'] ?? null,
             'cta_label' => $data['ctaLabel'] ?? null, 'cta_url' => $data['ctaUrl'] ?? null,
-            'image_url' => $data['imageUrl'] ?? null, 'badge_text' => $data['badgeText'] ?? null,
+            'image_url' => $data['imageUrl'] ?? null, 'media_type' => $data['mediaType'] ?? 'image',
+            'media_frame' => $this->encodeMediaFrame($data['mediaFrame'] ?? null),
+            'video_duration_ms' => $duration, 'rotation_weight' => $data['rotationWeight'] ?? 3,
+            'button_placement' => $data['buttonPlacement'] ?? 'banner',
+            'secondary_links' => $secondaryLinks === [] ? null : json_encode($secondaryLinks, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+            'badge_text' => $data['badgeText'] ?? null,
             'terms_text' => $data['termsText'] ?? null,
             'background_color' => $data['backgroundColor'] ?? '#08B86F', 'text_color' => $data['textColor'] ?? '#FFFFFF',
+            'active' => (int) ($data['active'] ?? true),
             'starts_at' => $data['startsAt'] ?? null, 'ends_at' => $data['endsAt'] ?? null, 'sort_order' => $data['sortOrder'] ?? 0,
-        ]);
-        return Response::data(['id' => $publicId] + $data, 201);
+          ]);
+        }, create: true);
+        return Response::data(['id' => $publicId, 'videoDurationMs' => $duration] + $data, 201);
     }
 
     public function updatePromotion(Request $request, array $params, ?array $auth): Response
@@ -278,6 +357,12 @@ final class AdminController extends Controller
             'title' => ['sometimes', 'string', 'min:3', 'max:160'], 'subtitle' => ['sometimes', 'nullable', 'string', 'max:300'],
             'ctaLabel' => ['sometimes', 'nullable', 'string', 'max:60'], 'ctaUrl' => ['sometimes', 'nullable', 'string', 'max:255'],
             'imageUrl' => ['sometimes', 'nullable', 'string', 'max:1024'], 'badgeText' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'mediaType' => ['sometimes', 'string', 'in:image,video'],
+            'mediaFrame' => ['sometimes', 'nullable', 'array'],
+            'videoDurationMs' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:60000'],
+            'rotationWeight' => ['sometimes', 'integer', 'min:1', 'max:5'],
+            'buttonPlacement' => ['sometimes', 'string', 'in:banner,below,both'],
+            'secondaryLinks' => ['sometimes', 'array', 'max:3'],
             'termsText' => ['sometimes', 'nullable', 'string', 'max:300'], 'backgroundColor' => ['sometimes', 'string', 'max:20'],
             'textColor' => ['sometimes', 'string', 'max:20'], 'active' => ['sometimes', 'boolean'],
             'startsAt' => ['sometimes', 'nullable', 'date'], 'endsAt' => ['sometimes', 'nullable', 'date'],
@@ -285,14 +370,76 @@ final class AdminController extends Controller
         ]);
         $this->validateWebPath($data['ctaUrl'] ?? null);
         $this->validateWebPath($data['imageUrl'] ?? null);
+        if (array_key_exists('secondaryLinks', $data)) {
+            $data['secondaryLinks'] = $this->validatePromotionLinks($data['secondaryLinks']);
+        }
         $map = [
             'title' => 'title', 'subtitle' => 'subtitle', 'ctaLabel' => 'cta_label', 'ctaUrl' => 'cta_url',
-            'imageUrl' => 'image_url', 'badgeText' => 'badge_text', 'termsText' => 'terms_text',
+            'imageUrl' => 'image_url', 'mediaType' => 'media_type', 'mediaFrame' => 'media_frame', 'buttonPlacement' => 'button_placement',
+            'videoDurationMs' => 'video_duration_ms', 'rotationWeight' => 'rotation_weight',
+            'secondaryLinks' => 'secondary_links', 'badgeText' => 'badge_text', 'termsText' => 'terms_text',
             'backgroundColor' => 'background_color', 'textColor' => 'text_color', 'active' => 'active',
             'startsAt' => 'starts_at', 'endsAt' => 'ends_at', 'sortOrder' => 'sort_order',
         ];
-        $this->dynamicUpdate('promotions', $params['id'], $data, $map);
-        return Response::data(['id' => $params['id']] + $data);
+        if (array_key_exists('secondaryLinks', $data)) {
+            $data['secondaryLinks'] = $data['secondaryLinks'] === [] ? null : json_encode($data['secondaryLinks'], JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        }
+        $values = $data;
+        if (array_key_exists('mediaFrame', $data)) {
+            $values['mediaFrame'] = $this->encodeMediaFrame($data['mediaFrame']);
+        }
+        $duration = $this->writePromotion($params['id'], $data, function (?int $duration) use ($params, $values, $map): void {
+            if ($values !== []) $values['videoDurationMs'] = $duration;
+            $this->dynamicUpdate('promotions', $params['id'], $values, $map);
+        });
+        return Response::data(['id' => $params['id'], 'videoDurationMs' => $duration] + $data);
+    }
+
+    private function writePromotion(string $id, array $data, callable $write, bool $create = false): ?int
+    {
+        return $this->uploads->withCampaignLock(function () use ($id, $data, $write, $create): ?int {
+            $select = 'SELECT media_type, image_url, video_duration_ms, cta_url, media_frame, secondary_links
+                       FROM promotions WHERE public_id = :id';
+            $current = $create ? [] : $this->requireRow($select, ['id' => $id]);
+            $type = $data['mediaType'] ?? ($current['media_type'] ?? 'image');
+            $url = array_key_exists('imageUrl', $data) ? $data['imageUrl'] : ($current['image_url'] ?? null);
+            $duration = null;
+            if (PromotionVideo::hasSource($type, $url)) {
+                $alreadyVideo = PromotionVideo::hasSource($current['media_type'] ?? null, $current['image_url'] ?? null);
+                if (!$alreadyVideo && (int) $this->db->query(
+                    "SELECT COUNT(*) FROM promotions WHERE media_type = 'video' AND TRIM(image_url) <> ''"
+                )->fetchColumn() >= PromotionVideo::LIMIT) {
+                    throw new ApiException(422, 'PROMOTION_VIDEO_LIMIT', 'É possível cadastrar no máximo 10 vídeos de campanha.');
+                }
+                $duration = $alreadyVideo && $url === $current['image_url']
+                    ? (isset($current['video_duration_ms']) ? (int) $current['video_duration_ms'] : null)
+                    : $this->promotionDuration($url, $data['videoDurationMs'] ?? null);
+            }
+            $this->db->beginTransaction();
+            try {
+                $write($duration);
+                $saved = $this->requireRow($select, ['id' => $id]);
+                $this->uploads->attachNewReferences($saved, $current, $this->config['url']);
+                $this->db->commit();
+            } catch (Throwable $failure) {
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
+                throw $failure;
+            }
+            return $duration;
+        });
+    }
+
+    private function promotionDuration(string $url, mixed $declared): int
+    {
+        if (preg_match('#^/api/v1/promotion-media/([a-f0-9]{48}\.(mp4|webm))$#D', $url, $match) === 1) {
+            $path = $this->uploads->path($match[1]);
+            if ($path !== null) {
+                return PromotionVideo::requireDuration(PromotionVideo::duration($path, $match[2]));
+            }
+        }
+        return PromotionVideo::requireDuration(isset($declared) ? (int) $declared : null);
     }
 
     public function products(Request $request, array $params, ?array $auth): Response
@@ -311,21 +458,24 @@ final class AdminController extends Controller
         $data = $this->validatedProduct($request->body, false);
         $publicId = Uuid::v4();
         $slug = !empty($data['slug']) ? $this->slug((string) $data['slug']) : $this->slug((string) $data['name']);
-        $this->db->prepare(
-            'INSERT INTO products
-                (public_id, name, slug, short_description, price_cents, compare_at_price_cents, currency,
-                 image_url, purchase_url, badge_text, inventory_count, featured, active, sort_order, created_at, updated_at)
-             VALUES (:public_id, :name, :slug, :short_description, :price_cents, :compare_at_price_cents, :currency,
-                     :image_url, :purchase_url, :badge_text, :inventory_count, :featured, :active, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
-        )->execute([
-            'public_id' => $publicId, 'name' => $data['name'], 'slug' => $slug,
-            'short_description' => $data['shortDescription'] ?? null, 'price_cents' => $data['priceCents'],
-            'compare_at_price_cents' => $data['compareAtPriceCents'] ?? null, 'currency' => $data['currency'] ?? 'BRL',
-            'image_url' => $data['imageUrl'] ?? null, 'purchase_url' => $data['purchaseUrl'],
-            'badge_text' => $data['badgeText'] ?? null, 'inventory_count' => $data['inventoryCount'] ?? 0,
-            'featured' => !empty($data['featured']) ? 1 : 0, 'active' => array_key_exists('active', $data) && !$data['active'] ? 0 : 1,
-            'sort_order' => $data['sortOrder'] ?? 0,
-        ]);
+        $write = function () use ($data, $publicId, $slug): void {
+            $this->db->prepare(
+                'INSERT INTO products
+                    (public_id, name, slug, short_description, price_cents, compare_at_price_cents, currency,
+                     image_url, purchase_url, badge_text, inventory_count, featured, active, sort_order, created_at, updated_at)
+                 VALUES (:public_id, :name, :slug, :short_description, :price_cents, :compare_at_price_cents, :currency,
+                         :image_url, :purchase_url, :badge_text, :inventory_count, :featured, :active, :sort_order, UTC_TIMESTAMP(), UTC_TIMESTAMP())'
+            )->execute([
+                'public_id' => $publicId, 'name' => $data['name'], 'slug' => $slug,
+                'short_description' => $data['shortDescription'] ?? null, 'price_cents' => $data['priceCents'],
+                'compare_at_price_cents' => $data['compareAtPriceCents'] ?? null, 'currency' => $data['currency'] ?? 'BRL',
+                'image_url' => $data['imageUrl'] ?? null, 'purchase_url' => $data['purchaseUrl'],
+                'badge_text' => $data['badgeText'] ?? null, 'inventory_count' => $data['inventoryCount'] ?? 0,
+                'featured' => !empty($data['featured']) ? 1 : 0, 'active' => array_key_exists('active', $data) && !$data['active'] ? 0 : 1,
+                'sort_order' => $data['sortOrder'] ?? 0,
+            ]);
+        };
+        $this->uploads->writeProductReferences([$data['imageUrl'] ?? null, $data['purchaseUrl']], $this->config['url'], $write);
         return Response::data(['id' => $publicId, 'slug' => $slug] + $data, 201);
     }
 
@@ -341,7 +491,11 @@ final class AdminController extends Controller
             'purchaseUrl' => 'purchase_url', 'badgeText' => 'badge_text', 'inventoryCount' => 'inventory_count',
             'featured' => 'featured', 'active' => 'active', 'sortOrder' => 'sort_order',
         ];
-        $this->dynamicUpdate('products', $params['id'], $data, $map);
+        $this->uploads->writeProductReferences(
+            [$data['imageUrl'] ?? null, $data['purchaseUrl'] ?? null],
+            $this->config['url'],
+            fn () => $this->dynamicUpdate('products', $params['id'], $data, $map)
+        );
         return Response::data(['id' => $params['id']] + $data);
     }
 
@@ -477,6 +631,54 @@ final class AdminController extends Controller
         if (is_string($value) && $value !== '' && preg_match('#^(?:/|https://)#i', $value) !== 1) {
             throw new ApiException(422, 'INVALID_URL', 'Use um endereço interno iniciado por / ou um endereço HTTPS.');
         }
+    }
+
+    private function validatePromotionLinks(mixed $links): array
+    {
+        if (!is_array($links) || count($links) > 3) {
+            throw new ApiException(422, 'INVALID_PROMOTION_LINKS', 'Adicione no máximo três links à campanha.');
+        }
+
+        $validated = [];
+        foreach ($links as $link) {
+            if (!is_array($link) || !is_string($link['label'] ?? null) || !is_string($link['url'] ?? null)) {
+                throw new ApiException(422, 'INVALID_PROMOTION_LINK', 'Cada link precisa de um texto e um destino.');
+            }
+            $label = trim($link['label']);
+            $url = trim($link['url']);
+            if ($label === '' || mb_strlen($label) > 40 || $url === '' || mb_strlen($url) > 255) {
+                throw new ApiException(422, 'INVALID_PROMOTION_LINK', 'Informe o texto e o destino de cada link (até 40 caracteres no texto).');
+            }
+            $this->validateWebPath($url);
+            $placement = Validator::validate($link, ['placement' => ['sometimes', 'string', 'in:banner,below,both']]);
+            $validated[] = ['label' => $label, 'url' => $url, 'placement' => $placement['placement'] ?? 'below'];
+        }
+        return $validated;
+    }
+
+    private function encodeMediaFrame(?array $frame): ?string
+    {
+        if ($frame === null) {
+            return null;
+        }
+
+        $validated = Validator::validate($frame, [
+            'fit' => ['required', 'string', 'in:contain,cover'],
+            'x' => ['required', 'integer', 'min:0', 'max:100'],
+            'y' => ['required', 'integer', 'min:0', 'max:100'],
+            'size' => ['sometimes', 'integer', 'min:40', 'max:100'],
+            'layout' => ['sometimes', 'string', 'in:side,background'],
+            'posterUrl' => ['sometimes', 'nullable', 'string', 'max:1024'],
+            'backgroundKey' => ['sometimes', 'nullable', 'array'],
+        ]);
+        $this->validateWebPath($validated['posterUrl'] ?? null);
+        if (isset($validated['backgroundKey'])) {
+            $validated['backgroundKey'] = Validator::validate($validated['backgroundKey'], [
+                'color' => ['required', 'string', 'regex:/^#[a-fA-F0-9]{6}$/D'],
+                'tolerance' => ['required', 'integer', 'min:5', 'max:100'],
+            ]);
+        }
+        return json_encode($validated, JSON_THROW_ON_ERROR);
     }
 
     private function slug(string $value): string

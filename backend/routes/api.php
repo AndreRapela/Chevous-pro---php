@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 use ChezVoust\Core\Request;
 use ChezVoust\Core\Response;
+use ChezVoust\Core\WorkerHealth;
 use ChezVoust\Modules\Admin\AdminController;
+use ChezVoust\Modules\Admin\PromotionMediaController;
+use ChezVoust\Modules\Admin\PromotionUploads;
 use ChezVoust\Modules\Auth\AuthController;
+use ChezVoust\Modules\Auth\EmailChangeController;
 use ChezVoust\Modules\Bookings\BookingController;
 use ChezVoust\Modules\Bookings\PricingService;
 use ChezVoust\Modules\Catalog\CatalogController;
 use ChezVoust\Modules\Engagement\EngagementController;
 use ChezVoust\Modules\Professionals\ProviderController;
+use ChezVoust\Modules\Store\ProductOrderController;
+use ChezVoust\Modules\Store\StripeCheckout;
 use ChezVoust\Modules\Users\AccountController;
 use ChezVoust\Modules\Users\MediaController;
 use ChezVoust\Modules\Users\PostalCodeController;
@@ -20,7 +26,8 @@ return static function (array $services): void {
     $db = $services['db'];
     $config = $services['config'];
 
-    $auth = new AuthController($db, $config, $services['jwt'], $services['rateLimiter'], $services['audit'], $services['sensitivePayload']);
+    $auth = new AuthController($db, $config, $services['jwt'], $services['rateLimiter'], $services['audit'], $services['mailOutbox']);
+    $emailChange = new EmailChangeController($db, $config, $services['rateLimiter'], $services['audit'], $services['mailOutbox']);
     $catalog = new CatalogController($db, $config);
     $pricing = new PricingService($db, $config);
     $bookings = new BookingController($db, $config, $pricing, $services['audit']);
@@ -29,11 +36,31 @@ return static function (array $services): void {
     $postalCode = new PostalCodeController($db, $config, $services['rateLimiter']);
     $engagement = new EngagementController($db, $config, $services['rateLimiter']);
     $provider = new ProviderController($db, $config);
-    $admin = new AdminController($db, $config, $services['audit']);
+    $uploads = new PromotionUploads($db, $config['database']['name']);
+    $admin = new AdminController($db, $config, $services['audit'], $uploads);
+    $promotionMedia = new PromotionMediaController($db, $config, $uploads);
+    $productOrders = new ProductOrderController($db, $config, new StripeCheckout($config['store_payment']), $services['rateLimiter']);
 
-    $router->add('GET', '/api/v1/health', static function (Request $request, array $params, ?array $user) use ($db): Response {
+    $health = static function (?bool $workerReady = null): Response {
+        $checks = ['database' => 'ok'];
+        if ($workerReady !== null) {
+            $checks['worker'] = $workerReady ? 'ok' : 'unavailable';
+        }
+        return Response::data([
+            'status' => $workerReady === false ? 'degraded' : 'ok',
+            'service' => 'ChezVoust Pro API',
+            'version' => '1.0.0',
+            'time' => gmdate(DATE_ATOM),
+            'checks' => $checks,
+        ], $workerReady === false ? 503 : 200);
+    };
+    $router->add('GET', '/api/v1/health/live', static function () use ($db, $health): Response {
         $db->query('SELECT 1');
-        return Response::data(['status' => 'ok', 'service' => 'ChezVoust Pro API', 'version' => '1.0.0', 'time' => gmdate(DATE_ATOM)]);
+        return $health();
+    });
+    $router->add('GET', '/api/v1/health', static function () use ($db, $config, $health): Response {
+        $worker = new WorkerHealth($db, $config['worker_heartbeat_max_age_seconds']);
+        return $health($worker->isHealthy());
     });
     $router->add('GET', '/api/v1/seo/robots.txt', [$catalog, 'robots']);
     $router->add('GET', '/api/v1/seo/sitemap.xml', [$catalog, 'sitemap']);
@@ -42,9 +69,18 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/categories', [$catalog, 'categories']);
     $router->add('GET', '/api/v1/postal-codes/{cep}', [$postalCode, 'lookup']);
     $router->add('GET', '/api/v1/avatars/{id}', [$media, 'avatar']);
+    $router->add('GET', '/api/v1/promotion-media/{filename}', [$promotionMedia, 'media']);
     $router->add('GET', '/api/v1/services', [$catalog, 'services']);
     $router->add('GET', '/api/v1/services/{id}', [$catalog, 'service']);
-    $router->add('GET', '/api/v1/products', [$catalog, 'products']);
+    $router->add('GET', '/api/v1/products', static function (Request $request, array $params, ?array $user) use ($catalog, $productOrders): Response {
+        $response = $catalog->products($request, $params, $user);
+        $productOrders->reconcileAfterResponse();
+        return $response;
+    });
+    $router->add('GET', '/api/v1/products/{slug}/checkout', [$productOrders, 'quote']);
+    $router->add('POST', '/api/v1/products/{slug}/checkout', [$productOrders, 'create']);
+    $router->add('GET', '/api/v1/product-orders/{id}', [$productOrders, 'status']);
+    $router->add('POST', '/api/v1/store/stripe/webhook', [$productOrders, 'webhook']);
     $router->add('GET', '/api/v1/professionals', [$catalog, 'professionals']);
     $router->add('GET', '/api/v1/professionals/{id}', [$catalog, 'professional']);
     $router->add('GET', '/api/v1/professionals/{id}/availability', [$catalog, 'availability']);
@@ -67,6 +103,8 @@ return static function (array $services): void {
     $router->add('POST', '/api/v1/auth/forgot-password', [$auth, 'forgotPassword']);
     $router->add('POST', '/api/v1/auth/reset-password', [$auth, 'resetPassword']);
     $router->add('POST', '/api/v1/auth/email/verify', [$auth, 'verifyEmail']);
+    $router->add('POST', '/api/v1/auth/email/resend', [$auth, 'resendEmailVerification']);
+    $router->add('POST', '/api/v1/auth/email/change/verify', [$emailChange, 'verify']);
     $router->add('POST', '/api/v1/auth/logout', [$auth, 'logout'], true);
     $router->add('POST', '/api/v1/auth/logout-all', [$auth, 'logoutAll'], true);
     $router->add('GET', '/api/v1/auth/sessions', [$auth, 'sessions'], true);
@@ -75,6 +113,10 @@ return static function (array $services): void {
 
     $router->add('GET', '/api/v1/me', [$auth, 'me'], true);
     $router->add('PATCH', '/api/v1/me', [$auth, 'updateMe'], true);
+    $router->add('GET', '/api/v1/me/email-change', [$emailChange, 'pending'], true);
+    $router->add('POST', '/api/v1/me/email-change', [$emailChange, 'requestChange'], true);
+    $router->add('POST', '/api/v1/me/email-change/resend', [$emailChange, 'resend'], true);
+    $router->add('POST', '/api/v1/me/email-change/verify', [$emailChange, 'verify'], true);
     $router->add('POST', '/api/v1/me/avatar', [$account, 'updateAvatar'], true);
     $router->add('GET', '/api/v1/me/addresses', [$account, 'addresses'], true);
     $router->add('POST', '/api/v1/me/addresses', [$account, 'createAddress'], true);
@@ -143,6 +185,7 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/admin/dashboard', [$admin, 'dashboard'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/users', [$admin, 'users'], true, ['admin']);
     $router->add('PATCH', '/api/v1/admin/users/{id}/status', [$admin, 'setUserStatus'], true, ['admin']);
+    $router->add('DELETE', '/api/v1/admin/users/{id}', [$admin, 'deleteUser'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/professionals/pending', [$admin, 'pendingProfessionals'], true, ['admin']);
     $router->add('POST', '/api/v1/admin/professionals/{id}/review', [$admin, 'reviewProfessional'], true, ['admin']);
     $router->add('POST', '/api/v1/admin/categories', [$admin, 'createCategory'], true, ['admin']);
@@ -152,7 +195,9 @@ return static function (array $services): void {
     $router->add('GET', '/api/v1/admin/promotions', [$admin, 'promotions'], true, ['admin']);
     $router->add('POST', '/api/v1/admin/promotions', [$admin, 'createPromotion'], true, ['admin']);
     $router->add('PATCH', '/api/v1/admin/promotions/{id}', [$admin, 'updatePromotion'], true, ['admin']);
+    $router->add('POST', '/api/v1/admin/promotion-media', [$promotionMedia, 'upload'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/products', [$admin, 'products'], true, ['admin']);
+    $router->add('GET', '/api/v1/admin/product-orders', [$productOrders, 'adminOrders'], true, ['admin']);
     $router->add('POST', '/api/v1/admin/products', [$admin, 'createProduct'], true, ['admin']);
     $router->add('PATCH', '/api/v1/admin/products/{id}', [$admin, 'updateProduct'], true, ['admin']);
     $router->add('GET', '/api/v1/admin/bookings', [$bookings, 'index'], true, ['admin']);
