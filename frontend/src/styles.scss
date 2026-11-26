@@ -443,7 +443,7 @@ html:has(.mobile-drawer[open]) { overflow: hidden; }
 .benefits-grid p, .info-grid p { font-size: .85rem; }
 .service-detail-providers { padding-block: 2.5rem; background: var(--surface-soft); }
 .service-detail-providers .section-heading { margin-bottom: 1.1rem; }
-.service-detail-providers .section-heading h2 { font-size: clamp(1.65rem, 3vw, 2.35rem); }
+.service-detail-providers .section-heading :is(h1, h2) { font-size: clamp(1.65rem, 3vw, 2.35rem); margin-bottom: 0; }
 .service-detail-providers .service-detail-provider-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 22rem)); justify-content: start; }
 .service-detail-provider-grid .provider-card { padding: .85rem; }
 .service-detail-provider-grid .provider-card .chip-row { gap: .3rem; margin-top: .7rem; }
@@ -3285,7 +3285,7 @@ body .catalog-hero p {
 }
 .catalog-results,
 .professionals-results { padding-top: 1.25rem; }
-.service-detail-providers .section-heading h2 { font-size: clamp(1.5rem, 2.2vw, 2rem); }
+.service-detail-providers .section-heading :is(h1, h2) { font-size: clamp(1.5rem, 2.2vw, 2rem); }
 
 .portal-page .portal-page-heading h1 { font-size: clamp(1.55rem, 2.35vw, 1.9rem); line-height: 1.08; }
 .portal-page .portal-page-heading p { max-width: 48rem; }
@@ -3331,7 +3331,7 @@ body .catalog-hero p {
   .portal-page-heading > div { min-width: 0; }
   .portal-page .portal-page-heading h1 { font-size: 1.5rem; }
   .service-detail-grid h1 { font-size: clamp(2rem, 10vw, 2.35rem); }
-  .service-detail-providers .section-heading h2 { font-size: 1.55rem; }
+  .service-detail-providers .section-heading :is(h1, h2) { font-size: 1.55rem; }
   .wizard-actions .btn { min-width: 0; padding-inline: .8rem; }
 }
 

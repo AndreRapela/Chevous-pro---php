@@ -67,7 +67,7 @@ test('os cartões da home abrem detalhes e perfis com clique em telas estreitas'
     'GET /api/v1/services': [],
   });
   for (const [selector, linkSelector, path, heading] of [
-    ['.home-popular .service-grid', 'a.service-tile-action', '/servicos/fixture-cleaning', service.name],
+    ['.home-popular .service-grid', 'a.service-tile-action', '/servicos/fixture-cleaning', 'Professionals for fixture cleaning'],
     ['.home-providers .provider-grid', '.card-footer a', '/profissionais/provider-1/fixture-professional-brussels', professional.name],
   ]) {
     await page.goto(origin);
@@ -120,7 +120,25 @@ test('a campanha mantém título, botão e selo no idioma selecionado', async ({
   await expect(campaign.getByRole('link', { name: 'Voir les offres' })).toBeVisible();
 });
 
-test('o serviço exibe um só banner e alterna a foto e o nome do profissional juntos', async ({ page }) => {
+test('o serviço sem campanha abre na lista com a foto do profissional', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 860 });
+  const avatarUrl = '/images/perfil-eletricista-rafael-nunes-640.jpg';
+  await stubApi(page, {
+    'GET /api/v1/services/fixture-electrician': { id: 'electrical', slug: 'fixture-electrician', name: 'Fixture electrician' },
+    'GET /api/v1/professionals': [{ id: 'professional-1', name: 'Fixture Alex', city: 'Brussels', avatarUrl }],
+  });
+  await page.goto(`${origin}/servicos/fixture-electrician`);
+
+  const list = page.locator('.service-detail-providers');
+  await expect(list.getByRole('heading', { level: 1 })).toHaveText('Professionals for fixture electrician');
+  await expect(page.locator('.service-detail-hero')).toHaveCount(0);
+  const provider = list.locator('cvp-provider-card');
+  await expect(provider.getByRole('heading', { name: 'Fixture Alex' })).toBeVisible();
+  await expect(provider.locator('img')).toHaveAttribute('src', avatarUrl);
+  await expect(provider.getByRole('link', { name: 'View profile' })).toHaveAttribute('href', '/profissionais/professional-1/fixture-alex-brussels');
+});
+
+test('uma campanha publicada no serviço exibe um só banner e alterna a foto e o nome juntos', async ({ page }) => {
   await page.setViewportSize({ width: 414, height: 860 });
   const artwork = '/images/promo-laundry-discount-v1.webp';
   const first = { id: 'professional-1', name: 'Fixture Alex', city: 'Brussels', avatarUrl: '/images/perfil-eletricista-rafael-nunes-640.jpg' };

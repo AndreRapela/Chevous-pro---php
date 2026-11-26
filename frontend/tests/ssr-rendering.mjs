@@ -106,11 +106,8 @@ try {
   const detailHtml = await detail.text();
   assert.equal(detail.status, 200);
   assert.ok(!detailHtml.includes('<cvp-home-hero'), 'Service details must not repeat the Home banner.');
-  assert.ok(detailHtml.includes('Home cleaning'), 'The service fixture must render its actual page, not a loading or error state.');
-  assert.match(detailHtml, /<img[^>]*src="\/images\/profissional-limpeza-hero-887\.webp"/, 'Service details must retain the professional portrait.');
-  const serviceBanner = detailHtml.match(/<article[^>]*class="container service-detail-grid"[^>]*>[\s\S]*?<\/article>/)?.[0] ?? '';
-  assert.match(serviceBanner, /class="service-detail-copy"[\s\S]*?class="service-detail-art"/, 'Service details must group their copy and portrait in the same banner.');
-  assert.equal((detailHtml.match(/class="container service-detail-grid"/g) ?? []).length, 1, 'Service details must render a single banner.');
+  assert.match(detailHtml, /<h1[^>]*>Professionals for home cleaning<\/h1>/i);
+  assert.doesNotMatch(detailHtml, /<section[^>]*class="service-detail-hero"/, 'The provider list must render without a default service banner.');
 
   for (const path of ['/profissionais', '/produtos', '/ajuda']) {
     const page = await request(path);
@@ -146,7 +143,7 @@ try {
   });
   assert.equal(poisonedHost, 421, 'SSR deve rejeitar hosts que não pertencem à aplicação.');
 
-  console.log('PASS SSR: Home-only banner, service portrait, English rendering, dynamic category/search metadata, current brand, noindex and 404.');
+  console.log('PASS SSR: Home banner, service provider list, English rendering, dynamic category/search metadata, current brand, noindex and 404.');
 } finally {
   server.kill();
   await once(server, 'exit');
