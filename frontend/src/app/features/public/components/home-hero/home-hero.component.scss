@@ -1,16 +1,6 @@
 :host { display: block; }
 
 @media (min-width: 64rem) {
-  .desktop-hero-lower {
-    --services-offset: 2.5rem;
-    min-height: 8rem;
-    padding: .625rem .4rem;
-  }
-
-  .desktop-service-strip { gap: .5rem; }
-  .desktop-service-strip > .eyebrow { font-size: .875rem; }
-  .desktop-service-links { gap: .5rem; }
-
   .desktop-service-strip a {
     min-height: 5rem;
     flex-direction: column;

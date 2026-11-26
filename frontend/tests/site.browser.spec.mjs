@@ -110,8 +110,13 @@ test('a campanha mantém título, botão e selo no idioma selecionado', async ({
   await expect(campaign.locator('.home-discount-cta')).toHaveText('View product →');
   await expect(campaign.locator('.home-discount-pill')).toHaveText('Black Friday offer');
 
-  await page.locator('cvp-locale-controls .locale-trigger:visible').first().click();
-  await page.locator('cvp-locale-controls .locale-option:visible').filter({ hasText: 'FR' }).first().click();
+  const locale = page.locator('cvp-locale-controls .locale-trigger:visible').first();
+  await expect(locale.locator('.locale-trigger-value')).toHaveText('EN');
+  await locale.click();
+  const languages = page.getByRole('dialog', { name: 'Language', exact: true });
+  await expect(languages.locator('.locale-option')).toHaveCount(2);
+  await expect(languages.getByRole('button', { name: 'EN English' })).toHaveAttribute('aria-pressed', 'true');
+  await languages.getByRole('button', { name: 'FR French' }).click();
   await expect(page.locator('html')).toHaveAttribute('lang', 'fr-FR');
   await expect(campaign.getByRole('heading')).toHaveText('Des offres sélectionnées pour vous');
   await expect(campaign.locator('.home-discount-cta')).toHaveText('Voir le produit →');

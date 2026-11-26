@@ -6,11 +6,7 @@ import { patterns, translations } from './translations.en';
 
 export type AppLanguage = 'en' | 'fr';
 export type AppCurrency = 'BRL' | 'EUR' | 'USD';
-// BRL remains a source currency for historical API amounts, not a site preference.
-export type DisplayCurrency = 'EUR' | 'USD';
-
 const LANGUAGE_KEY = 'cvp.language';
-const CURRENCY_KEY = 'cvp.currency';
 
 const englishCatalog = createTranslationCatalog(translations, patterns);
 
@@ -24,7 +20,6 @@ export class LocalizationService {
   private translateFrench?: typeof englishCatalog;
   private frenchRequest?: Promise<boolean>;
   readonly language = signal<AppLanguage>('en');
-  readonly currency = signal<DisplayCurrency>(this.readCurrency());
   readonly locale = computed(() => this.language() === 'fr' ? 'fr-FR' : 'en-US');
 
   constructor() {
@@ -55,10 +50,8 @@ export class LocalizationService {
     this.applyDocumentLanguage(language);
   }
 
-  setCurrency(currency: string): void {
-    if (currency !== 'EUR' && currency !== 'USD') return;
-    this.currency.set(currency);
-    this.safeStore(CURRENCY_KEY, currency);
+  currency(): 'EUR' {
+    return 'EUR';
   }
 
   translate(source: string, knownOnly = false): string {
@@ -96,13 +89,6 @@ export class LocalizationService {
 
   private readLanguage(): AppLanguage {
     try { const stored = localStorage.getItem(LANGUAGE_KEY); return stored === 'en' || stored === 'fr' ? stored : 'en'; } catch { return 'en'; }
-  }
-
-  private readCurrency(): DisplayCurrency {
-    try {
-      const stored = localStorage.getItem(CURRENCY_KEY);
-      return stored === 'USD' ? 'USD' : 'EUR';
-    } catch { return 'EUR'; }
   }
 
   private safeStore(key: string, value: string): void {

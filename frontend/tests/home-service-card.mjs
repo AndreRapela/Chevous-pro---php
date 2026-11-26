@@ -13,8 +13,5 @@ export function assertHomeServiceCard(html) {
     assert.match(links[index][2], /aria-hidden="true"/, 'Decorative icons must not duplicate accessible link names.');
   }
   assert.ok(!card[1].includes('<aside'));
-  assert.ok(html.includes('desktop-promo-card'), 'The confidence card must be restored to the desktop hero.');
-  assert.ok(html.includes('desktop-booking-preview'), 'The compact booking preview must be restored to the desktop hero.');
-  assert.ok(html.includes('Reviewed and approved profiles'), 'The confidence card must be localized and readable.');
-  assert.ok(html.includes('Ana Clara'), 'The booking preview must retain the featured professional.');
+  assert.doesNotMatch(html, /class="desktop-(?:promo-card|booking-preview)"/, 'The hero must only show the service shortcuts below the main content.');
 }

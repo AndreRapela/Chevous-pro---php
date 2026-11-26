@@ -24,7 +24,7 @@ const patterns = [['en', english], ['fr', french]].flatMap(([language, catalog])
     language, regex: new RegExp(`^(?:${regex.source})$`, regex.flags.replace('g', '')), target
   })));
 function readPreferences(node) {
-  if (ts.isMethodDeclaration(node) && ['readLanguage', 'readCurrency'].includes(node.name.getText(source))) {
+  if (ts.isMethodDeclaration(node) && ['readLanguage', 'currency'].includes(node.name.getText(source))) {
     methods.set(node.name.getText(source), node.getText(source));
   }
   ts.forEachChild(node, readPreferences);
@@ -43,17 +43,17 @@ const translators = {
 };
 const harnessSource = `class LocalizationHarness { ${[...methods.values()].join('\n')} }`;
 const harnessJs = ts.transpileModule(harnessSource, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText;
-const createHarness = new Function('localStorage', 'LANGUAGE_KEY', 'CURRENCY_KEY', `${harnessJs}; return new LocalizationHarness();`);
-const legacy = createHarness({ getItem: key => key === 'cvp.language' ? 'pt' : 'BRL' }, 'cvp.language', 'cvp.currency');
+const createHarness = new Function('localStorage', 'LANGUAGE_KEY', `${harnessJs}; return new LocalizationHarness();`);
+const legacy = createHarness({ getItem: key => key === 'cvp.language' ? 'pt' : 'USD' }, 'cvp.language');
 assert.equal(legacy.readLanguage(), 'en', 'Legacy Portuguese preferences must fall back to English');
-assert.equal(legacy.readCurrency(), 'EUR', 'Legacy BRL preferences must fall back to EUR');
-const missingStorage = createHarness({ getItem: () => { throw new Error('Storage disabled'); } }, 'cvp.language', 'cvp.currency');
+assert.equal(legacy.currency(), 'EUR', 'Prices must use EUR even with a stored USD preference');
+const missingStorage = createHarness({ getItem: () => { throw new Error('Storage disabled'); } }, 'cvp.language');
 assert.equal(missingStorage.readLanguage(), 'en');
-assert.equal(missingStorage.readCurrency(), 'EUR');
-for (const [language, currency] of [['en', 'EUR'], ['fr', 'USD']]) {
-  const preferences = createHarness({ getItem: key => key === 'cvp.language' ? language : currency }, 'cvp.language', 'cvp.currency');
+assert.equal(missingStorage.currency(), 'EUR');
+for (const language of ['en', 'fr']) {
+  const preferences = createHarness({ getItem: () => language }, 'cvp.language');
   assert.equal(preferences.readLanguage(), language);
-  assert.equal(preferences.readCurrency(), currency);
+  assert.equal(preferences.currency(), 'EUR');
 }
 for (const [phrase, english, french] of [
   ['Etapa 1 de 3', 'Step 1 of 3', 'Étape 1 sur 3'],

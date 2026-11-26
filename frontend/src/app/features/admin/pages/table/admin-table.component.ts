@@ -151,7 +151,6 @@ export class AdminTableComponent implements OnInit {
 
   constructor() {
     effect(() => {
-      this.localization.currency();
       this.localization.language();
       if (this.initialized) untracked(() => this.load());
     });

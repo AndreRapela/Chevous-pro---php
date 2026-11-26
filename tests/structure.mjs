@@ -57,14 +57,10 @@ assert.equal(angularArchitect.build.configurations.mock.optimization.styles.inli
 
 const globalStyles = await text('frontend/src/styles.scss');
 assert.match(globalStyles, /\.desktop-service-links\s*\{[^}]*grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\)/s, 'O card de serviços do herói deve distribuir cinco atalhos em colunas iguais.');
-assert.match(globalStyles, /desktop-booking-preview/, 'A prévia de agendamento deve compor o banner inicial.');
-assert.match(globalStyles, /desktop-promo-card/, 'O painel de confiança deve compor o banner inicial.');
-assert.match(globalStyles, /\.desktop-hero-lower\s*\{[^}]*display:\s*grid;/s, 'Os painéis devem compartilhar uma faixa inferior organizada.');
 const homeHero = await text('frontend/src/app/features/public/components/home-hero/home-hero.component.ts');
 const serviceCard = homeHero.match(/<nav class="desktop-service-strip"[^>]*>([\s\S]*?)<\/nav>/)?.[1] ?? '';
 assert.equal((serviceCard.match(/<a /g) ?? []).length, 5, 'O card deve conter apenas os cinco atalhos de serviço.');
-assert.match(homeHero, /desktop-booking-preview/, 'A prévia compacta deve ser renderizada no banner.');
-assert.match(homeHero, /desktop-promo-card/, 'O painel compacto de confiança deve ser renderizado no banner.');
+assert.doesNotMatch(homeHero, /desktop-(?:booking-preview|promo-card)/, 'Somente os atalhos de serviço devem compor a faixa abaixo do banner.');
 assert.match(homeHero, /profissional-limpeza-hero-887\.webp/, 'O banner deve usar a imagem original de fundo verde.');
 assert.doesNotMatch(homeHero, /hero-warm/, 'O banner não deve reintroduzir a variante marrom da imagem.');
 assert.equal((homeHero.match(/mobile-hero-orb mobile-hero-orb-/g) ?? []).length, 4, 'O herói móvel deve conter quatro círculos decorativos sutis.');
@@ -79,7 +75,6 @@ assert.match(globalStyles, /body cvp-home \.home-providers cvp-provider-card\s*\
 assert.match(globalStyles, /body cvp-home \.home-providers \.availability\s*\{\s*display:\s*none;/s, 'O card profissional da home móvel deve priorizar identidade, avaliação, preço e perfil.');
 const homePage = await text('frontend/src/app/features/public/pages/home/home.component.ts');
 assert.match(homePage, /id="categorias-title">Nossos serviços<\/h2>/, 'A seção compacta deve se apresentar como nossos serviços.');
-assert.match(homeHero, /desktop-hero-lower[\s\S]*desktop-promo-card[\s\S]*desktop-service-strip[\s\S]*desktop-booking-preview/, 'Os cards devem manter a ordem visual da referência.');
 assert.match(globalStyles, /\.provider-schedule-page \.availability-table tr\s*\{[^}]*grid-template-columns:\s*repeat\(2,/s, 'A agenda mobile deve organizar horários como cartões responsivos.');
 assert.match(globalStyles, /\.provider-dashboard-page \.metric-grid,[^}]*grid-template-columns:\s*repeat\(2,/s, 'As métricas do profissional devem permanecer compactas no celular.');
 assert.match(globalStyles, /\.portal-header \.icon-button\s*\{[^}]*min-width:\s*2\.75rem/s, 'Ações do cabeçalho devem manter alvo de toque de 44px.');
@@ -96,8 +91,7 @@ assert.doesNotMatch(publicShell, /<details class="footer-group footer-mobile-gro
 assert.match(globalStyles, /\.footer-desktop-group\s*\{\s*display:\s*grid\s*!important;/s, 'Os links do rodapé devem continuar visíveis a partir do breakpoint de desktop.');
 const mockApi = await text('frontend/src/app/core/testing/mock-api.service.ts');
 assert.doesNotMatch(mockApi, /timer\(120\)/, 'O catálogo local não deve introduzir latência artificial.');
-assert.match(globalStyles, /\.locale-popover \{ position: fixed;[^}]*width: min\(14\.5rem,/s, 'O seletor móvel de idioma e moeda deve permanecer compacto.');
-assert.match(globalStyles, /\.locale-popover-header strong \{ display: none; \}/, 'O seletor móvel não deve repetir o subtítulo no cabeçalho compacto.');
+assert.match(globalStyles, /\.locale-popover \{ position: fixed;[^}]*width: min\(14\.5rem,/s, 'O seletor móvel de idioma deve permanecer compacto.');
 const professionalsSource = await text('frontend/src/app/features/public/pages/professionals/professionals.component.ts');
 assert.match(professionalsSource, /readonly pageSize = 20;/, 'A vitrine deve exibir pelo menos vinte profissionais por página.');
 const mockDirectoryData = await text('frontend/src/app/core/testing/mock-data.ts');

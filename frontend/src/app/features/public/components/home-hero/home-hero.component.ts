@@ -22,26 +22,16 @@ import { ServiceIconComponent } from '../../../../shared/components/service-icon
           </div>
           <div class="desktop-hero-copy"><span class="eyebrow">Cuidado profissional para sua casa</span><h1>A melhor solução para o seu lar.</h1><p>Compare profissionais, escolha o melhor horário e acompanhe tudo pela plataforma.</p><form class="hero-search desktop-hero-search" (ngSubmit)="submitSearch()" role="search"><label class="sr-only" for="home-search-desktop">Qual serviço você precisa?</label><span aria-hidden="true">⌕</span><input id="home-search-desktop" name="desktopQuery" [ngModel]="query" (ngModelChange)="updateQuery($event)" placeholder="Qual serviço você precisa?" autocomplete="off"><button class="btn btn-primary" type="submit">Buscar</button></form></div>
         </div>
-        <div class="desktop-hero-lower">
-            <article class="desktop-promo-card">
-              <div><span class="eyebrow">Escolha com confiança</span><strong>Perfis avaliados e aprovados</strong><small>Compare experiência, avaliações e disponibilidade</small></div>
-            </article>
-            <nav class="desktop-service-strip" aria-label="Serviços em destaque">
-              <span class="eyebrow">Serviços</span>
-              <div class="desktop-service-links">
-                <a routerLink="/servicos" [queryParams]="{ q: 'limpeza' }"><b aria-hidden="true"><cvp-service-icon category="cleaning" /></b>Limpeza</a>
-                <a routerLink="/servicos" [queryParams]="{ q: 'lavagem' }"><b aria-hidden="true"><cvp-service-icon category="laundry" /></b>Lavagem</a>
-                <a routerLink="/servicos" [queryParams]="{ q: 'reparo' }"><b aria-hidden="true"><cvp-service-icon category="repairs" /></b>Reparos</a>
-                <a routerLink="/servicos" [queryParams]="{ q: 'pintura' }"><b aria-hidden="true"><cvp-service-icon category="painting" /></b>Pintura</a>
-                <a routerLink="/servicos" [queryParams]="{ q: 'jardim' }"><b aria-hidden="true"><cvp-service-icon category="gardening" /></b>Jardim</a>
-              </div>
-            </nav>
-            <article class="desktop-booking-preview" aria-label="Prévia de agendamento">
-              <header><span class="avatar avatar-sm" aria-hidden="true" data-cvp-no-localize>AC</span><span><strong data-cvp-no-localize>Ana Clara</strong><small>Perfil aprovado</small></span><span class="verified" title="Perfil aprovado">✓</span></header>
-              <dl><div><dt>Serviço</dt><dd>Limpeza residencial</dd></div><div><dt>Horário</dt><dd>Qui, 14h</dd></div></dl>
-              <a class="btn btn-primary btn-block" routerLink="/servicos/limpeza-residencial">Agendar agora</a>
-            </article>
-        </div>
+        <nav class="desktop-service-strip" aria-label="Serviços em destaque">
+          <span class="eyebrow">Serviços</span>
+          <div class="desktop-service-links">
+            <a routerLink="/servicos" [queryParams]="{ q: 'limpeza' }"><b aria-hidden="true"><cvp-service-icon category="cleaning" /></b>Limpeza</a>
+            <a routerLink="/servicos" [queryParams]="{ q: 'lavagem' }"><b aria-hidden="true"><cvp-service-icon category="laundry" /></b>Lavagem</a>
+            <a routerLink="/servicos" [queryParams]="{ q: 'reparo' }"><b aria-hidden="true"><cvp-service-icon category="repairs" /></b>Reparos</a>
+            <a routerLink="/servicos" [queryParams]="{ q: 'pintura' }"><b aria-hidden="true"><cvp-service-icon category="painting" /></b>Pintura</a>
+            <a routerLink="/servicos" [queryParams]="{ q: 'jardim' }"><b aria-hidden="true"><cvp-service-icon category="gardening" /></b>Jardim</a>
+          </div>
+        </nav>
       </div>
       <div class="container hero-stack">
         <article class="hero-banner">

@@ -124,26 +124,11 @@ describe('original green brand palette', () => {
     assert.equal((template.match(/class="footer-group footer-desktop-group"/g) ?? []).length, 3);
     assert.doesNotMatch(template, /<details class="footer-group footer-mobile-group" open>/);
   });
-  it('places two raised hero cards around a slimmer strip with five balanced service links', () => {
-    assert.match(declaration('.desktop-hero-lower', 'grid-template-columns'), /minmax\(0, 1fr\)/);
-    assert.equal(declaration('.desktop-hero-lower', 'margin-top'), '.75rem');
-    assert.equal(declaration('.desktop-hero-lower', 'min-height'), '5.5rem');
-    assert.equal(declaration('.desktop-hero-lower', 'padding'), '.25rem .4rem');
-    assert.equal(declaration('.desktop-hero-lower', '--promo-offset'), 'clamp(1.5rem, 2.3vw, 2rem)');
-    assert.equal(declaration('.desktop-hero-lower', '--services-offset'), 'clamp(6.25rem, 9vw, 7rem)');
+  it('keeps five balanced service links in the desktop hero strip', () => {
     assert.equal(declaration('.desktop-service-links', 'grid-template-columns'), 'repeat(5, minmax(0, 1fr))');
-    assert.equal(declaration('.desktop-service-strip', 'border'), '0');
-    assert.equal(declaration('.desktop-service-strip a', 'min-height'), '2.5rem');
+    assert.equal(declaration('.desktop-service-strip', 'display'), 'grid');
+    assert.equal(declaration('.desktop-service-strip', 'background'), 'var(--surface)');
     assert.equal(declaration('.desktop-service-strip a', 'font-weight'), '750');
-    assert.equal(declaration('.desktop-promo-card', 'position'), 'absolute');
-    assert.equal(declaration('.desktop-booking-preview', 'position'), 'absolute');
-    assert.equal(declaration('.desktop-promo-card', 'bottom'), '-1.5rem');
-    assert.equal(declaration('.desktop-promo-card', 'left'), 'var(--promo-offset)');
-    assert.equal(declaration('.desktop-service-strip', 'padding'), '0 .1rem 0 var(--services-offset)');
-    assert.equal(declaration('.desktop-booking-preview', 'bottom'), '-2.25rem');
-    assert.equal(declaration('.desktop-promo-card > div', 'background'), 'var(--brand-800)');
-    assert.equal(declaration('.desktop-promo-card > div', 'text-align'), 'center');
-    assert.equal(declaration('.desktop-booking-preview .btn', 'min-height'), '2.2rem');
     assert.equal(declaration('.desktop-hero-tag', 'font-size'), '.7rem');
     assert.equal(declaration('.desktop-hero-tag', 'background'), 'rgba(255,255,255,.84)');
     assert.equal(declaration('.desktop-service-strip a:hover', 'background'), 'var(--brand-100)');
