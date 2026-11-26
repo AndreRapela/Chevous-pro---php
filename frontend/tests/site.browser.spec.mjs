@@ -44,6 +44,50 @@ async function stubApi(page, replies) {
   });
 }
 
+test('os cartões da home abrem detalhes e perfis com clique em telas estreitas', async ({ page }) => {
+  await page.setViewportSize({ width: 414, height: 860 });
+  const service = { id: 'service-1', slug: 'fixture-cleaning', name: 'Fixture cleaning', categoryId: 'cleaning' };
+  const professional = { id: 'provider-1', name: 'Fixture Professional', city: 'Brussels', verified: true };
+  await stubApi(page, {
+    'GET /api/v1/home': {
+      categories: [], promotions: [],
+      services: [service, { ...service, id: 'service-2', slug: 'fixture-repairs' }, { ...service, id: 'service-3', slug: 'fixture-painting' }],
+      professionals: [professional, { ...professional, id: 'provider-2' }, { ...professional, id: 'provider-3' }],
+    },
+    'GET /api/v1/services/fixture-cleaning': service,
+    'GET /api/v1/professionals': [],
+    'GET /api/v1/professionals/provider-1': professional,
+    'GET /api/v1/professionals/provider-1/reviews': [],
+    'GET /api/v1/professionals/provider-1/comments': [],
+    'GET /api/v1/services': [],
+  });
+  for (const [selector, linkSelector, path, heading] of [
+    ['.home-popular .service-grid', 'a.service-tile-action', '/servicos/fixture-cleaning', service.name],
+    ['.home-providers .provider-grid', '.card-footer a', '/profissionais/provider-1/fixture-professional-brussels', professional.name],
+  ]) {
+    await page.goto(origin);
+    const row = page.locator(selector);
+    const link = row.locator(linkSelector).first();
+    await link.evaluate((element) => element.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' }));
+    await link.click({ trial: true });
+    expect(await row.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(true);
+
+    const box = await link.boundingBox();
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x - 80, y, { steps: 5 });
+    await expect.poll(() => row.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    await page.mouse.up();
+    await expect(page).toHaveURL(`${origin}/`);
+
+    await link.click();
+    await expect(page).toHaveURL(`${origin}${path}`);
+    await expect(page.getByRole('heading', { level: 1, name: heading, exact: true })).toBeVisible();
+  }
+});
+
 test('a home mantém cada campanha por um minuto e alterna vídeo e imagem', async ({ page }) => {
   const campaign = { active: true, backgroundColor: '#096653', textColor: '#ffffff', ctaUrl: '/produtos', ctaLabel: 'Store' };
   await stubApi(page, {

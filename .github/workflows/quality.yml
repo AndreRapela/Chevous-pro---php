@@ -25,7 +25,7 @@ jobs:
       - run: npm run check
       - name: Instalar Chromium para os testes
         run: npx playwright install --with-deps --only-shell chromium
-      - name: Validar campanhas no navegador
+      - name: Validar a home e as campanhas no navegador
         run: npm run test:browser
       - run: npm audit --omit=dev --audit-level=high
   frontend-mirror:

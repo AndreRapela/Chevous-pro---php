@@ -16,7 +16,7 @@
     "test:localization": "node --experimental-strip-types tests/localization-coverage.mjs",
     "test:bundle": "node tests/production-bundle.mjs",
     "test:ssr": "node tests/ssr-rendering.mjs",
-    "test:browser": "playwright test tests/promotions.browser.spec.mjs --workers=1 --output=.angular/test-results",
+    "test:browser": "playwright test tests/site.browser.spec.mjs --workers=1 --output=.angular/test-results",
     "test:structure": "node ../tests/structure.mjs",
     "test:architecture": "node ../tests/architecture.mjs",
     "check": "npm run lint && npm run build && npm run test:bundle && npm test && npm run test:coverage:utils && npm run test:ssr",

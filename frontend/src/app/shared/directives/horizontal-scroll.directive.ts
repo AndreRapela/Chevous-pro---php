@@ -43,7 +43,6 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
     this.originScrollLeft = this.element.scrollLeft;
     this.dragging = false;
     this.suppressClick = false;
-    this.element.setPointerCapture(event.pointerId);
   }
 
   @HostListener('pointermove', ['$event'])
@@ -51,20 +50,28 @@ export class HorizontalScrollDirective implements OnInit, OnDestroy {
     if (this.pointerId !== event.pointerId) return;
     const deltaX = this.originX - event.clientX;
     const deltaY = this.originY - event.clientY;
-    if (!this.dragging && Math.abs(deltaX) < 6) return;
-    if (!this.dragging && Math.abs(deltaY) > Math.abs(deltaX)) return;
-    this.dragging = true;
-    this.element.classList.add('is-dragging');
+    if (!this.dragging) {
+      if (Math.abs(deltaX) < 6 || Math.abs(deltaY) > Math.abs(deltaX)) return;
+      // Capture only after a drag starts so a plain click reaches its link.
+      this.element.setPointerCapture(event.pointerId);
+      this.dragging = true;
+      this.element.classList.add('is-dragging');
+    }
     this.element.scrollLeft = this.originScrollLeft + deltaX;
     if (event.cancelable) event.preventDefault();
+  }
+
+  @HostListener('pointerleave', ['$event'])
+  leave(event: PointerEvent): void {
+    if (!this.dragging && this.pointerId === event.pointerId) this.pointerId = null;
   }
 
   @HostListener('pointerup', ['$event'])
   @HostListener('pointercancel', ['$event'])
   finish(event: PointerEvent): void {
     if (this.pointerId !== event.pointerId) return;
-    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId);
     this.pointerId = null;
+    if (this.element.hasPointerCapture(event.pointerId)) this.element.releasePointerCapture(event.pointerId);
     if (!this.dragging) return;
     this.suppressClick = true;
     this.releaseTimer = setTimeout(() => {

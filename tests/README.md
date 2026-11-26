@@ -14,7 +14,7 @@
   sensível de eventos irrecuperáveis.
 - `product_checkout.php` valida reservas, repetição e expiração com respostas simuladas do Stripe.
 - `promotion_storage.php` valida a retenção das mídias referenciadas e a coleta das que perderam seus vínculos.
-- `frontend/tests/promotions.browser.spec.mjs` testa a rotação da home no Chromium e o envio de vídeos de 60 e 61 segundos por arquivo e por link. Os WebM em `frontend/tests/fixtures/` têm quadros pretos de 32 × 32 pixels a 1 quadro por segundo.
+- `frontend/tests/site.browser.spec.mjs` verifica no Chromium a navegação dos cartões da home em telas estreitas, a rotação das campanhas e o envio de vídeos de 60 e 61 segundos por arquivo e por link. Os WebM em `frontend/tests/fixtures/` têm quadros pretos de 32 × 32 pixels a 1 quadro por segundo.
 - `frontend_mirror.mjs` compara os arquivos compartilhados das duas cópias do frontend e lista as divergências.
 - `production_compose.mjs`: garante que o overlay público não publique portas nem
   entregue segredos desnecessários ao frontend.
