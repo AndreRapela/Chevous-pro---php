@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { createServer, request as httpRequest } from 'node:http';
 import { assertHomeServiceCard } from './home-service-card.mjs';
-import { assertHomeProviderCta } from './home-provider-cta.mjs';
+import { assertHomeProviderRegistration } from './home-provider-cta.mjs';
 
 // A local read-only fixture exercises dynamic page SEO without accessing the user's API.
 const apiRequests = [];
@@ -64,7 +64,7 @@ try {
   assert.equal(home.status, 200, 'Home SSR deve responder 200.');
   assert.deepEqual(apiRequests, ['/api/v1/home'], 'The home page makes one catalog request.');
   assertHomeServiceCard(homeHtml);
-  assertHomeProviderCta(homeHtml);
+  assertHomeProviderRegistration(homeHtml);
   assert.equal((homeHtml.match(/<cvp-home-hero\b/g) ?? []).length, 1, 'Only the Home route must render its main banner, exactly once.');
   for (const fragment of [
     'ng-server-context="ssr"',

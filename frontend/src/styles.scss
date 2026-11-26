@@ -344,15 +344,6 @@ html:has(.mobile-drawer[open]) { overflow: hidden; }
 .steps-grid li > span { grid-row: 1 / span 2; width: 2.2rem; height: 2.2rem; display: grid; place-items: center; border-radius: .7rem; color: #fff; background: var(--brand-700); font-weight: 900; }
 .steps-grid h3 { margin: 0; color: var(--ink-900); font-size: .95rem; }
 .steps-grid p { margin: 0; color: var(--ink-600); font-size: .82rem; }
-.home-provider-cta { padding-block: 2.25rem; }
-.provider-cta { display: grid; gap: 1.5rem; padding: 1.5rem; border: 1px solid var(--ink-200); border-radius: 1.3rem; background: linear-gradient(135deg, var(--brand-50), #fff); }
-.provider-cta-copy { min-width: 0; }
-.provider-cta h2 { margin-bottom: .65rem; line-height: 1.15; }
-.provider-cta p { max-width: 38rem; margin: 0; font-size: 1rem; }
-.provider-cta-actions { min-width: 0; display: grid; gap: .75rem; align-content: center; color: var(--brand-800); font-size: 1rem; font-weight: 700; line-height: 1.5; }
-.provider-cta-actions > span { display: flex; align-items: baseline; gap: .55rem; }
-.provider-cta-actions b { flex: 0 0 auto; color: var(--brand-700); }
-.provider-cta-actions .btn { min-height: 3rem; width: 100%; margin-top: .25rem; padding: .75rem 1.25rem; }
 
 .state-panel { min-height: 15rem; display: grid; place-content: center; justify-items: center; text-align: center; padding: 2rem; }
 .state-panel h2 { font-size: 1.25rem; margin: .7rem 0 .35rem; }
@@ -942,8 +933,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .home-steps { padding-block: 2.35rem; }
   .steps-grid { gap: .6rem; }
   .steps-grid li { padding: .8rem; }
-  .home-provider-cta { padding-block: 1.75rem; }
-  .provider-cta { gap: 1.25rem; padding: 1.25rem; }
   .site-footer { padding-top: 1.5rem; }
   .footer-grid { gap: 1rem .8rem; }
   .footer-grid p { display: none; }
@@ -2448,7 +2437,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .home-popular,
   .home-providers,
   .home-steps,
-  .home-provider-cta { padding-block: 3rem; }
   .home-section .section-heading { margin-bottom: 1.25rem; }
   .home-section .section-heading h2 { font-size: clamp(1.85rem, 2.7vw, 2.2rem); }
   .home-section .section-heading .eyebrow { font-size: .82rem; }
@@ -2875,15 +2863,6 @@ cvp-provider-detail .booking-aside small { font-size: .82rem; line-height: 1.4; 
   cvp-provider-detail .profile-sidebar-facts div:last-child { border-right: 1px solid var(--ink-100); border-bottom: 1px solid var(--ink-100); border-radius: 0 .65rem .65rem 0; }
   cvp-provider-detail .profile-sidebar-facts dt { font-size: .72rem; line-height: 1.25; }
   cvp-provider-detail .profile-sidebar-facts dd { font-size: .82rem; text-align: left; overflow-wrap: anywhere; }
-}
-
-/* Professional invitation follows the site's reading scale, not metadata size. */
-body .provider-cta-actions .btn { font-size: 1rem !important; }
-
-@media (min-width: 64rem) {
-  .provider-cta { grid-template-columns: minmax(0, 1.6fr) minmax(18rem, .8fr); align-items: center; min-height: 12rem; gap: 2rem; padding: 2rem; }
-  .provider-cta h2 { font-size: clamp(2rem, 2.8vw, 2.25rem); }
-  body .provider-cta p { font-size: 1.0625rem !important; }
 }
 
 /* Original green identity over a soft, lightly tinted page background. */
@@ -3746,7 +3725,6 @@ body .home-discount-copy p {
   cvp-home > .home-categories { order: 3; }
   cvp-home > .home-popular { order: 4; }
   cvp-home > .home-providers { order: 5; }
-  cvp-home > .home-provider-cta { order: 6; }
 
   cvp-home-hero .hero-section {
     padding: 0;
