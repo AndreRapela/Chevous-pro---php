@@ -21,6 +21,21 @@ $cookieSecure = Env::bool('REFRESH_COOKIE_SECURE', !$isLocalEnvironment);
 $autoSeed = Env::bool('AUTO_SEED', false);
 $mailDriver = Env::get('MAIL_DRIVER', 'disabled');
 $mailFrom = Env::get('MAIL_FROM', '');
+$smtp = [
+    'host' => Env::get('SMTP_HOST', 'smtp-auth.mailprotect.be'),
+    'port' => Env::int('SMTP_PORT', 465),
+    'username' => Env::get('SMTP_USERNAME', $mailFrom),
+    'password' => Env::get('SMTP_PASSWORD', ''),
+];
+if ($mailDriver === 'smtp' && (
+    !filter_var($mailFrom, FILTER_VALIDATE_EMAIL)
+    || !filter_var($smtp['host'], FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME)
+    || $smtp['port'] < 1 || $smtp['port'] > 65535
+    || $smtp['username'] === '' || $smtp['password'] === ''
+    || !function_exists('curl_version') || !in_array('smtps', curl_version()['protocols'], true)
+)) {
+    throw new RuntimeException('O envio por SMTP requer SMTPS no cURL, um MAIL_FROM válido e credenciais SMTP configuradas.');
+}
 
 if (!$isLocalEnvironment) {
     $unsafeSecrets = [
@@ -54,7 +69,7 @@ if (!$isLocalEnvironment) {
     if ($autoSeed) {
         throw new RuntimeException('AUTO_SEED não pode ser habilitado fora do ambiente local.');
     }
-    if (!in_array($mailDriver, ['resend', 'php-mail'], true)) {
+    if (!in_array($mailDriver, ['resend', 'php-mail', 'smtp'], true)) {
         throw new RuntimeException('Um serviço de e-mail ativo é obrigatório fora do ambiente local.');
     }
     if ($mailDriver === 'resend' && ($mailFrom === '' || Env::get('RESEND_API_KEY', '') === '')) {
@@ -124,6 +139,7 @@ return [
         'driver' => $mailDriver,
         'from' => $mailFrom,
         'resend_api_key' => Env::get('RESEND_API_KEY', ''),
+        'smtp' => $smtp,
     ],
     'auto_seed' => $autoSeed,
     'upload_max_bytes' => Env::int('UPLOAD_MAX_BYTES', 5242880),

@@ -7,6 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const webhookSecret = 'whsec_compose_fixture';
 const sender = 'notifications@example.test';
 const resendKey = 're_compose_fixture';
+const smtpPassword = 'smtp_password_compose_fixture';
 
 function renderCompose(files, envFile, mode, mailDriver) {
   const secretKey = `sk_${mode}_compose_fixture`;
@@ -22,9 +23,10 @@ function renderCompose(files, envFile, mode, mailDriver) {
       STORE_PAYMENT_MODE: mode,
       STRIPE_SECRET_KEY: secretKey,
       STRIPE_WEBHOOK_SECRET: webhookSecret,
-      MAIL_DRIVER: 'log',
+      MAIL_DRIVER: 'smtp',
       MAIL_FROM: sender,
       RESEND_API_KEY: resendKey,
+      SMTP_PASSWORD: smtpPassword,
     }
   });
   assert.equal(result.status, 0, `A configuração do Compose é inválida.\n${result.stderr || result.error || ''}`);
@@ -36,16 +38,19 @@ function renderCompose(files, envFile, mode, mailDriver) {
     assert.equal(environment.MAIL_DRIVER, mailDriver, `${service} deve usar o modo de envio do ambiente.`);
     assert.equal(environment.MAIL_FROM, sender, `${service} deve receber o remetente configurado.`);
     assert.ok(environment.RESEND_API_KEY === resendKey, `${service} deve receber a chave configurada para o Resend.`);
+    assert.equal(environment.SMTP_USERNAME, sender, `${service} deve usar o remetente como usuário SMTP por padrão.`);
+    assert.ok(environment.SMTP_PASSWORD === smtpPassword, `${service} deve receber a senha SMTP configurada.`);
   }
   for (const service of ['web', 'ssr']) {
     assert.ok(!('RESEND_API_KEY' in config.services[service].environment), `${service} não deve receber a chave do Resend.`);
+    assert.ok(!('SMTP_PASSWORD' in config.services[service].environment), `${service} não deve receber a senha SMTP.`);
   }
   assert.ok(config.services.api.environment.STRIPE_WEBHOOK_SECRET === webhookSecret, 'A API deve receber o segredo do webhook.');
   assert.ok(!('STRIPE_WEBHOOK_SECRET' in config.services.worker.environment), 'O worker não precisa do segredo do webhook.');
   return config;
 }
 
-renderCompose(['compose.yaml'], '.env.example', 'test', 'log');
+renderCompose(['compose.yaml'], '.env.example', 'test', 'smtp');
 const config = renderCompose(['compose.yaml', 'compose.production.yaml'], '.env.production.example', 'live', 'resend');
 
 for (const service of ['database', 'api', 'web']) {

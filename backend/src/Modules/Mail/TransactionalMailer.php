@@ -69,8 +69,15 @@ final class TransactionalMailer
             . '<p><a href="' . htmlspecialchars($url, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '" style="display:inline-block;padding:12px 18px;background:#0c7a5b;color:#fff;text-decoration:none;border-radius:8px">'
             . htmlspecialchars($action, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</a></p><p>'
             . htmlspecialchars(self::COPY[$language]['ignore'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p></body></html>';
-        if ($this->config['mail']['driver'] === 'php-mail') {
-            $this->sendPhpMail($email, $subject, $html, $logo);
+        $driver = $this->config['mail']['driver'];
+        if ($driver === 'php-mail' || $driver === 'smtp') {
+            [$headers, $body] = $this->mimeParts($html, $logo);
+            $subject = mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n", 9);
+            if ($driver === 'smtp') {
+                $this->sendSmtp($email, $subject, $headers, $body);
+            } elseif (!@mail($email, $subject, $body, $headers)) {
+                throw new \RuntimeException('O servidor de e-mail da hospedagem recusou a entrega.');
+            }
             return;
         }
 
@@ -100,7 +107,7 @@ final class TransactionalMailer
         ];
     }
 
-    private function sendPhpMail(string $email, string $subject, string $html, ?array $logo): void
+    private function mimeParts(string $html, ?array $logo): array
     {
         $headers = [
             'From' => 'ChezVoust Pro <' . $this->config['mail']['from'] . '>',
@@ -130,8 +137,52 @@ final class TransactionalMailer
                 '',
             ]);
         }
-        if (!@mail($email, mb_encode_mimeheader($subject, 'UTF-8', 'B', "\r\n", 9), $body, $headers)) {
-            throw new \RuntimeException('O servidor de e-mail da hospedagem recusou a entrega.');
+        return [$headers, $body];
+    }
+
+    private function sendSmtp(string $email, string $subject, array $headers, string $body): void
+    {
+        $smtp = $this->config['mail']['smtp'];
+        $from = $this->config['mail']['from'];
+        $domain = substr(strrchr($from, '@'), 1);
+        $headers['Date'] = gmdate('D, d M Y H:i:s +0000');
+        $headers['Message-ID'] = '<' . bin2hex(random_bytes(16)) . '@' . $domain . '>';
+        $headers['To'] = '<' . $email . '>';
+        $headers['Subject'] = $subject;
+        $message = '';
+        foreach ($headers as $name => $value) {
+            $message .= $name . ': ' . $value . "\r\n";
+        }
+        $message .= "\r\n" . rtrim($body, "\r\n") . "\r\n";
+        $offset = 0;
+
+        $connection = curl_init('smtps://' . $smtp['host'] . ':' . $smtp['port']);
+        if ($connection === false || !curl_setopt_array($connection, [
+            CURLOPT_USERNAME => $smtp['username'],
+            CURLOPT_PASSWORD => $smtp['password'],
+            CURLOPT_MAIL_FROM => '<' . $from . '>',
+            CURLOPT_MAIL_RCPT => ['<' . $email . '>'],
+            CURLOPT_UPLOAD => true,
+            CURLOPT_INFILESIZE => strlen($message),
+            CURLOPT_READFUNCTION => static function ($connection, $stream, int $length) use ($message, &$offset): string {
+                $chunk = substr($message, $offset, $length);
+                $offset += strlen($chunk);
+                return $chunk;
+            },
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 15,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+        ])) {
+            throw new \RuntimeException('Falha ao configurar a conexão SMTP.');
+        }
+        if (curl_exec($connection) === false) {
+            throw new \RuntimeException(sprintf(
+                'Falha no transporte SMTP (cURL %d, SMTP %d).',
+                curl_errno($connection),
+                curl_getinfo($connection, CURLINFO_RESPONSE_CODE)
+            ));
         }
     }
 }

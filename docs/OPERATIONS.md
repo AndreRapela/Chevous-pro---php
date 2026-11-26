@@ -93,6 +93,14 @@ para a nova raiz e valide a resposta de `/api/v1/avatars/{id}`.
 
 ## Fila de e-mails
 
+Para usar a caixa da Easyhost pelo Docker local, configure `MAIL_DRIVER=smtp`
+e `SMTP_PASSWORD` no `.env` local. O backend usa `MAIL_FROM` também como
+usuário SMTP por padrão e conecta a `smtp-auth.mailprotect.be:465` com TLS.
+Defina `SMTP_USERNAME` se a caixa autenticada tiver outro endereço autorizado a
+enviar pelo remetente. Recrie a API e o worker com o novo ambiente e solicite
+um novo e-mail de confirmação pelo site.
+[Configuração do SMTP autenticado do Mailprotect](https://www.combell.com/en/help/kb/how-to-make-sure-my-website-sends-outgoing-mail-in-an-authenticated-fashion/)
+
 Com `MAIL_DRIVER=php-mail`, o PHP tenta enviar o evento recém-criado ao
 terminar a requisição. Requisições bem-sucedidas que passam pela API também
 podem processar até dois eventos prontos por intervalo de 30 segundos. O

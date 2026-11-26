@@ -112,7 +112,7 @@ final class MailOutbox
                 }
                 if ($this->config['mail']['driver'] === 'log') {
                     error_log('[ChezVoust Pro] E-mail de desenvolvimento registrado: ' . $event['event_type']);
-                } elseif (in_array($this->config['mail']['driver'], ['resend', 'php-mail'], true)) {
+                } elseif (in_array($this->config['mail']['driver'], ['resend', 'php-mail', 'smtp'], true)) {
                     $payload = $this->decodePayload((string) $event['payload']);
                     if ($this->tokenCanBeDelivered($event['event_type'], $payload)) {
                         $mailer->send($event['event_type'], $payload);

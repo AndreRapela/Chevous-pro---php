@@ -8,6 +8,10 @@ x-mail-access: &mail-access
   MAIL_DRIVER: ${MAIL_DRIVER:-log}
   MAIL_FROM: ${MAIL_FROM:-}
   RESEND_API_KEY: ${RESEND_API_KEY:-}
+  SMTP_HOST: ${SMTP_HOST:-smtp-auth.mailprotect.be}
+  SMTP_PORT: ${SMTP_PORT:-465}
+  SMTP_USERNAME: ${SMTP_USERNAME:-${MAIL_FROM:-}}
+  SMTP_PASSWORD: ${SMTP_PASSWORD:-}
 
 services:
   database:
