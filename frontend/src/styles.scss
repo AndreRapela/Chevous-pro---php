@@ -142,9 +142,8 @@ legend { color: var(--ink-700); font-weight: 800; font-size: var(--type-ui); mar
 .label-row { display: flex; align-items: center; justify-content: space-between; }
 .label-row a { color: var(--brand-700); font-weight: 750; }
 .password-input { position: relative; display: block; }
-.password-input input { width: 100%; padding-right: 5.4rem; }
-.password-input button { position: absolute; top: 50%; right: .25rem; min-height: 2rem; padding: .25rem .5rem; border: 0; border-radius: .4rem; color: var(--brand-800); background: transparent; font: inherit; font-weight: 750; transform: translateY(-50%); }
-.password-input button:hover { background: var(--brand-50); }
+.password-input input { width: 100%; padding-inline-end: 3.25rem; }
+.password-input input::-ms-reveal { display: none; }
 .check-row { display: flex; grid-template-columns: auto 1fr; align-items: flex-start; gap: .7rem; font-weight: 550; }
 .check-row a { color: var(--brand-700); text-decoration: underline; }
 .check-row input { flex: 0 0 auto; margin-top: .15rem; }
@@ -2041,7 +2040,6 @@ td > small { color: var(--ink-500); margin-top: .15rem; }
   .auth-form-panel .btn,
   .auth-form-panel .demo-accounts button,
   .auth-form-panel .switch-mode { min-height: 2.75rem; font-size: 1rem; }
-  .auth-form-panel .password-input button { min-width: 2.75rem; min-height: 2.75rem; font-size: .875rem; }
   .auth-form-panel .check-row { min-height: 2.75rem; align-items: center; }
   .auth-form-panel form label > small,
   .auth-form-panel .auth-divider { font-size: .82rem; }

@@ -3,13 +3,14 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { ApiClientError } from '../../../../core/models';
+import { PasswordVisibilityButtonComponent } from '../../../../shared/components/password-visibility-button/password-visibility-button.component';
 import { AuthShellComponent } from '../../layout/auth-shell.component';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
   selector: 'cvp-login',
   standalone: true,
-  imports: [AuthShellComponent, ReactiveFormsModule, RouterLink],
+  imports: [AuthShellComponent, PasswordVisibilityButtonComponent, ReactiveFormsModule, RouterLink],
   template: `
     <cvp-auth-shell
       variant="login"
@@ -32,14 +33,17 @@ import { environment } from '../../../../../environments/environment';
           <input type="email" formControlName="email" autocomplete="email" inputmode="email" autocapitalize="none" spellcheck="false" [attr.aria-invalid]="invalid('email')">
           @if (invalid('email')) { <small class="field-error">Informe um e-mail válido.</small> }
         </label>
-        <label>
-          <span class="label-row">
-            <span>Senha</span>
+        <div class="login-password">
+          <div class="label-row">
+            <label for="login-password">Senha</label>
             <a routerLink="/recuperar-senha" [state]="{ recoveryEmail: form.controls.email.value.trim() }" (mousedown)="$event.preventDefault()">Esqueci minha senha</a>
-          </span>
-          <span class="password-input"><input [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="invalid('password')"><button type="button" (click)="togglePasswordVisibility()" [attr.aria-label]="passwordVisible() ? 'Ocultar senha' : 'Mostrar senha'" [attr.aria-pressed]="passwordVisible()">{{ passwordVisible() ? 'Ocultar' : 'Mostrar' }}</button></span>
+          </div>
+          <div class="password-input">
+            <input id="login-password" [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="current-password" [attr.aria-invalid]="invalid('password')">
+            <cvp-password-visibility-button fieldId="login-password" [visible]="passwordVisible()" (toggled)="togglePasswordVisibility()" />
+          </div>
           @if (invalid('password')) { <small class="field-error">A senha é obrigatória.</small> }
-        </label>
+        </div>
         <label class="check-row"><input type="checkbox" formControlName="remember"> <span>Manter acesso neste dispositivo</span></label>
         <button class="btn btn-primary btn-block" type="submit" [disabled]="auth.busy()">{{ auth.busy() ? 'Entrando...' : 'Entrar' }}</button>
       </form>
@@ -62,6 +66,7 @@ import { environment } from '../../../../../environments/environment';
     </cvp-auth-shell>
   `,
   styles: `
+    .login-password { display: grid; gap: .45rem; }
     .demo-role-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .4rem; }
     .demo-role-shortcuts .btn { min-height: 2.75rem; padding: .4rem .25rem; font-size: .82rem; text-align: center; overflow-wrap: anywhere; }
   `,

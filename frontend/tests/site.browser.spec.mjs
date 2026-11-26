@@ -215,6 +215,41 @@ test('o administrador pode salvar uma campanha exclusiva para um serviço', asyn
   expect(saved).toMatchObject([{ placement: 'services', serviceId: 'electrical', ctaLabel: null, ctaUrl: null }]);
 });
 
+test('o olho alterna a visibilidade da senha sem apagar o valor ou enviar o formulário', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 860 });
+  for (const [path, fields] of [
+    ['/entrar', [['login-password', 'password']]],
+    ['/cadastro', [['register-password', 'password'], ['register-password-confirmation', 'password confirmation']]],
+  ]) {
+    await page.goto(`${origin}${path}`);
+    for (const [id, label] of fields) {
+      const input = page.locator(`#${id}`);
+      const toggle = page.locator(`button[aria-controls="${id}"]`);
+      await input.fill('Fixture!8pass');
+      await expect(input).toHaveAttribute('type', 'password');
+      await expect(toggle).toHaveAccessibleName(`Show ${label}`);
+      await expect(toggle).toHaveAttribute('type', 'button');
+      await expect(toggle).toHaveText('');
+      await expect(toggle.locator('svg circle')).toHaveCount(0);
+
+      await toggle.click();
+      await expect(input).toHaveAttribute('type', 'text');
+      await expect(toggle).toHaveAccessibleName(`Hide ${label}`);
+      await expect(toggle.locator('svg circle')).toHaveCount(1);
+      await expect(input).toHaveValue('Fixture!8pass');
+      if (id === 'register-password') {
+        await expect(page.locator('#register-password-confirmation')).toHaveAttribute('type', 'password');
+      }
+
+      await toggle.press('Space');
+      await expect(input).toHaveAttribute('type', 'password');
+      await expect(toggle.locator('svg circle')).toHaveCount(0);
+      await expect(input).toHaveValue('Fixture!8pass');
+      await expect(page).toHaveURL(`${origin}${path}`);
+    }
+  }
+});
+
 test('erros de login da API são exibidos no idioma do formulário', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('cvp.language', 'fr'));
   await page.route('**/api/v1/auth/login', route => route.fulfill({

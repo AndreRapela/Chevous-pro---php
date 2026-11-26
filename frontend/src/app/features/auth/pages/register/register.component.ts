@@ -7,6 +7,7 @@ import { environment } from '../../../../../environments/environment';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { LocalizationService } from '../../../../core/localization/localization.service';
 import { ApiClientError } from '../../../../core/models';
+import { PasswordVisibilityButtonComponent } from '../../../../shared/components/password-visibility-button/password-visibility-button.component';
 import { DEFAULT_PHONE_COUNTRY, countryForPhone, internationalPhone, phoneCountryOptions, phoneFlagUrl, phoneWithCountry } from '../../registration-phone';
 import { AuthShellComponent } from '../../layout/auth-shell.component';
 
@@ -15,7 +16,7 @@ type RegisterField = keyof RegisterComponent['form']['controls'];
 @Component({
   selector: 'cvp-register',
   standalone: true,
-  imports: [AuthShellComponent, ReactiveFormsModule, RouterLink],
+  imports: [AuthShellComponent, PasswordVisibilityButtonComponent, ReactiveFormsModule, RouterLink],
   template: `
     <cvp-auth-shell
       variant="register"
@@ -66,7 +67,7 @@ type RegisterField = keyof RegisterComponent['form']['controls'];
           <label for="register-password">Senha</label>
           <div class="password-input">
             <input id="register-password" name="password" [type]="passwordVisible() ? 'text' : 'password'" formControlName="password" autocomplete="new-password" [attr.aria-invalid]="invalid('password')" aria-describedby="register-password-rules">
-            <button type="button" aria-controls="register-password" (click)="passwordVisible.set(!passwordVisible())" [attr.aria-label]="localization.translate(passwordVisible() ? 'Ocultar senha' : 'Mostrar senha')">{{ passwordVisible() ? 'Ocultar' : 'Mostrar' }}</button>
+            <cvp-password-visibility-button fieldId="register-password" [visible]="passwordVisible()" (toggled)="passwordVisible.set(!passwordVisible())" />
           </div>
           <small id="register-password-rules" [class.field-error]="invalid('password')">Use 8 caracteres, com maiúscula, minúscula, número e símbolo.</small>
         </div>
@@ -75,7 +76,7 @@ type RegisterField = keyof RegisterComponent['form']['controls'];
           <label for="register-password-confirmation">Confirmar senha</label>
           <div class="password-input">
             <input id="register-password-confirmation" name="confirmation" [type]="confirmationVisible() ? 'text' : 'password'" formControlName="confirmation" autocomplete="new-password" aria-required="true" [attr.aria-invalid]="confirmationInvalid" [attr.aria-describedby]="confirmationInvalid ? 'register-password-confirmation-error' : null">
-            <button type="button" aria-controls="register-password-confirmation" (click)="confirmationVisible.set(!confirmationVisible())" [attr.aria-label]="localization.translate(confirmationVisible() ? 'Ocultar confirmação de senha' : 'Mostrar confirmação de senha')">{{ confirmationVisible() ? 'Ocultar' : 'Mostrar' }}</button>
+            <cvp-password-visibility-button fieldId="register-password-confirmation" [visible]="confirmationVisible()" [confirmation]="true" (toggled)="confirmationVisible.set(!confirmationVisible())" />
           </div>
           @if (confirmationInvalid) {
             <small id="register-password-confirmation-error" class="field-error" role="alert">
@@ -95,7 +96,6 @@ type RegisterField = keyof RegisterComponent['form']['controls'];
   styles: `
     .register-phone,
     .register-password { display: grid; gap: .32rem; }
-    .register-password .password-input > input { padding-inline-end: 5.75rem; }
     .register-phone-field { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: .45rem; }
     .register-phone-field input { min-width: 0; }
     .register-phone-country {
